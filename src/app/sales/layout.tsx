@@ -8,16 +8,5 @@ export default async function SalesLayout({
   children: React.ReactNode;
 }) {
   const user = await requireRole(ROLES.SALES);
-  return (
-    <AppShell
-      user={user}
-      roleLabel="Sales"
-      nav={[
-        { href: "/sales", label: "Dashboard" },
-        { href: "/sales/students", label: "Students" },
-      ]}
-    >
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

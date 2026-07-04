@@ -8,17 +8,5 @@ export default async function MentorLayout({
   children: React.ReactNode;
 }) {
   const user = await requireRole(ROLES.MENTOR);
-  return (
-    <AppShell
-      user={user}
-      roleLabel="Mentor"
-      nav={[
-        { href: "/mentor", label: "My students" },
-        { href: "/mentor/sessions", label: "Sessions" },
-        { href: "/mentor/feedback", label: "My feedback" },
-      ]}
-    >
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }
