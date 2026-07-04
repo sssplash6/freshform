@@ -1,5 +1,9 @@
+import { LogSessionForm } from "@/components/forms/log-session-form";
+import { StudentsTable } from "@/components/students-table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
+import { formatHours } from "@/lib/format";
+import { mentorAssignments, studentsWithHours } from "@/lib/queries";
 
 export default async function MentorHomePage() {
   const user = await requireRole(ROLES.MENTOR);
@@ -19,13 +23,31 @@ export default async function MentorHomePage() {
     );
   }
 
+  const assignments = await mentorAssignments(user.id);
+  const students = await studentsWithHours({
+    cohortId: { in: assignments.map((a) => a.cohortId) },
+  });
+
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-navy">My students</h1>
-      <p className="mt-2 text-sm text-gray-500">
-        Coming next: students in your assigned cohorts, session logging, and
-        totals.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold text-navy">My students</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Cohorts:{" "}
+          {assignments
+            .map((a) => `${a.cohort.program.name} / ${a.cohort.name}`)
+            .join(", ") || "none"}
+        </p>
+      </div>
+
+      <LogSessionForm
+        students={students.map((s) => ({
+          profileId: s.id,
+          label: `${s.user.name ?? s.user.email} — ${formatHours(s.remainingHours)}h left (${s.cohort.name})`,
+        }))}
+      />
+
+      <StudentsTable students={students} showProgram />
     </div>
   );
 }
