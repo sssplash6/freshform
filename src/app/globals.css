@@ -5,6 +5,14 @@
   --foreground: #171717;
 }
 
+/* Freshman Academy palette */
+@theme {
+  --color-brand: #f18d05;
+  --color-brand-deep: #ed7a2d;
+  --color-navy: #124b84;
+  --color-mist: #e6e6e7;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,15 +20,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
