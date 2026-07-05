@@ -85,6 +85,18 @@ export default async function StudentHomePage() {
         </Link>
       </div>
 
+      {completed > 0 && (
+        <div className="rounded-lg border border-mist bg-white p-4 text-sm text-gray-600">
+          How was your last session?{" "}
+          <Link
+            href="/student/feedback"
+            className="font-medium text-navy underline underline-offset-2"
+          >
+            Rate your mentor →
+          </Link>
+        </div>
+      )}
+
       <section>
         <h2 className="mb-2 text-sm font-semibold text-navy">
           Session history
