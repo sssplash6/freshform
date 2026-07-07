@@ -1,10 +1,15 @@
-import { ROLES } from "@/lib/constants";
+import { redirect } from "next/navigation";
+
+import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
+import { formatHours } from "@/lib/format";
+import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 
 /**
  * Booking is entirely external Calendly links (spec §8) — this page lists
- * the mentors assigned to the student's cohort with each mentor's link.
+ * the mentors assigned to the student's cohort with each mentor's link and
+ * the hours the student still holds with them.
  */
 export default async function StudentBookPage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -14,20 +19,20 @@ export default async function StudentBookPage() {
     include: { cohort: { include: { program: true } } },
   });
 
-  if (!profile) {
-    return (
-      <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        Your account isn&apos;t linked to a cohort. Ask your program contact to
-        fix your registration.
-      </p>
-    );
-  }
+  // Not onboarded / not approved yet — the home page explains what's next.
+  if (!profile || user.status !== USER_STATUS.ACTIVE) redirect("/student");
 
-  const assignments = await prisma.mentorAssignment.findMany({
-    where: { cohortId: profile.cohortId },
-    include: { mentor: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const [assignments, hours] = await Promise.all([
+    prisma.mentorAssignment.findMany({
+      where: { cohortId: profile.cohortId },
+      include: { mentor: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    allocationSummary(profile.id),
+  ]);
+  const remainingByMentor = new Map(
+    hours.perMentor.map((m) => [m.mentor.id, m.remaining])
+  );
 
   return (
     <div className="space-y-6">
@@ -36,7 +41,8 @@ export default async function StudentBookPage() {
         <p className="mt-1 text-sm text-gray-500">
           Mentors for {profile.cohort.program.name} / {profile.cohort.name}.
           Booking happens on the mentor&apos;s calendar; the session appears in
-          your history after the mentor logs it.
+          your history — and draws down your hours with that mentor — after
+          the mentor logs it.
         </p>
       </div>
 
@@ -46,27 +52,49 @@ export default async function StudentBookPage() {
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
-          {assignments.map((a) => (
-            <li
-              key={a.id}
-              className="flex flex-col justify-between rounded-lg border border-mist bg-white p-4"
-            >
-              <div>
-                <h2 className="font-medium text-gray-900">
-                  {a.mentor.name ?? a.mentor.email}
-                </h2>
-                <p className="mt-0.5 text-xs text-gray-500">{a.mentor.email}</p>
-              </div>
-              <a
-                href={a.calendlyUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-block rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-brand-deep"
+          {assignments.map((a) => {
+            const remaining = remainingByMentor.get(a.mentorId);
+            return (
+              <li
+                key={a.id}
+                className="flex flex-col justify-between rounded-lg border border-mist bg-white p-4"
               >
-                Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"} ↗
-              </a>
-            </li>
-          ))}
+                <div>
+                  <h2 className="font-medium text-gray-900">
+                    {a.mentor.name ?? a.mentor.email}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {a.mentor.email}
+                  </p>
+                  <p className="mt-2 text-xs">
+                    {remaining === undefined ? (
+                      <span className="text-gray-400">
+                        No hours allocated with this mentor
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          remaining < 0
+                            ? "font-medium text-red-600"
+                            : "font-medium text-brand-deep"
+                        }
+                      >
+                        {formatHours(remaining)} hours remaining with them
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <a
+                  href={a.calendlyUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-block rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-brand-deep"
+                >
+                  Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"} ↗
+                </a>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

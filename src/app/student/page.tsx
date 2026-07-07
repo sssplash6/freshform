@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { StatCard, StatCardGrid } from "@/components/stat-card";
-import { ROLES, SESSION_STATUS } from "@/lib/constants";
+import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDate, formatHours } from "@/lib/format";
+import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 
 export default async function StudentHomePage() {
@@ -20,19 +22,30 @@ export default async function StudentHomePage() {
     },
   });
 
-  if (!profile) {
+  // Self-signed-up student who hasn't picked a cohort yet.
+  if (!profile) redirect("/student/onboarding");
+
+  // Registered but not yet approved by an admin.
+  if (user.status === USER_STATUS.PENDING) {
     return (
-      <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        Your account isn&apos;t linked to a cohort. Ask your program contact to
-        fix your registration.
-      </p>
+      <div className="rounded-lg border border-brand/40 bg-brand/5 p-6">
+        <h1 className="text-xl font-semibold text-navy">
+          Registration received
+        </h1>
+        <p className="mt-2 text-sm text-gray-600">
+          You&apos;re registered for {profile.cohort.program.name} /{" "}
+          {profile.cohort.name}. An admin is reviewing your registration —
+          once approved, your mentoring hours will be allocated and appear
+          here.
+        </p>
+      </div>
     );
   }
 
-  const completed = profile.sessions
-    .filter((s) => s.status === SESSION_STATUS.ACTIVE)
-    .reduce((sum, s) => sum + s.hours, 0);
-  const remaining = profile.allottedHours - completed;
+  const hours = await allocationSummary(profile.id);
+  const activeSessions = profile.sessions.filter(
+    (s) => s.status === SESSION_STATUS.ACTIVE
+  );
 
   return (
     <div className="space-y-8">
@@ -44,36 +57,72 @@ export default async function StudentHomePage() {
       </div>
 
       <StatCardGrid>
-        <StatCard
-          label="Hours allotted"
-          value={formatHours(profile.allottedHours)}
-        />
+        <StatCard label="Hours allotted" value={formatHours(hours.allotted)} />
         <StatCard
           label="Hours completed"
-          value={formatHours(completed)}
+          value={formatHours(hours.completed)}
           tone="brand"
         />
         <StatCard
           label="Hours remaining"
-          value={formatHours(remaining)}
-          tone={remaining < 0 ? "danger" : "default"}
+          value={formatHours(hours.remaining)}
+          tone={hours.remaining < 0 ? "danger" : "default"}
         />
-        <StatCard
-          label="Sessions"
-          value={String(
-            profile.sessions.filter(
-              (s) => s.status === SESSION_STATUS.ACTIVE
-            ).length
-          )}
-        />
+        <StatCard label="Sessions" value={String(activeSessions.length)} />
       </StatCardGrid>
 
-      {remaining < 0 && (
+      {hours.remaining < 0 && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          You&apos;ve used {formatHours(-remaining)} hours more than your
+          You&apos;ve used {formatHours(-hours.remaining)} hours more than your
           allotment. Talk to your program contact about topping up.
         </p>
       )}
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-navy">
+          Hours with each mentor
+        </h2>
+        {hours.perMentor.length === 0 ? (
+          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+            No mentor hours allocated yet — an admin will set them up soon.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-mist bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-3 py-2">Mentor</th>
+                  <th className="px-3 py-2 text-right">Allotted</th>
+                  <th className="px-3 py-2 text-right">Completed</th>
+                  <th className="px-3 py-2 text-right">Remaining</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-mist/60">
+                {hours.perMentor.map((m) => (
+                  <tr key={m.mentor.id}>
+                    <td className="px-3 py-2">
+                      {m.mentor.name ?? m.mentor.email}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatHours(m.allocated)}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatHours(m.completed)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 text-right font-medium tabular-nums ${
+                        m.remaining < 0 ? "text-red-600" : "text-gray-900"
+                      }`}
+                    >
+                      {formatHours(m.remaining)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <div className="rounded-lg border border-brand/40 bg-brand/5 p-4 text-sm">
         Ready for your next session?{" "}
@@ -85,7 +134,7 @@ export default async function StudentHomePage() {
         </Link>
       </div>
 
-      {completed > 0 && (
+      {hours.completed > 0 && (
         <div className="rounded-lg border border-mist bg-white p-4 text-sm text-gray-600">
           How was your last session?{" "}
           <Link

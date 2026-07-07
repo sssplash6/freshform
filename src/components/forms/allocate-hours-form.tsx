@@ -2,28 +2,31 @@
 
 import { useActionState } from "react";
 
-import { setAllottedHours } from "@/lib/actions/students";
+import { setMentorAllocation } from "@/lib/actions/students";
 
-/** Inline per-student allotment editor (admin only). */
-export function SetHoursForm({
+/** Inline per-mentor allocation editor for one student (admin only). */
+export function AllocateHoursForm({
   studentProfileId,
+  mentorId,
   currentHours,
 }: {
   studentProfileId: string;
+  mentorId: string;
   currentHours: number;
 }) {
-  const [state, action, pending] = useActionState(setAllottedHours, null);
+  const [state, action, pending] = useActionState(setMentorAllocation, null);
 
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="studentProfileId" value={studentProfileId} />
+      <input type="hidden" name="mentorId" value={mentorId} />
       <input
-        name="newHours"
+        name="hours"
         type="number"
         min="0"
         step="any"
         defaultValue={currentHours}
-        aria-label="New allotted hours"
+        aria-label="Allocated hours with this mentor"
         className="w-20 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
       />
       <button

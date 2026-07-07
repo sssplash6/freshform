@@ -24,20 +24,27 @@ async function requireActiveMentor() {
   return actor;
 }
 
-async function remainingFor(studentProfileId: string): Promise<number> {
-  const profile = await prisma.studentProfile.findUniqueOrThrow({
-    where: { id: studentProfileId },
-  });
+/** Remaining hours the student holds with this mentor (derived). */
+async function remainingWith(
+  studentProfileId: string,
+  mentorId: string,
+  allocatedHours: number
+): Promise<number> {
   const sum = await prisma.session.aggregate({
-    where: { studentId: studentProfileId, status: SESSION_STATUS.ACTIVE },
+    where: {
+      studentId: studentProfileId,
+      mentorId,
+      status: SESSION_STATUS.ACTIVE,
+    },
     _sum: { hours: true },
   });
-  return profile.allottedHours - (sum._sum.hours ?? 0);
+  return allocatedHours - (sum._sum.hours ?? 0);
 }
 
 /**
- * Log a completed session. Draws down the student's remaining hours (derived)
- * and notifies them. Overdraw is allowed but flagged back to the mentor.
+ * Log a completed session. Draws down the hours the student holds with THIS
+ * mentor (derived) and notifies them. Overdraw is allowed but flagged back
+ * to the mentor.
  */
 export async function logSession(
   _prev: ActionState,
@@ -63,17 +70,25 @@ export async function logSession(
     include: { user: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
-
-  // The student must be in one of THIS mentor's assigned cohorts.
-  const assignment = await prisma.mentorAssignment.findUnique({
-    where: {
-      mentorId_cohortId: { mentorId: mentor.id, cohortId: profile.cohortId },
-    },
-  });
-  if (!assignment) {
+  if (profile.user.status !== USER_STATUS.ACTIVE) {
     return {
       ok: false,
-      error: "That student isn't in any of your assigned cohorts.",
+      error: "That student hasn't been approved by an admin yet.",
+    };
+  }
+
+  // Sessions can only be logged against hours an admin allocated to THIS
+  // mentor for this student.
+  const allocation = await prisma.hourAllocation.findUnique({
+    where: {
+      studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
+    },
+  });
+  if (!allocation) {
+    return {
+      ok: false,
+      error:
+        "No hours were allocated to you for that student — ask an admin to allocate hours first.",
     };
   }
 
@@ -98,13 +113,13 @@ export async function logSession(
 
   revalidatePath("/", "layout");
 
-  const remaining = await remainingFor(profile.id);
+  const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged. Heads up: ${profile.user.name ?? profile.user.email} is now overdrawn by ${formatHours(-remaining)} hours.`
-        : `Session logged. ${profile.user.name ?? profile.user.email} has ${formatHours(remaining)} hours remaining.`,
+        ? `Session logged. Heads up: ${profile.user.name ?? profile.user.email} is now overdrawn by ${formatHours(-remaining)} hours with you.`
+        : `Session logged. ${profile.user.name ?? profile.user.email} has ${formatHours(remaining)} hours left with you.`,
   };
 }
 

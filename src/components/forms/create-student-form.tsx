@@ -10,10 +10,8 @@ const inputClass =
 
 export function CreateStudentForm({
   cohorts,
-  allowInitialHours,
 }: {
   cohorts: { id: string; label: string }[];
-  allowInitialHours: boolean;
 }) {
   const [state, action, pending] = useActionState(createStudent, null);
 
@@ -49,19 +47,6 @@ export function CreateStudentForm({
             ))}
           </select>
         </label>
-        {allowInitialHours && (
-          <label className="block text-sm">
-            <span className="text-gray-600">Initial hours</span>
-            <input
-              name="initialHours"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0"
-              className={inputClass}
-            />
-          </label>
-        )}
       </div>
       <div className="mt-3 flex items-center gap-3">
         <button

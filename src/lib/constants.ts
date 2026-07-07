@@ -13,7 +13,8 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const USER_STATUS = {
   ACTIVE: "ACTIVE",
-  UNASSIGNED: "UNASSIGNED",
+  UNASSIGNED: "UNASSIGNED", // freshly signed-up mentors awaiting cohort assignment
+  PENDING: "PENDING", // self-signed-up students awaiting admin approval
 } as const;
 
 export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
@@ -30,6 +31,8 @@ export const NOTIFICATION_TYPES = {
   SESSION_LOGGED: "SESSION_LOGGED",
   SESSION_EDITED: "SESSION_EDITED",
   SESSION_VOIDED: "SESSION_VOIDED",
+  STUDENT_SIGNUP: "STUDENT_SIGNUP", // to admins: a student finished onboarding
+  ACCOUNT_APPROVED: "ACCOUNT_APPROVED", // to the student: admin approved them
 } as const;
 
 export type NotificationType =

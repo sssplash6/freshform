@@ -6,14 +6,16 @@ import { ROLES, USER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Sign-in policy (spec §6):
+ * Sign-in policy:
  * - Everyone authenticates with Google.
  * - Emails already in the User table (seeded staff, staff-created students,
- *   returning mentors) may sign in.
+ *   returning mentors/students) may sign in.
  * - Unknown emails on ALLOWED_MENTOR_DOMAIN self-register as UNASSIGNED
  *   mentors; an admin must assign them to cohorts before they can do
  *   anything.
- * - All other unknown emails are rejected.
+ * - All other unknown emails self-register as PENDING students: they pick
+ *   their cohort during onboarding, then wait for an admin to approve them
+ *   and allocate mentor hours before anything counts.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -47,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      // Unknown email: only mentor self-sign-up on the allowed domain.
+      // Unknown email on the staff domain: mentor self-sign-up.
       if (email.endsWith(`@${ALLOWED_MENTOR_DOMAIN}`)) {
         await prisma.user.create({
           data: {
@@ -60,7 +62,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      return false;
+      // Any other unknown email: student self-sign-up, pending approval.
+      await prisma.user.create({
+        data: {
+          email,
+          name: user.name ?? null,
+          role: ROLES.STUDENT,
+          status: USER_STATUS.PENDING,
+        },
+      });
+      return true;
     },
     async jwt({ token, user }) {
       // On initial sign-in, pin the JWT to our DB user id. Role/status are

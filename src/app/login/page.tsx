@@ -2,7 +2,7 @@ import { signIn } from "@/lib/auth";
 
 const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied:
-    "This Google account isn't registered. Students must be added by staff first; mentors must use their @freshman.academy account.",
+    "Something blocked your sign-in. Students can sign up with any Google account; mentors must use their @freshman.academy account.",
   Configuration: "Sign-in is misconfigured. Please contact the site admin.",
   Default: "Something went wrong signing you in. Please try again.",
 };

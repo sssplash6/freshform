@@ -19,10 +19,13 @@ function totals(students: StudentWithHours[]) {
 }
 
 export default async function AdminHomePage() {
-  const [students, unassignedMentors] = await Promise.all([
+  const [students, unassignedMentors, pendingStudents] = await Promise.all([
     studentsWithHours(),
     prisma.user.count({
       where: { role: ROLES.MENTOR, status: USER_STATUS.UNASSIGNED },
+    }),
+    prisma.user.count({
+      where: { role: ROLES.STUDENT, status: USER_STATUS.PENDING },
     }),
   ]);
 
@@ -45,15 +48,26 @@ export default async function AdminHomePage() {
         <h1 className="text-xl font-semibold text-navy">
           Cross-program dashboard
         </h1>
-        {unassignedMentors > 0 && (
-          <Link
-            href="/admin/mentors"
-            className="rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm text-brand-deep transition-colors hover:bg-brand/10"
-          >
-            {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
-            awaiting assignment →
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {pendingStudents > 0 && (
+            <Link
+              href="/admin/students"
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+            >
+              {pendingStudents} student{pendingStudents === 1 ? "" : "s"}{" "}
+              awaiting approval →
+            </Link>
+          )}
+          {unassignedMentors > 0 && (
+            <Link
+              href="/admin/mentors"
+              className="rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm text-brand-deep transition-colors hover:bg-brand/10"
+            >
+              {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
+              awaiting assignment →
+            </Link>
+          )}
+        </div>
       </div>
 
       <StatCardGrid>

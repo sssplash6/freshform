@@ -16,7 +16,6 @@ export default async function SalesStudentsPage() {
       <h1 className="text-xl font-semibold text-navy">Students</h1>
       <CreateStudentForm
         cohorts={cohorts.map((c) => ({ id: c.id, label: c.name }))}
-        allowInitialHours={false}
       />
       <StudentsTable students={students} showProgram={false} />
     </div>

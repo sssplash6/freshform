@@ -1,19 +1,23 @@
+import Link from "next/link";
+
+import { USER_STATUS } from "@/lib/constants";
 import { formatHours } from "@/lib/format";
-import { SetHoursForm } from "@/components/forms/set-hours-form";
 import type { StudentWithHours } from "@/lib/queries";
 
 /**
- * Students with derived hour totals. Negative remaining renders red
- * (overdraw is allowed but warned). `showAllotmentEditor` is admin-only.
+ * Students with derived hour totals (allotted = sum of per-mentor
+ * allocations). Negative remaining renders red (overdraw is allowed but
+ * warned). `manageBase` (admin only) links each row to its detail page where
+ * approval and per-mentor allocations live.
  */
 export function StudentsTable({
   students,
   showProgram,
-  showAllotmentEditor = false,
+  manageBase,
 }: {
   students: StudentWithHours[];
   showProgram: boolean;
-  showAllotmentEditor?: boolean;
+  manageBase?: string;
 }) {
   if (students.length === 0) {
     return (
@@ -34,15 +38,20 @@ export function StudentsTable({
             <th className="px-3 py-2 text-right">Allotted</th>
             <th className="px-3 py-2 text-right">Completed</th>
             <th className="px-3 py-2 text-right">Remaining</th>
-            {showAllotmentEditor && <th className="px-3 py-2">Set allotment</th>}
+            {manageBase && <th className="px-3 py-2" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-mist/60">
           {students.map((s) => (
             <tr key={s.id}>
               <td className="px-3 py-2">
-                <div className="font-medium text-gray-900">
+                <div className="flex items-center gap-2 font-medium text-gray-900">
                   {s.user.name ?? "—"}
+                  {s.user.status === USER_STATUS.PENDING && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-700">
+                      Pending approval
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500">{s.user.email}</div>
               </td>
@@ -63,12 +72,14 @@ export function StudentsTable({
               >
                 {formatHours(s.remainingHours)}
               </td>
-              {showAllotmentEditor && (
-                <td className="px-3 py-2">
-                  <SetHoursForm
-                    studentProfileId={s.id}
-                    currentHours={s.allottedHours}
-                  />
+              {manageBase && (
+                <td className="px-3 py-2 text-right">
+                  <Link
+                    href={`${manageBase}/${s.id}`}
+                    className="text-xs font-medium text-navy underline underline-offset-2"
+                  >
+                    Manage →
+                  </Link>
                 </td>
               )}
             </tr>

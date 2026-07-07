@@ -5,8 +5,8 @@
 // `src/lib/constants.ts` and enforced in application code. When migrating to
 // Postgres, these columns can be converted to real enums.
 //
-// NOTE ON DERIVED VALUES: completedHours / remainingHours are computed from
-// ACTIVE sessions vs. StudentProfile.allottedHours (see src/lib/hours.ts).
+// NOTE ON DERIVED VALUES: allotted / completed / remaining hours are computed
+// from HourAllocation rows vs. ACTIVE sessions (see src/lib/hours.ts).
 // They are intentionally NOT stored as columns.
 
 generator client {
@@ -23,7 +23,7 @@ model User {
   email     String   @unique
   name      String?
   role      String // ADMIN | DEPT_LEADER | SALES | MENTOR | STUDENT
-  status    String   @default("ACTIVE") // ACTIVE | UNASSIGNED (freshly signed-up mentors)
+  status    String   @default("ACTIVE") // ACTIVE | UNASSIGNED (freshly signed-up mentors) | PENDING (self-signed-up students awaiting admin approval)
   programId String? // set for DEPT_LEADER and SALES (their scope)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -33,7 +33,9 @@ model User {
   createdStudents   StudentProfile[]      @relation("CreatedBy")
   mentorAssignments MentorAssignment[]    @relation("MentorUser")
   mentorSessions    Session[]             @relation("SessionMentor")
+  hourAllocations   HourAllocation[]      @relation("AllocationMentor")
   allotmentChanges  HourAllotmentChange[] @relation("ChangedBy")
+  allotmentMentions HourAllotmentChange[] @relation("ChangeMentor")
   notifications     Notification[]
   mentorFeedback    MentorFeedback[]      @relation("FeedbackMentor")
 }
@@ -73,21 +75,39 @@ model MentorAssignment {
 }
 
 model StudentProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  cohortId      String
-  allottedHours Float    @default(0) // only admins may change this (audited)
-  createdById   String // staff user who created the student
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  cohortId    String
+  createdById String // staff user who created the student, or the student themself (self-signup)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user             User                  @relation("StudentUser", fields: [userId], references: [id])
   cohort           Cohort                @relation(fields: [cohortId], references: [id])
   createdBy        User                  @relation("CreatedBy", fields: [createdById], references: [id])
   sessions         Session[]
+  hourAllocations  HourAllocation[]
   allotmentChanges HourAllotmentChange[]
   mentorFeedback   MentorFeedback[]
   websiteFeedback  WebsiteFeedback[]
+}
+
+// Hours an admin granted a student FROM a specific mentor (only admins may
+// change this, audited via HourAllotmentChange). A student's total allotment
+// is the sum of their allocations; sessions logged by a mentor draw down
+// that mentor's allocation.
+model HourAllocation {
+  id        String   @id @default(cuid())
+  studentId String
+  mentorId  String
+  hours     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id])
+  mentor  User           @relation("AllocationMentor", fields: [mentorId], references: [id])
+
+  @@unique([studentId, mentorId])
 }
 
 // A completed mentoring session logged by a mentor. ACTIVE sessions draw down
@@ -107,16 +127,18 @@ model Session {
   mentor  User           @relation("SessionMentor", fields: [mentorId], references: [id])
 }
 
-// Audit log of admin changes to a student's allotted hours.
+// Audit log of admin changes to a student's per-mentor hour allocation.
 model HourAllotmentChange {
   id          String   @id @default(cuid())
   studentId   String
+  mentorId    String // the mentor whose allocation was changed
   changedById String
   oldHours    Float
   newHours    Float
   createdAt   DateTime @default(now())
 
   student   StudentProfile @relation(fields: [studentId], references: [id])
+  mentor    User           @relation("ChangeMentor", fields: [mentorId], references: [id])
   changedBy User           @relation("ChangedBy", fields: [changedById], references: [id])
 }
 
