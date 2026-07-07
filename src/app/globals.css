@@ -11,6 +11,11 @@
   --color-brand-deep: #ed7a2d;
   --color-navy: #124b84;
   --color-mist: #e6e6e7;
+
+  /* Motion: strong ease-out as the app-wide default curve. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-out-strong);
 }
 
 @theme inline {
@@ -24,4 +29,54 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  /* Keyboard focus: a visible navy ring on click targets. Inside the navy
+     header chrome, navy is invisible, so the ring flips to white there. */
+  :is(button, a, select, summary, input[type="radio"], input[type="checkbox"]):focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
+  }
+  header :is(button, a):focus-visible {
+    outline-color: #ffffff;
+  }
+
+  /* Press feedback: every enabled button acknowledges the click. */
+  button:not(:disabled) {
+    transition: transform 160ms var(--ease-out-strong);
+  }
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  /* Text fields ease into their focus border; text links ease their color. */
+  :is(input, select, textarea) {
+    transition: border-color 150ms var(--ease-out-strong);
+  }
+  a {
+    transition: color 150ms var(--ease-out-strong);
+  }
+}
+
+/* Inline content that just got revealed (expanded rows, action results). */
+@utility rise-in {
+  transition:
+    opacity 180ms var(--ease-out-strong),
+    transform 180ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Reduced motion: keep state changes instant instead of animated. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
