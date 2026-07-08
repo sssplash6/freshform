@@ -1,4 +1,5 @@
 import { ArrowLink } from "@/components/arrow-link";
+import { Chip } from "@/components/chip";
 import { USER_STATUS } from "@/lib/constants";
 import { formatHours } from "@/lib/format";
 import type { StudentWithHours } from "@/lib/queries";
@@ -47,9 +48,7 @@ export function StudentsTable({
                 <div className="flex items-center gap-2 font-medium text-gray-900">
                   {s.user.name ?? "—"}
                   {s.user.status === USER_STATUS.PENDING && (
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-700">
-                      Pending approval
-                    </span>
+                    <Chip tone="amber">Pending approval</Chip>
                   )}
                 </div>
                 <div className="text-xs text-gray-500">{s.user.email}</div>
@@ -66,7 +65,7 @@ export function StudentsTable({
               </td>
               <td
                 className={`px-4 py-3 text-right font-medium tabular-nums ${
-                  s.remainingHours < 0 ? "text-red-600" : "text-gray-900"
+                  s.remainingHours < 0 ? "text-red-600" : "text-navy"
                 }`}
               >
                 {formatHours(s.remainingHours)}

@@ -1,3 +1,4 @@
+import { Chip } from "@/components/chip";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
@@ -18,7 +19,7 @@ export default async function MentorHomePage() {
         <p className="mt-2 text-sm text-gray-600">
           Your mentor account is created but not yet assigned to any cohorts.
           An admin needs to assign you before you can see students or log
-          sessions — check back soon.
+          sessions, so check back soon.
         </p>
       </div>
     );
@@ -95,13 +96,13 @@ export default async function MentorHomePage() {
           .filter((s) => s.approved)
           .map((s) => ({
             profileId: s.profile.id,
-            label: `${s.profile.user.name ?? s.profile.user.email} — ${formatHours(s.remaining)}h left with you (${s.profile.cohort.name})`,
+            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.cohort.name})`,
           }))}
       />
 
       {students.length === 0 ? (
         <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No students have hours allocated with you yet — an admin assigns
+          No students have hours allocated with you yet. An admin assigns
           those.
         </p>
       ) : (
@@ -127,9 +128,7 @@ export default async function MentorHomePage() {
                     <div className="flex items-center gap-2 font-medium text-gray-900">
                       {s.profile.user.name ?? "—"}
                       {!s.approved && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-700">
-                          Pending approval
-                        </span>
+                        <Chip tone="amber">Pending approval</Chip>
                       )}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -148,7 +147,7 @@ export default async function MentorHomePage() {
                   </td>
                   <td
                     className={`px-4 py-3 text-right font-medium tabular-nums ${
-                      s.remaining < 0 ? "text-red-600" : "text-gray-900"
+                      s.remaining < 0 ? "text-red-600" : "text-navy"
                     }`}
                   >
                     {formatHours(s.remaining)}

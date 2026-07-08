@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
 import { ArrowLeftIcon } from "@/components/icons";
+import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { USER_STATUS } from "@/lib/constants";
@@ -58,9 +59,7 @@ export default async function AdminStudentDetailPage({
             {profile.user.name ?? profile.user.email}
           </h1>
           {isPending && (
-            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-              Pending approval
-            </span>
+            <Chip tone="amber">Pending approval</Chip>
           )}
         </div>
         <p className="mt-1.5 text-base text-gray-500">
@@ -106,7 +105,7 @@ export default async function AdminStudentDetailPage({
         {mentors.length === 0 ? (
           <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No mentors are assigned to cohorts in{" "}
-            {profile.cohort.program.name} yet — assign mentors first, then
+            {profile.cohort.program.name} yet. Assign mentors first, then
             allocate hours here.
           </p>
         ) : (
@@ -144,7 +143,7 @@ export default async function AdminStudentDetailPage({
                         className={`px-4 py-3 text-right font-medium tabular-nums ${
                           (alloc?.remaining ?? 0) < 0
                             ? "text-red-600"
-                            : "text-gray-900"
+                            : "text-navy"
                         }`}
                       >
                         {formatHours(alloc?.remaining ?? 0)}

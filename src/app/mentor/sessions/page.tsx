@@ -1,3 +1,4 @@
+import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { ROLES, SESSION_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -69,13 +70,9 @@ export default async function MentorSessionsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {voided ? (
-                        <span className="rounded bg-mist px-1.5 py-0.5 text-xs text-gray-600">
-                          Voided
-                        </span>
+                        <Chip tone="gray">Voided</Chip>
                       ) : (
-                        <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                          Active
-                        </span>
+                        <Chip tone="green">Active</Chip>
                       )}
                     </td>
                     <td className="px-4 py-3">

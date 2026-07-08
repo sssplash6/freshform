@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { ArrowLink } from "@/components/arrow-link";
+import { Chip } from "@/components/chip";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -34,8 +35,8 @@ export default async function StudentHomePage() {
         </h1>
         <p className="mt-2 text-sm text-gray-600">
           You&apos;re registered for {profile.cohort.program.name} /{" "}
-          {profile.cohort.name}. An admin is reviewing your registration —
-          once approved, your mentoring hours will be allocated and appear
+          {profile.cohort.name}. An admin is reviewing your registration.
+          Once approved, your mentoring hours will be allocated and appear
           here.
         </p>
       </div>
@@ -84,7 +85,7 @@ export default async function StudentHomePage() {
         </h2>
         {hours.perMentor.length === 0 ? (
           <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No mentor hours allocated yet — an admin will set them up soon.
+            No mentor hours allocated yet. An admin will set them up soon.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-mist bg-white">
@@ -114,7 +115,7 @@ export default async function StudentHomePage() {
                     </td>
                     <td
                       className={`px-4 py-3 text-right font-medium tabular-nums ${
-                        m.remaining < 0 ? "text-red-600" : "text-gray-900"
+                        m.remaining < 0 ? "text-red-600" : "text-navy"
                       }`}
                     >
                       {formatHours(m.remaining)}
@@ -145,7 +146,7 @@ export default async function StudentHomePage() {
         </h2>
         {profile.sessions.length === 0 ? (
           <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No sessions yet — book your first one!
+            No sessions yet. Book your first one!
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-mist bg-white">
@@ -181,13 +182,9 @@ export default async function StudentHomePage() {
                       </td>
                       <td className="px-4 py-3">
                         {voided ? (
-                          <span className="rounded bg-mist px-1.5 py-0.5 text-xs text-gray-600">
-                            Voided — hours returned
-                          </span>
+                          <Chip tone="gray">Voided, hours returned</Chip>
                         ) : (
-                          <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                            Completed
-                          </span>
+                          <Chip tone="green">Completed</Chip>
                         )}
                       </td>
                     </tr>
