@@ -32,6 +32,15 @@ export function ArrowRightIcon({ className }: { className?: string }) {
   );
 }
 
+export function ArrowLeftIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M20 12H4" />
+      <path d="m11 19-7-7 7-7" />
+    </Svg>
+  );
+}
+
 export function ArrowUpRightIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

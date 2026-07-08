@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
+import { ArrowLeftIcon } from "@/components/icons";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { USER_STATUS } from "@/lib/constants";
@@ -47,9 +48,10 @@ export default async function AdminStudentDetailPage({
       <div>
         <Link
           href="/admin/students"
-          className="text-xs text-gray-500 underline underline-offset-2"
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
         >
-          ← All students
+          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+          All students
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight text-navy">
