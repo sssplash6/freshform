@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { NavLinks } from "@/components/nav-links";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
@@ -34,15 +35,7 @@ export async function AppShell({
           </Link>
 
           <nav className="flex flex-1 items-center gap-4 text-sm">
-            {NAV_BY_ROLE[role].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-white/80 transition-colors hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
+            <NavLinks items={NAV_BY_ROLE[role]} />
           </nav>
 
           <div className="flex items-center gap-3 text-sm">
