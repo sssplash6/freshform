@@ -1,4 +1,4 @@
-/** Small metric tile used across the dashboards. */
+/** One number in a dashboard's stat strip. */
 export function StatCard({
   label,
   value,
@@ -16,19 +16,20 @@ export function StatCard({
         : "text-navy";
 
   return (
-    <div className="rounded-lg border border-mist bg-white p-4">
-      <div className="text-xs uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${valueClass}`}>
+    <div>
+      <div className={`text-xl font-semibold tabular-nums ${valueClass}`}>
         {value}
       </div>
+      <div className="mt-0.5 text-xs text-gray-500">{label}</div>
     </div>
   );
 }
 
+/** The numbers as one quiet strip between hairlines — no tile boxes. */
 export function StatCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
+    <div className="flex flex-wrap gap-x-10 gap-y-4 border-y border-mist px-1 py-4">
+      {children}
+    </div>
   );
 }
