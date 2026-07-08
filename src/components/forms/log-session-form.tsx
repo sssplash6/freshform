@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Select } from "@/components/select";
 
 const inputClass =
   "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
@@ -25,17 +26,19 @@ export function LogSessionForm({
         Log a completed session
       </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="text-gray-600">Student *</span>
-          <select name="studentProfileId" required className={inputClass}>
-            <option value="">Select…</option>
-            {students.map((s) => (
-              <option key={s.profileId} value={s.profileId}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="mt-0.5">
+            <Select
+              name="studentProfileId"
+              ariaLabel="Student"
+              options={students.map((s) => ({
+                value: s.profileId,
+                label: s.label,
+              }))}
+            />
+          </div>
+        </div>
         <label className="block text-sm">
           <span className="text-gray-600">Hours *</span>
           <input

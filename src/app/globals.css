@@ -59,6 +59,18 @@ body {
   }
 }
 
+/* Popovers and menus: scale in from their origin. */
+@utility pop-in {
+  transform-origin: var(--pop-origin, top center);
+  transition:
+    opacity 140ms var(--ease-out-strong),
+    transform 140ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97) translateY(-2px);
+  }
+}
+
 /* Inline content that just got revealed (expanded rows, action results). */
 @utility rise-in {
   transition:

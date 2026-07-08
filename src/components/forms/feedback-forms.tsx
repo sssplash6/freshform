@@ -1,36 +1,60 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   submitMentorFeedback,
   submitWebsiteFeedback,
 } from "@/lib/actions/feedback";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { StarIcon } from "@/components/icons";
+import { Select } from "@/components/select";
 
 const inputClass =
   "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
-function RatingPicker({ name }: { name: string }) {
+/** Interactive 5-star picker: hover previews the fill, click commits. A
+ * hidden input carries the value; the server rejects a missing rating. */
+function StarRating({ name }: { name: string }) {
+  const [value, setValue] = useState(0);
+  const [hover, setHover] = useState(0);
+  const shown = hover || value;
+
   return (
-    <fieldset className="flex items-center gap-1">
-      <legend className="mb-1 text-sm text-gray-600">Rating *</legend>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <label
-          key={n}
-          className="flex cursor-pointer flex-col items-center rounded-md border border-mist px-2.5 py-1.5 text-sm text-gray-700 transition-colors has-checked:border-brand has-checked:bg-brand/10 has-checked:text-brand-deep"
-        >
-          <input
-            type="radio"
-            name={name}
-            value={n}
-            required
-            className="sr-only"
-          />
-          {n}★
-        </label>
-      ))}
-    </fieldset>
+    <div className="block text-sm">
+      <span className="text-gray-600">Rating *</span>
+      <div
+        role="radiogroup"
+        aria-label="Rating"
+        onMouseLeave={() => setHover(0)}
+        className="mt-1 flex items-center gap-0.5"
+      >
+        <input type="hidden" name={name} value={value || ""} />
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            aria-label={`${n} star${n === 1 ? "" : "s"}`}
+            onMouseEnter={() => setHover(n)}
+            onClick={() => setValue(n)}
+            className="rounded p-0.5"
+          >
+            <StarIcon
+              className={`h-7 w-7 transition-colors ${
+                n <= shown ? "text-brand" : "text-mist"
+              }`}
+            />
+          </button>
+        ))}
+        {value > 0 && (
+          <span className="ml-2 text-sm font-medium tabular-nums text-gray-500">
+            {value}/5
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -48,18 +72,17 @@ export function MentorFeedbackForm({
         Your name isn&apos;t shown to the mentor.
       </p>
       <div className="mt-3 space-y-3">
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="text-gray-600">Mentor *</span>
-          <select name="mentorId" required className={inputClass}>
-            <option value="">Select…</option>
-            {mentors.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <RatingPicker name="rating" />
+          <div className="mt-0.5">
+            <Select
+              name="mentorId"
+              ariaLabel="Mentor"
+              options={mentors.map((m) => ({ value: m.id, label: m.label }))}
+            />
+          </div>
+        </div>
+        <StarRating name="rating" />
         <label className="block text-sm">
           <span className="text-gray-600">Comment</span>
           <textarea
@@ -89,7 +112,7 @@ export function WebsiteFeedbackForm() {
     <form action={action} className="rounded-lg border border-mist bg-white p-4">
       <h2 className="text-base font-semibold text-navy">Rate this website</h2>
       <div className="mt-3 space-y-3">
-        <RatingPicker name="rating" />
+        <StarRating name="rating" />
         <label className="block text-sm">
           <span className="text-gray-600">Comment</span>
           <textarea

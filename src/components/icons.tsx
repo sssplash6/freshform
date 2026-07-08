@@ -49,3 +49,28 @@ export function ArrowUpRightIcon({ className }: { className?: string }) {
     </Svg>
   );
 }
+
+export function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="m6 9 6 6 6-6" />
+    </Svg>
+  );
+}
+
+export function CheckIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M20 6 9 17l-5-5" />
+    </Svg>
+  );
+}
+
+/** Filled star (rating control), unlike the stroke icons above. */
+export function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M12 2.5c.3 0 .58.17.71.45l2.6 5.27 5.82.85c.65.09.9.89.44 1.34l-4.21 4.1 1 5.8a.79.79 0 0 1-1.15.83L12 18.4l-5.2 2.74a.79.79 0 0 1-1.15-.83l.99-5.8-4.21-4.1a.79.79 0 0 1 .44-1.34l5.82-.85 2.6-5.27a.79.79 0 0 1 .71-.45Z" />
+    </svg>
+  );
+}

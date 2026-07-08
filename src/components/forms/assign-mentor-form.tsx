@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { assignMentor } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Select } from "@/components/select";
 
 const inputClass =
   "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
@@ -30,28 +31,26 @@ export function AssignMentorForm({
         existing pairing updates its link.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="text-gray-600">Mentor *</span>
-          <select name="mentorId" required className={inputClass}>
-            <option value="">Select…</option>
-            {mentors.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
+          <div className="mt-0.5">
+            <Select
+              name="mentorId"
+              ariaLabel="Mentor"
+              options={mentors.map((m) => ({ value: m.id, label: m.label }))}
+            />
+          </div>
+        </div>
+        <div className="block text-sm">
           <span className="text-gray-600">Cohort *</span>
-          <select name="cohortId" required className={inputClass}>
-            <option value="">Select…</option>
-            {cohorts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="mt-0.5">
+            <Select
+              name="cohortId"
+              ariaLabel="Cohort"
+              options={cohorts.map((c) => ({ value: c.id, label: c.label }))}
+            />
+          </div>
+        </div>
         <label className="block text-sm">
           <span className="text-gray-600">Calendly URL *</span>
           <input
