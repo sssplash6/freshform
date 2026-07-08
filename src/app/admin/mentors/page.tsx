@@ -37,7 +37,7 @@ export default async function AdminMentorsPage() {
             {unassigned.map((m) => (
               <li key={m.id}>
                 {m.name ?? "—"}{" "}
-                <span className="text-gray-500">({m.email})</span> — signed up{" "}
+                <span className="text-gray-500">({m.email})</span> · signed up{" "}
                 {m.createdAt.toISOString().slice(0, 10)}
               </li>
             ))}

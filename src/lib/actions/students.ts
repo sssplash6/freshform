@@ -278,7 +278,7 @@ export async function setMentorAllocation(
   });
   const oldHours = existing?.hours ?? 0;
   if (newHours === oldHours) {
-    return { ok: true, message: "No change — allocation already at that value." };
+    return { ok: true, message: "No change: allocation is already at that value." };
   }
 
   const mentorLabel = mentor.name ?? mentor.email;

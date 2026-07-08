@@ -58,7 +58,7 @@ export async function submitMentorFeedback(
   });
 
   revalidatePath("/", "layout");
-  return { ok: true, message: "Thanks — your mentor feedback was recorded." };
+  return { ok: true, message: "Thanks! Your mentor feedback was recorded." };
 }
 
 /** Student rates the website (1–5 + optional comment). */
@@ -80,5 +80,5 @@ export async function submitWebsiteFeedback(
   });
 
   revalidatePath("/", "layout");
-  return { ok: true, message: "Thanks — your website feedback was recorded." };
+  return { ok: true, message: "Thanks! Your website feedback was recorded." };
 }

@@ -22,7 +22,7 @@ export default async function MentorFeedbackPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-navy">My feedback</h1>
         <p className="mt-1.5 text-base text-gray-500">
-          Feedback is anonymous — student names are never shown.
+          Feedback is anonymous: student names are never shown.
         </p>
       </div>
 

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Freshman Academy — Mentoring Hours",
+  title: "Freshman Academy · Mentoring Hours",
   description: "Track mentoring hours, sessions, and feedback.",
 };
 

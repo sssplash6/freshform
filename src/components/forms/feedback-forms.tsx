@@ -88,7 +88,7 @@ export function MentorFeedbackForm({
           <textarea
             name="comment"
             rows={3}
-            placeholder="Optional — what went well, what could be better?"
+            placeholder="Optional: what went well, what could be better?"
             className={inputClass}
           />
         </label>
@@ -118,7 +118,7 @@ export function WebsiteFeedbackForm() {
           <textarea
             name="comment"
             rows={3}
-            placeholder="Optional — anything confusing or missing?"
+            placeholder="Optional: anything confusing or missing?"
             className={inputClass}
           />
         </label>

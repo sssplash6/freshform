@@ -88,7 +88,7 @@ export async function logSession(
     return {
       ok: false,
       error:
-        "No hours were allocated to you for that student — ask an admin to allocate hours first.",
+        "No hours were allocated to you for that student. Ask an admin to allocate hours first.",
     };
   }
 
@@ -215,7 +215,7 @@ export async function voidSession(
       data: {
         userId: session.student.userId,
         type: NOTIFICATION_TYPES.SESSION_VOIDED,
-        message: `${mentor.name ?? mentor.email} voided the ${formatHours(session.hours)}-hour session from ${formatDate(session.date)} — those hours are back in your balance.`,
+        message: `${mentor.name ?? mentor.email} voided the ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in your balance.`,
       },
     });
   });

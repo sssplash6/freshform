@@ -42,14 +42,14 @@ export default async function StudentBookPage() {
         <p className="mt-1.5 text-base text-gray-500">
           Mentors for {profile.cohort.program.name} / {profile.cohort.name}.
           Booking happens on the mentor&apos;s calendar; the session appears in
-          your history — and draws down your hours with that mentor — after
+          your history and draws down your hours with that mentor after
           the mentor logs it.
         </p>
       </div>
 
       {assignments.length === 0 ? (
         <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No mentors are assigned to your cohort yet — check back soon.
+          No mentors are assigned to your cohort yet. Check back soon.
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
