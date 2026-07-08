@@ -16,7 +16,7 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-navy">Notifications</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-navy">Notifications</h1>
         {unread > 0 && (
           <form action={markAllNotificationsRead}>
             <button
@@ -30,7 +30,7 @@ export default async function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           Nothing yet. You&apos;ll be notified here whenever your hours change.
         </p>
       ) : (

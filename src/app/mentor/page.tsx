@@ -12,7 +12,7 @@ export default async function MentorHomePage() {
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (
       <div className="rounded-lg border border-brand/40 bg-brand/5 p-6">
-        <h1 className="text-xl font-semibold text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">
           Welcome, {user.name ?? user.email}
         </h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -70,8 +70,8 @@ export default async function MentorHomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-navy">My students</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">My students</h1>
+        <p className="mt-1.5 text-base text-gray-500">
           Cohorts:{" "}
           {assignments
             .map((a) => `${a.cohort.program.name} / ${a.cohort.name}`)
@@ -100,7 +100,7 @@ export default async function MentorHomePage() {
       />
 
       {students.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No students have hours allocated with you yet — an admin assigns
           those.
         </p>
@@ -109,12 +109,12 @@ export default async function MentorHomePage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-3 py-2">Student</th>
-                <th className="px-3 py-2">Program</th>
-                <th className="px-3 py-2">Cohort</th>
-                <th className="px-3 py-2 text-right">Allocated to you</th>
-                <th className="px-3 py-2 text-right">Completed</th>
-                <th className="px-3 py-2 text-right">Remaining</th>
+                <th className="px-4 py-3">Student</th>
+                <th className="px-4 py-3">Program</th>
+                <th className="px-4 py-3">Cohort</th>
+                <th className="px-4 py-3 text-right">Allocated to you</th>
+                <th className="px-4 py-3 text-right">Completed</th>
+                <th className="px-4 py-3 text-right">Remaining</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-mist/60">
@@ -123,7 +123,7 @@ export default async function MentorHomePage() {
                   key={s.profile.id}
                   className="transition-colors hover:bg-mist/20"
                 >
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2 font-medium text-gray-900">
                       {s.profile.user.name ?? "—"}
                       {!s.approved && (
@@ -136,18 +136,18 @@ export default async function MentorHomePage() {
                       {s.profile.user.email}
                     </div>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     {s.profile.cohort.program.name}
                   </td>
-                  <td className="px-3 py-2">{s.profile.cohort.name}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-4 py-3">{s.profile.cohort.name}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
                     {formatHours(s.allocated)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-4 py-3 text-right tabular-nums">
                     {formatHours(s.completed)}
                   </td>
                   <td
-                    className={`px-3 py-2 text-right font-medium tabular-nums ${
+                    className={`px-4 py-3 text-right font-medium tabular-nums ${
                       s.remaining < 0 ? "text-red-600" : "text-gray-900"
                     }`}
                   >

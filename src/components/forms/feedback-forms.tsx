@@ -9,7 +9,7 @@ import {
 import { ActionFeedback } from "@/components/forms/action-feedback";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3 py-2 text-sm focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
 function RatingPicker({ name }: { name: string }) {
   return (
@@ -43,7 +43,7 @@ export function MentorFeedbackForm({
 
   return (
     <form action={action} className="rounded-lg border border-mist bg-white p-4">
-      <h2 className="text-sm font-semibold text-navy">Rate a mentor</h2>
+      <h2 className="text-base font-semibold text-navy">Rate a mentor</h2>
       <p className="mt-1 text-xs text-gray-500">
         Your name isn&apos;t shown to the mentor.
       </p>
@@ -87,7 +87,7 @@ export function WebsiteFeedbackForm() {
 
   return (
     <form action={action} className="rounded-lg border border-mist bg-white p-4">
-      <h2 className="text-sm font-semibold text-navy">Rate this website</h2>
+      <h2 className="text-base font-semibold text-navy">Rate this website</h2>
       <div className="mt-3 space-y-3">
         <RatingPicker name="rating" />
         <label className="block text-sm">

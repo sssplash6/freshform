@@ -20,8 +20,8 @@ export default async function MentorFeedbackPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-navy">My feedback</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">My feedback</h1>
+        <p className="mt-1.5 text-base text-gray-500">
           Feedback is anonymous — student names are never shown.
         </p>
       </div>
@@ -36,7 +36,7 @@ export default async function MentorFeedbackPage() {
       </StatCardGrid>
 
       {feedback.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No feedback yet.
         </p>
       ) : (

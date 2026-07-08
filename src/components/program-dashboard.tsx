@@ -48,7 +48,7 @@ export async function ProgramDashboard({
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-navy">
+      <h1 className="text-3xl font-bold tracking-tight text-navy">
         {program.name} dashboard
       </h1>
 
@@ -68,7 +68,7 @@ export async function ProgramDashboard({
       </StatCardGrid>
 
       {students.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No students in {program.name} yet.{" "}
           <Link href={studentsHref} className="text-navy underline">
             Create the first one.

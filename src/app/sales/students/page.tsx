@@ -13,7 +13,7 @@ export default async function SalesStudentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-navy">Students</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-navy">Students</h1>
       <CreateStudentForm
         cohorts={cohorts.map((c) => ({ id: c.id, label: c.name }))}
       />

@@ -26,11 +26,11 @@ export default async function AdminMentorsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-navy">Mentors</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-navy">Mentors</h1>
 
       {unassigned.length > 0 && (
         <div className="rounded-lg border border-brand/40 bg-brand/5 p-4">
-          <h2 className="text-sm font-semibold text-navy">
+          <h2 className="text-base font-semibold text-navy">
             Awaiting assignment ({unassigned.length})
           </h2>
           <ul className="mt-2 space-y-1 text-sm text-gray-700">
@@ -46,7 +46,7 @@ export default async function AdminMentorsPage() {
       )}
 
       {mentors.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No mentors yet. Mentors self-register by signing in with their
           @freshman.academy Google account.
         </p>
@@ -66,11 +66,11 @@ export default async function AdminMentorsPage() {
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Current assignments
         </h2>
         {assignments.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No assignments yet.
           </p>
         ) : (
@@ -78,16 +78,16 @@ export default async function AdminMentorsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-3 py-2">Mentor</th>
-                  <th className="px-3 py-2">Program / Cohort</th>
-                  <th className="px-3 py-2">Booking link</th>
-                  <th className="px-3 py-2" />
+                  <th className="px-4 py-3">Mentor</th>
+                  <th className="px-4 py-3">Program / Cohort</th>
+                  <th className="px-4 py-3">Booking link</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-mist/60">
                 {assignments.map((a) => (
                   <tr key={a.id}>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">
                         {a.mentor.name ?? "—"}
                       </div>
@@ -95,10 +95,10 @@ export default async function AdminMentorsPage() {
                         {a.mentor.email}
                       </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       {a.cohort.program.name} / {a.cohort.name}
                     </td>
-                    <td className="max-w-64 truncate px-3 py-2">
+                    <td className="max-w-64 truncate px-4 py-3">
                       <a
                         href={a.calendlyUrl}
                         target="_blank"
@@ -108,7 +108,7 @@ export default async function AdminMentorsPage() {
                         {a.calendlyUrl}
                       </a>
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-4 py-3 text-right">
                       <RemoveAssignmentButton assignmentId={a.id} />
                     </td>
                   </tr>

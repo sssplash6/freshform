@@ -6,7 +6,7 @@ import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3 py-2 text-sm focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
 export function LogSessionForm({
   students,
@@ -21,7 +21,7 @@ export function LogSessionForm({
       action={action}
       className="rounded-lg border border-mist bg-white p-4"
     >
-      <h2 className="text-sm font-semibold text-navy">
+      <h2 className="text-base font-semibold text-navy">
         Log a completed session
       </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

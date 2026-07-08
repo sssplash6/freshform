@@ -23,10 +23,10 @@ export default async function StudentOnboardingPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">
           Complete your registration
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1.5 text-base text-gray-500">
           Tell us which program and cohort you&apos;re in. An admin will review
           your registration and allocate your mentoring hours.
         </p>

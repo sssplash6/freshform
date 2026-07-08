@@ -19,9 +19,11 @@ export default async function LoginPage({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-mist/40 p-6">
-      <div className="w-full max-w-sm rounded-xl border border-mist bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-navy">Freshman Academy</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="w-full max-w-md rounded-2xl border border-mist bg-white p-10 shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">
+          Freshman Academy
+        </h1>
+        <p className="mt-2 text-base text-gray-500">
           Welcome! Sign in to see your mentoring hours.
         </p>
 
@@ -43,7 +45,7 @@ export default async function LoginPage({
         >
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-md border border-mist bg-white px-4 py-2.5 text-sm font-medium text-gray-900 transition hover:border-navy/40 hover:bg-mist/20"
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-mist bg-white px-4 py-3 text-[15px] font-medium text-gray-900 transition hover:border-navy/40 hover:bg-mist/20"
           >
             <GoogleIcon />
             Continue with Google

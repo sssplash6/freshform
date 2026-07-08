@@ -13,7 +13,7 @@ type FeedbackRow = MentorFeedback & {
 export function MentorFeedbackList({ feedback }: { feedback: FeedbackRow[] }) {
   if (feedback.length === 0) {
     return (
-      <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+      <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
         No mentor feedback yet.
       </p>
     );

@@ -6,7 +6,7 @@ import { completeOnboarding } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3 py-2 text-sm focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
 /** Self-signup step 2: the student picks their cohort and confirms details. */
 export function OnboardingForm({

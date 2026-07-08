@@ -59,13 +59,13 @@ export default async function StudentFeedbackPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-navy">Feedback</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-navy">Feedback</h1>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {mentors.length > 0 ? (
           <MentorFeedbackForm mentors={mentors} />
         ) : (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             You&apos;ll be able to rate mentors once one is assigned to your
             cohort.
           </p>
@@ -75,7 +75,7 @@ export default async function StudentFeedbackPage() {
 
       {(myMentorFeedback.length > 0 || myWebsiteFeedback.length > 0) && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-navy">
+          <h2 className="mb-2 text-base font-semibold text-navy">
             Your previous feedback
           </h2>
           <ul className="space-y-2">

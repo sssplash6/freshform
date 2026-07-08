@@ -25,8 +25,8 @@ export default async function LeaderFeedbackPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-navy">Mentor feedback</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">Mentor feedback</h1>
+        <p className="mt-1.5 text-base text-gray-500">
           Ratings for mentors assigned in your program.
         </p>
       </div>

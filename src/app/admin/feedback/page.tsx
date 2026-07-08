@@ -23,7 +23,7 @@ export default async function AdminFeedbackPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-navy">Feedback</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-navy">Feedback</h1>
 
       <StatCardGrid>
         <StatCard
@@ -47,18 +47,18 @@ export default async function AdminFeedbackPage() {
       </StatCardGrid>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Mentor feedback
         </h2>
         <MentorFeedbackList feedback={mentorFeedback} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Website feedback
         </h2>
         {websiteFeedback.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No website feedback yet.
           </p>
         ) : (

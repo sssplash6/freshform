@@ -52,7 +52,7 @@ export default async function AdminStudentDetailPage({
           ← All students
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold text-navy">
+          <h1 className="text-3xl font-bold tracking-tight text-navy">
             {profile.user.name ?? profile.user.email}
           </h1>
           {isPending && (
@@ -61,7 +61,7 @@ export default async function AdminStudentDetailPage({
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1.5 text-base text-gray-500">
           {profile.user.email} · {profile.cohort.program.name} /{" "}
           {profile.cohort.name} · registered {formatDate(profile.createdAt)}
         </p>
@@ -98,11 +98,11 @@ export default async function AdminStudentDetailPage({
       </StatCardGrid>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Hour allocations by mentor
         </h2>
         {mentors.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No mentors are assigned to cohorts in{" "}
             {profile.cohort.program.name} yet — assign mentors first, then
             allocate hours here.
@@ -112,11 +112,11 @@ export default async function AdminStudentDetailPage({
             <table className="w-full text-left text-sm">
               <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-3 py-2">Mentor</th>
-                  <th className="px-3 py-2 text-right">Allocated</th>
-                  <th className="px-3 py-2 text-right">Completed</th>
-                  <th className="px-3 py-2 text-right">Remaining</th>
-                  <th className="px-3 py-2">Set allocation</th>
+                  <th className="px-4 py-3">Mentor</th>
+                  <th className="px-4 py-3 text-right">Allocated</th>
+                  <th className="px-4 py-3 text-right">Completed</th>
+                  <th className="px-4 py-3 text-right">Remaining</th>
+                  <th className="px-4 py-3">Set allocation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-mist/60">
@@ -124,7 +124,7 @@ export default async function AdminStudentDetailPage({
                   const alloc = byMentor.get(mentor.id);
                   return (
                     <tr key={mentor.id}>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">
                           {mentor.name ?? "—"}
                         </div>
@@ -132,14 +132,14 @@ export default async function AdminStudentDetailPage({
                           {mentor.email}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(alloc?.allocated ?? 0)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(alloc?.completed ?? 0)}
                       </td>
                       <td
-                        className={`px-3 py-2 text-right font-medium tabular-nums ${
+                        className={`px-4 py-3 text-right font-medium tabular-nums ${
                           (alloc?.remaining ?? 0) < 0
                             ? "text-red-600"
                             : "text-gray-900"
@@ -147,7 +147,7 @@ export default async function AdminStudentDetailPage({
                       >
                         {formatHours(alloc?.remaining ?? 0)}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         <AllocateHoursForm
                           studentProfileId={profile.id}
                           mentorId={mentor.id}
@@ -164,17 +164,17 @@ export default async function AdminStudentDetailPage({
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Allocation history
         </h2>
         {profile.allotmentChanges.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No allocation changes yet.
           </p>
         ) : (
           <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
             {profile.allotmentChanges.map((c) => (
-              <li key={c.id} className="flex flex-wrap gap-x-2 px-3 py-2">
+              <li key={c.id} className="flex flex-wrap gap-x-2 px-4 py-3">
                 <span className="tabular-nums text-gray-500">
                   {formatDate(c.createdAt)}
                 </span>

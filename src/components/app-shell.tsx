@@ -26,15 +26,17 @@ export async function AppShell({
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-mist bg-navy text-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-8 px-4 py-4">
           <Link href="/" className="flex items-baseline gap-2">
-            <span className="text-lg font-semibold">Freshman Academy</span>
-            <span className="rounded bg-brand px-1.5 py-0.5 text-xs font-medium text-white">
+            <span className="text-xl font-bold tracking-tight">
+              Freshman Academy
+            </span>
+            <span className="rounded bg-brand px-1.5 py-0.5 text-xs font-semibold text-white">
               {ROLE_LABELS[role]}
             </span>
           </Link>
 
-          <nav className="flex flex-1 items-center gap-4 text-sm">
+          <nav className="flex flex-1 items-center gap-5 text-[15px]">
             <NavLinks items={NAV_BY_ROLE[role]} />
           </nav>
 
