@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ArrowRightIcon } from "@/components/icons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentsTable } from "@/components/students-table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
@@ -45,26 +46,28 @@ export default async function AdminHomePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">
           Cross-program dashboard
         </h1>
         <div className="flex items-center gap-2">
           {pendingStudents > 0 && (
             <Link
               href="/admin/students"
-              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+              className="group inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
             >
               {pendingStudents} student{pendingStudents === 1 ? "" : "s"}{" "}
-              awaiting approval →
+              awaiting approval
+              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           )}
           {unassignedMentors > 0 && (
             <Link
               href="/admin/mentors"
-              className="rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm text-brand-deep transition-colors hover:bg-brand/10"
+              className="group inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand-deep transition-colors hover:bg-brand/10"
             >
               {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
-              awaiting assignment →
+              awaiting assignment
+              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           )}
         </div>
@@ -86,7 +89,7 @@ export default async function AdminHomePage() {
       </StatCardGrid>
 
       {students.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No students yet.{" "}
           <Link href="/admin/students" className="text-navy underline">
             Create the first one.

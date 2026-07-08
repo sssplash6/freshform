@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { ArrowUpRightIcon } from "@/components/icons";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatHours } from "@/lib/format";
@@ -37,8 +38,8 @@ export default async function StudentBookPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-navy">Book a session</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">Book a session</h1>
+        <p className="mt-1.5 text-base text-gray-500">
           Mentors for {profile.cohort.program.name} / {profile.cohort.name}.
           Booking happens on the mentor&apos;s calendar; the session appears in
           your history — and draws down your hours with that mentor — after
@@ -47,7 +48,7 @@ export default async function StudentBookPage() {
       </div>
 
       {assignments.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
           No mentors are assigned to your cohort yet — check back soon.
         </p>
       ) : (
@@ -57,10 +58,10 @@ export default async function StudentBookPage() {
             return (
               <li
                 key={a.id}
-                className="flex flex-col justify-between rounded-lg border border-mist bg-white p-4"
+                className="flex flex-col justify-between rounded-lg border border-mist bg-white p-5 transition hover:border-brand/50 hover:shadow-sm"
               >
                 <div>
-                  <h2 className="font-medium text-gray-900">
+                  <h2 className="text-lg font-semibold text-gray-900">
                     {a.mentor.name ?? a.mentor.email}
                   </h2>
                   {a.mentor.name && (
@@ -90,9 +91,10 @@ export default async function StudentBookPage() {
                   href={a.calendlyUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-4 inline-block rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-brand-deep"
+                  className="group mt-5 inline-flex items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep"
                 >
-                  Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"} ↗
+                  Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"}
+                  <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </a>
               </li>
             );

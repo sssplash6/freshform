@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { ArrowLink } from "@/components/arrow-link";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { CreateStudentForm } from "@/components/forms/create-student-form";
 import { StudentsTable } from "@/components/students-table";
@@ -18,7 +17,7 @@ export default async function AdminStudentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-navy">Students</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-navy">Students</h1>
 
       {pending.length > 0 && (
         <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
@@ -46,12 +45,12 @@ export default async function AdminStudentsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <ApproveStudentButtons studentProfileId={s.id} />
-                  <Link
+                  <ArrowLink
                     href={`/admin/students/${s.id}`}
-                    className="text-xs font-medium text-navy underline underline-offset-2"
+                    className="text-[13px]"
                   >
-                    Manage →
-                  </Link>
+                    Manage
+                  </ArrowLink>
                 </div>
               </li>
             ))}

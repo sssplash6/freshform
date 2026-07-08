@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ArrowLink } from "@/components/arrow-link";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -29,7 +29,7 @@ export default async function StudentHomePage() {
   if (user.status === USER_STATUS.PENDING) {
     return (
       <div className="rounded-lg border border-brand/40 bg-brand/5 p-6">
-        <h1 className="text-xl font-semibold text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">
           Registration received
         </h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -50,8 +50,8 @@ export default async function StudentHomePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-navy">My hours</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-navy">My hours</h1>
+        <p className="mt-1.5 text-base text-gray-500">
           {profile.cohort.program.name} / {profile.cohort.name}
         </p>
       </div>
@@ -79,11 +79,11 @@ export default async function StudentHomePage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Hours with each mentor
         </h2>
         {hours.perMentor.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No mentor hours allocated yet — an admin will set them up soon.
           </p>
         ) : (
@@ -91,10 +91,10 @@ export default async function StudentHomePage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-3 py-2">Mentor</th>
-                  <th className="px-3 py-2 text-right">Allotted</th>
-                  <th className="px-3 py-2 text-right">Completed</th>
-                  <th className="px-3 py-2 text-right">Remaining</th>
+                  <th className="px-4 py-3">Mentor</th>
+                  <th className="px-4 py-3 text-right">Allotted</th>
+                  <th className="px-4 py-3 text-right">Completed</th>
+                  <th className="px-4 py-3 text-right">Remaining</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-mist/60">
@@ -103,17 +103,17 @@ export default async function StudentHomePage() {
                     key={m.mentor.id}
                     className="transition-colors hover:bg-mist/20"
                   >
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       {m.mentor.name ?? m.mentor.email}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       {formatHours(m.allocated)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       {formatHours(m.completed)}
                     </td>
                     <td
-                      className={`px-3 py-2 text-right font-medium tabular-nums ${
+                      className={`px-4 py-3 text-right font-medium tabular-nums ${
                         m.remaining < 0 ? "text-red-600" : "text-gray-900"
                       }`}
                     >
@@ -127,34 +127,24 @@ export default async function StudentHomePage() {
         )}
       </section>
 
-      <div className="rounded-lg border border-brand/40 bg-brand/5 p-4 text-sm">
-        Ready for your next session?{" "}
-        <Link
-          href="/student/book"
-          className="font-medium text-navy underline underline-offset-2"
-        >
-          Book with one of your mentors →
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/40 bg-brand/5 p-5 text-[15px]">
+        <span>Ready for your next session?</span>
+        <ArrowLink href="/student/book">Book with one of your mentors</ArrowLink>
       </div>
 
       {hours.completed > 0 && (
-        <div className="rounded-lg border border-mist bg-white p-4 text-sm text-gray-600">
-          How was your last session?{" "}
-          <Link
-            href="/student/feedback"
-            className="font-medium text-navy underline underline-offset-2"
-          >
-            Rate your mentor →
-          </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-mist bg-white p-5 text-[15px] text-gray-600">
+          <span>How was your last session?</span>
+          <ArrowLink href="/student/feedback">Rate your mentor</ArrowLink>
         </div>
       )}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-navy">
           Session history
         </h2>
         {profile.sessions.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
+          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             No sessions yet — book your first one!
           </p>
         ) : (
@@ -162,11 +152,11 @@ export default async function StudentHomePage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Mentor</th>
-                  <th className="px-3 py-2 text-right">Hours</th>
-                  <th className="px-3 py-2">Note</th>
-                  <th className="px-3 py-2">Status</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Mentor</th>
+                  <th className="px-4 py-3 text-right">Hours</th>
+                  <th className="px-4 py-3">Note</th>
+                  <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-mist/60">
@@ -177,19 +167,19 @@ export default async function StudentHomePage() {
                       key={s.id}
                       className={`transition-colors hover:bg-mist/20 ${voided ? "opacity-50" : ""}`}
                     >
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className="px-4 py-3 tabular-nums">
                         {formatDate(s.date)}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         {s.mentor.name ?? s.mentor.email}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.hours)}
                       </td>
-                      <td className="max-w-56 truncate px-3 py-2 text-gray-600">
+                      <td className="max-w-56 truncate px-4 py-3 text-gray-600">
                         {s.note ?? "—"}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         {voided ? (
                           <span className="rounded bg-mist px-1.5 py-0.5 text-xs text-gray-600">
                             Voided — hours returned
