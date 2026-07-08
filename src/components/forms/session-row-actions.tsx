@@ -1,19 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { editSession, voidSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { ChevronDownIcon } from "@/components/icons";
 
 const inputClass =
   "rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none";
 
-/** Edit + void controls for one ACTIVE session the mentor logged. */
+/** Edit + void controls for one ACTIVE session the mentor logged. Voiding
+ * confirms inline (no browser dialog). */
 export function SessionRowActions({
   session,
 }: {
   session: { id: string; hours: number; date: string; note: string | null };
 }) {
+  const [open, setOpen] = useState(false);
+  const [confirmingVoid, setConfirmingVoid] = useState(false);
   const [editState, editAction, editPending] = useActionState(
     editSession,
     null
@@ -24,76 +28,100 @@ export function SessionRowActions({
   );
 
   return (
-    <details className="text-sm">
-      <summary className="cursor-pointer select-none text-navy hover:underline">
+    <div className="text-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1 font-medium text-navy transition-colors hover:text-brand-deep"
+      >
         Correct
-      </summary>
-      <div className="mt-2 space-y-3 rounded-md border border-mist bg-mist/20 p-3">
-        <form action={editAction} className="flex flex-wrap items-end gap-2">
-          <input type="hidden" name="sessionId" value={session.id} />
-          <label className="block text-xs text-gray-600">
-            Hours
-            <input
-              name="hours"
-              type="number"
-              min="0.01"
-              step="any"
-              required
-              defaultValue={session.hours}
-              className={`${inputClass} block w-20`}
-            />
-          </label>
-          <label className="block text-xs text-gray-600">
-            Date
-            <input
-              name="date"
-              type="date"
-              required
-              defaultValue={session.date}
-              className={`${inputClass} block`}
-            />
-          </label>
-          <label className="block flex-1 text-xs text-gray-600">
-            Note
-            <input
-              name="note"
-              type="text"
-              defaultValue={session.note ?? ""}
-              className={`${inputClass} block w-full`}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={editPending}
-            className="rounded-md bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
-          >
-            {editPending ? "Saving…" : "Save changes"}
-          </button>
-        </form>
-        <ActionFeedback state={editState} />
+        <ChevronDownIcon
+          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
 
-        <form
-          action={voidAction}
-          onSubmit={(e) => {
-            if (
-              !confirm(
-                "Void this session? The hours return to the student's balance."
-              )
-            )
-              e.preventDefault();
-          }}
-        >
-          <input type="hidden" name="sessionId" value={session.id} />
-          <button
-            type="submit"
-            disabled={voidPending}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-          >
-            {voidPending ? "Voiding…" : "Void session"}
-          </button>
-        </form>
-        <ActionFeedback state={voidState} />
-      </div>
-    </details>
+      {open && (
+        <div className="rise-in mt-2 space-y-3 rounded-md border border-mist bg-mist/20 p-3">
+          <form action={editAction} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="sessionId" value={session.id} />
+            <label className="block text-xs text-gray-600">
+              Hours
+              <input
+                name="hours"
+                type="number"
+                min="0.01"
+                step="any"
+                required
+                defaultValue={session.hours}
+                className={`${inputClass} block w-20`}
+              />
+            </label>
+            <label className="block text-xs text-gray-600">
+              Date
+              <input
+                name="date"
+                type="date"
+                required
+                defaultValue={session.date}
+                className={`${inputClass} block`}
+              />
+            </label>
+            <label className="block flex-1 text-xs text-gray-600">
+              Note
+              <input
+                name="note"
+                type="text"
+                defaultValue={session.note ?? ""}
+                className={`${inputClass} block w-full`}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={editPending}
+              className="rounded-md bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+            >
+              {editPending ? "Saving…" : "Save changes"}
+            </button>
+          </form>
+          <ActionFeedback state={editState} />
+
+          <form action={voidAction}>
+            <input type="hidden" name="sessionId" value={session.id} />
+            {confirmingVoid ? (
+              <span className="rise-in flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-gray-600">
+                  The hours return to the student&apos;s balance.
+                </span>
+                <button
+                  type="submit"
+                  disabled={voidPending}
+                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                >
+                  {voidPending ? "Voiding…" : "Yes, void it"}
+                </button>
+                <button
+                  type="button"
+                  disabled={voidPending}
+                  onClick={() => setConfirmingVoid(false)}
+                  className="rounded-md px-2.5 py-1.5 text-xs text-gray-500 transition-colors hover:bg-mist/60"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingVoid(true)}
+                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                Void session
+              </button>
+            )}
+          </form>
+          <ActionFeedback state={voidState} />
+        </div>
+      )}
+    </div>
   );
 }
