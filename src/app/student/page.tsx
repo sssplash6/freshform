@@ -99,7 +99,10 @@ export default async function StudentHomePage() {
               </thead>
               <tbody className="divide-y divide-mist/60">
                 {hours.perMentor.map((m) => (
-                  <tr key={m.mentor.id}>
+                  <tr
+                    key={m.mentor.id}
+                    className="transition-colors hover:bg-mist/20"
+                  >
                     <td className="px-3 py-2">
                       {m.mentor.name ?? m.mentor.email}
                     </td>
@@ -170,7 +173,10 @@ export default async function StudentHomePage() {
                 {profile.sessions.map((s) => {
                   const voided = s.status === SESSION_STATUS.VOIDED;
                   return (
-                    <tr key={s.id} className={voided ? "opacity-50" : ""}>
+                    <tr
+                      key={s.id}
+                      className={`transition-colors hover:bg-mist/20 ${voided ? "opacity-50" : ""}`}
+                    >
                       <td className="px-3 py-2 tabular-nums">
                         {formatDate(s.date)}
                       </td>

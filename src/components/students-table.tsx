@@ -43,7 +43,7 @@ export function StudentsTable({
         </thead>
         <tbody className="divide-y divide-mist/60">
           {students.map((s) => (
-            <tr key={s.id}>
+            <tr key={s.id} className="transition-colors hover:bg-mist/20">
               <td className="px-3 py-2">
                 <div className="flex items-center gap-2 font-medium text-gray-900">
                   {s.user.name ?? "—"}
