@@ -63,9 +63,11 @@ export default async function StudentBookPage() {
                   <h2 className="font-medium text-gray-900">
                     {a.mentor.name ?? a.mentor.email}
                   </h2>
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {a.mentor.email}
-                  </p>
+                  {a.mentor.name && (
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {a.mentor.email}
+                    </p>
+                  )}
                   <p className="mt-2 text-xs">
                     {remaining === undefined ? (
                       <span className="text-gray-400">
