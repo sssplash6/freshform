@@ -1,5 +1,6 @@
 import { markAllNotificationsRead } from "@/lib/actions/notifications";
 import { requireUser } from "@/lib/dal";
+import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function NotificationsPage() {
@@ -45,7 +46,7 @@ export default async function NotificationsPage() {
             >
               <p>{n.message}</p>
               <p className="mt-1 text-xs text-gray-400">
-                {n.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+                {formatDateTime(n.createdAt)}
               </p>
             </li>
           ))}

@@ -9,3 +9,15 @@ export function formatHours(n: number): string {
 export function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** Timestamps (notifications, audit entries): "8 Jul 2026, 14:32 UTC". */
+export function formatDateTime(d: Date): string {
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
+}
