@@ -48,7 +48,7 @@ export default async function MentorFeedbackPage() {
             >
               <div className="flex items-center justify-between">
                 <Rating value={f.rating} />
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   {f.createdAt.toISOString().slice(0, 10)}
                 </span>
               </div>

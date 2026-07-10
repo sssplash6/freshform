@@ -7,7 +7,13 @@ import type { NavItem } from "@/lib/nav";
 
 /** Role nav with the current page marked; longest matching href wins so
  * /admin/students/[id] highlights Students, not Dashboard. */
-export function NavLinks({ items }: { items: NavItem[] }) {
+export function NavLinks({
+  items,
+  variant = "header",
+}: {
+  items: NavItem[];
+  variant?: "header" | "menu";
+}) {
   const pathname = usePathname();
   const current = items.reduce<NavItem | null>((best, item) => {
     const matches =
@@ -21,16 +27,24 @@ export function NavLinks({ items }: { items: NavItem[] }) {
     <>
       {items.map((item) => {
         const active = item === current;
+        const className =
+          variant === "menu"
+            ? `flex min-h-11 items-center rounded px-3 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-brand text-white"
+                  : "text-white/85 hover:bg-white/10 hover:text-white"
+              }`
+            : `inline-flex min-h-11 items-center border-b-2 px-1 transition-colors ${
+                active
+                  ? "border-brand text-white"
+                  : "border-transparent text-white/80 hover:text-white"
+              }`;
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`border-b-2 pb-0.5 transition-colors ${
-              active
-                ? "border-brand text-white"
-                : "border-transparent text-white/80 hover:text-white"
-            }`}
+            className={className}
           >
             {item.label}
           </Link>

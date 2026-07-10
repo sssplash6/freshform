@@ -27,17 +27,17 @@ export function AllocateHoursForm({
         step="any"
         defaultValue={currentHours}
         aria-label="Allocated hours with this mentor"
-        className="w-20 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
+        className="min-h-11 w-20 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md border border-navy px-2 py-1 text-xs font-medium text-navy transition-colors hover:bg-navy hover:text-white disabled:opacity-50"
+        className="min-h-11 rounded-md border border-navy px-2 py-1 text-xs font-medium text-navy transition-colors hover:bg-navy hover:text-white disabled:opacity-50"
       >
         {pending ? "…" : "Set"}
       </button>
       {state && !state.ok && (
-        <span role="alert" className="text-xs text-red-600">
+        <span role="alert" className="text-xs text-red-700">
           {state.error}
         </span>
       )}

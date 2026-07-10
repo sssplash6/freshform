@@ -93,7 +93,7 @@ export default async function StudentFeedbackPage() {
                 {f.comment && (
                   <p className="mt-1 text-gray-600">{f.comment}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-gray-500">
                   {f.createdAt.toISOString().slice(0, 10)}
                 </p>
               </li>
@@ -112,7 +112,7 @@ export default async function StudentFeedbackPage() {
                 {f.comment && (
                   <p className="mt-1 text-gray-600">{f.comment}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-gray-500">
                   {f.createdAt.toISOString().slice(0, 10)}
                 </p>
               </li>

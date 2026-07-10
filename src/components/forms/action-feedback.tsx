@@ -5,11 +5,13 @@ export function ActionFeedback({ state }: { state: ActionState }) {
   if (!state) return null;
   if (state.ok) {
     return state.message ? (
-      <p className="rise-in mt-2 text-sm text-green-700">{state.message}</p>
+      <p role="status" className="rise-in mt-2 text-sm text-green-700">
+        {state.message}
+      </p>
     ) : null;
   }
   return (
-    <p role="alert" className="rise-in mt-2 text-sm text-red-600">
+    <p role="alert" className="rise-in mt-2 text-sm text-red-700">
       {state.error}
     </p>
   );

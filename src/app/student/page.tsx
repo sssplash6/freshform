@@ -115,7 +115,7 @@ export default async function StudentHomePage() {
                     </td>
                     <td
                       className={`px-4 py-3 text-right font-medium tabular-nums ${
-                        m.remaining < 0 ? "text-red-600" : "text-navy"
+                        m.remaining < 0 ? "text-red-700" : "text-navy"
                       }`}
                     >
                       {formatHours(m.remaining)}

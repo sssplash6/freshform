@@ -1,16 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.985 0.003 70);
+  --foreground: oklch(0.22 0.01 255);
 }
 
 /* Freshman Academy palette */
 @theme {
-  --color-brand: #f18d05;
-  --color-brand-deep: #ed7a2d;
-  --color-navy: #124b84;
-  --color-mist: #e6e6e7;
+  /* All text-bearing orange uses a darker, AA-safe value on white. */
+  --color-brand: oklch(0.52 0.13 56);
+  --color-brand-deep: oklch(0.43 0.11 56);
+  --color-navy: oklch(0.39 0.1 250);
+  --color-mist: oklch(0.92 0.006 70);
+  --color-surface: oklch(0.99 0.002 70);
+  --color-muted: oklch(0.5 0.012 255);
+  --color-danger: oklch(0.43 0.17 28);
 
   /* Motion: strong ease-out as the app-wide default curve. */
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
@@ -34,17 +38,20 @@ body {
 @layer base {
   /* Keyboard focus: a visible navy ring on click targets. Inside the navy
      header chrome, navy is invisible, so the ring flips to white there. */
-  :is(button, a, select, summary, input[type="radio"], input[type="checkbox"]):focus-visible {
+  :is(button, a, select, summary, input, textarea):focus-visible {
     outline: 2px solid var(--color-navy);
     outline-offset: 2px;
   }
   header :is(button, a):focus-visible {
-    outline-color: #ffffff;
+    outline-color: oklch(0.99 0.002 70);
   }
 
   /* Press feedback: every enabled button acknowledges the click. */
   button:not(:disabled) {
     transition: transform 160ms var(--ease-out-strong);
+  }
+  button {
+    min-height: 2.75rem;
   }
   button:not(:disabled):active {
     transform: scale(0.98);
@@ -53,6 +60,9 @@ body {
   /* Text fields ease into their focus border; text links ease their color. */
   :is(input, select, textarea) {
     transition: border-color 150ms var(--ease-out-strong);
+  }
+  :is(input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), select, textarea) {
+    min-height: 2.75rem;
   }
   a {
     transition: color 150ms var(--ease-out-strong);

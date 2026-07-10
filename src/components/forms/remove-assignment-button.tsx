@@ -23,12 +23,12 @@ export function RemoveAssignmentButton({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
       >
         {pending ? "…" : "Remove"}
       </button>
       {state && !state.ok && (
-        <span role="alert" className="ml-2 text-xs text-red-600">
+        <span role="alert" className="ml-2 text-xs text-red-700">
           {state.error}
         </span>
       )}

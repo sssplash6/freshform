@@ -52,7 +52,7 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-gray-400">
+        <p className="mt-4 text-xs text-gray-500">
           Students: use the email your program registered. Mentors: use your
           @freshman.academy account.
         </p>

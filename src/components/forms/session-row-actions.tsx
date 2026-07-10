@@ -96,7 +96,7 @@ export function SessionRowActions({
                 <button
                   type="submit"
                   disabled={voidPending}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
                 >
                   {voidPending ? "Voiding…" : "Yes, void it"}
                 </button>
@@ -113,7 +113,7 @@ export function SessionRowActions({
               <button
                 type="button"
                 onClick={() => setConfirmingVoid(true)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
               >
                 Void session
               </button>

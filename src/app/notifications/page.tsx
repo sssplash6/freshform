@@ -45,7 +45,7 @@ export default async function NotificationsPage() {
               }`}
             >
               <p>{n.message}</p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-500">
                 {formatDateTime(n.createdAt)}
               </p>
             </li>

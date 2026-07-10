@@ -10,7 +10,7 @@ export function StatCard({
 }) {
   const valueClass =
     tone === "danger"
-      ? "text-red-600"
+      ? "text-red-700"
       : tone === "brand"
         ? "text-brand-deep"
         : "text-navy";

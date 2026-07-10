@@ -65,7 +65,7 @@ export function StudentsTable({
               </td>
               <td
                 className={`px-4 py-3 text-right font-medium tabular-nums ${
-                  s.remainingHours < 0 ? "text-red-600" : "text-navy"
+                  s.remainingHours < 0 ? "text-red-700" : "text-navy"
                 }`}
               >
                 {formatHours(s.remainingHours)}

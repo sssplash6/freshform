@@ -71,14 +71,14 @@ export default async function StudentBookPage() {
                   )}
                   <p className="mt-2 text-xs">
                     {remaining === undefined ? (
-                      <span className="text-gray-400">
+                      <span className="text-gray-500">
                         No hours allocated with this mentor
                       </span>
                     ) : (
                       <span
                         className={
                           remaining < 0
-                            ? "font-medium text-red-600"
+                            ? "font-medium text-red-700"
                             : "font-medium text-brand-deep"
                         }
                       >
@@ -91,7 +91,7 @@ export default async function StudentBookPage() {
                   href={a.calendlyUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="group mt-5 inline-flex items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep"
+                  className="group mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep"
                 >
                   Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"}
                   <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />

@@ -16,7 +16,7 @@ export function ArrowLink({
   return (
     <Link
       href={href}
-      className={`group inline-flex items-center gap-1.5 font-semibold text-navy hover:text-brand-deep ${className}`}
+      className={`group inline-flex min-h-11 items-center gap-1.5 font-semibold text-navy hover:text-brand-deep ${className}`}
     >
       {children}
       <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

@@ -40,13 +40,13 @@ export function ApproveStudentButtons({
         <button
           type="submit"
           disabled={approving || rejecting}
-          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
         >
           {rejecting ? "Rejecting…" : "Reject"}
         </button>
       </form>
       {error && (
-        <span role="alert" className="text-xs text-red-600">
+        <span role="alert" className="text-xs text-red-700">
           {error}
         </span>
       )}
