@@ -7,9 +7,9 @@
 
 /* Freshman Academy palette */
 @theme {
-  /* All text-bearing orange uses a darker, AA-safe value on white. */
-  --color-brand: oklch(0.52 0.13 56);
-  --color-brand-deep: oklch(0.43 0.11 56);
+  /* Freshman Academy brand orange. */
+  --color-brand: #f18d05;
+  --color-brand-deep: #ed7a2d;
   --color-navy: oklch(0.39 0.1 250);
   --color-mist: oklch(0.92 0.006 70);
   --color-surface: oklch(0.99 0.002 70);
