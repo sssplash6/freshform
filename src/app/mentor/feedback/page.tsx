@@ -1,7 +1,6 @@
 import { Rating, average } from "@/components/rating";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
-import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -9,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  * identifying details are shown here.
  */
 export default async function MentorFeedbackPage() {
-  const user = await requireRole(ROLES.MENTOR);
+  const user = await requireMentor();
 
   const feedback = await prisma.mentorFeedback.findMany({
     where: { mentorId: user.id },

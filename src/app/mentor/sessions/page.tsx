@@ -1,12 +1,12 @@
 import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
-import { ROLES, SESSION_STATUS } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { SESSION_STATUS } from "@/lib/constants";
+import { requireMentor } from "@/lib/dal";
 import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function MentorSessionsPage() {
-  const user = await requireRole(ROLES.MENTOR);
+  const user = await requireMentor();
 
   const sessions = await prisma.session.findMany({
     where: { mentorId: user.id },

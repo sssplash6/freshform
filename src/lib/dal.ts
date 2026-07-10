@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLE_HOME, type Role } from "@/lib/constants";
+import { ROLE_HOME, ROLES, type Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -37,6 +37,17 @@ export async function requireRole(...roles: Role[]): Promise<User> {
   if (!roles.includes(user.role as Role)) {
     redirect(ROLE_HOME[user.role as Role] ?? "/login");
   }
+  return user;
+}
+
+/**
+ * Require a mentor who has finished registration. Mentors self-sign-up via
+ * Google, which may not supply a name; until they've entered a full name we
+ * send them to the onboarding step so the app never labels them by email.
+ */
+export async function requireMentor(): Promise<User> {
+  const user = await requireRole(ROLES.MENTOR);
+  if (!user.name?.trim()) redirect("/mentor/onboarding");
   return user;
 }
 

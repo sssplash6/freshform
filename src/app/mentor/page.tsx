@@ -1,14 +1,14 @@
 import { Chip } from "@/components/chip";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
-import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import { requireMentor } from "@/lib/dal";
 import { formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments } from "@/lib/queries";
 
 export default async function MentorHomePage() {
-  const user = await requireRole(ROLES.MENTOR);
+  const user = await requireMentor();
 
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (

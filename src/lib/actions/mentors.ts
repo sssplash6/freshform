@@ -1,11 +1,34 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import type { ActionState } from "@/lib/actions/shared";
+
+/**
+ * Self-signup step 2 for mentors: capture the full name Google didn't supply,
+ * so mentors are labeled by name rather than email everywhere they appear.
+ */
+export async function completeMentorProfile(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.MENTOR) {
+    return { ok: false, error: "Only mentors can complete this step." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Enter your full name." };
+
+  await prisma.user.update({ where: { id: actor.id }, data: { name } });
+
+  revalidatePath("/", "layout");
+  redirect("/mentor");
+}
 
 /**
  * Assign a mentor to a cohort with their Calendly link for that cohort
