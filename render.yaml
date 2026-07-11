@@ -10,9 +10,12 @@ services:
     plan: starter # required — persistent disks are not available on Free
     numInstances: 1 # must stay 1: SQLite cannot be shared across instances
 
+    # Use `npm install`, not `npm ci`: the lockfile is generated on macOS and
+    # omits Linux-only optional deps (@emnapi/*, wasm fallbacks for Tailwind's
+    # native oxide), which makes strict `npm ci` fail on Render's Linux build.
     # devDependencies (typescript, tailwind, tsx) are needed to build and to
     # run the seed, so force-install them even though Render sets production.
-    buildCommand: npm ci --include=dev && npm run build
+    buildCommand: npm install --include=dev && npm run build
     # Apply migrations and (idempotently) seed the disk before starting.
     startCommand: npm run db:migrate:deploy && npm run db:seed && npm start
 
