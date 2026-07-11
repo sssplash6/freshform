@@ -1,0 +1,42 @@
+# Render Blueprint for Freshman Academy (freshform).
+# Deploy: Render dashboard → New → Blueprint → point at this repo.
+#
+# This is a stateful Node web service: it stores data in a SQLite file on a
+# persistent disk, so it runs as a SINGLE instance (SQLite is single-writer).
+services:
+  - type: web
+    name: freshform
+    runtime: node
+    plan: starter # required — persistent disks are not available on Free
+    numInstances: 1 # must stay 1: SQLite cannot be shared across instances
+
+    # devDependencies (typescript, tailwind, tsx) are needed to build and to
+    # run the seed, so force-install them even though Render sets production.
+    buildCommand: npm ci --include=dev && npm run build
+    # Apply migrations and (idempotently) seed the disk before starting.
+    startCommand: npm run db:migrate:deploy && npm run db:seed && npm start
+
+    # Persistent storage for the SQLite database. Wiped-on-deploy without this.
+    disk:
+      name: freshform-data
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        value: file:/data/app.db
+      # Set after the first deploy, once you know the service URL:
+      #   https://<your-service>.onrender.com
+      - key: NEXTAUTH_URL
+        sync: false
+      # Render generates a strong secret on first deploy.
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      # From Google Cloud console → APIs & Services → Credentials.
+      # Add redirect URI: <NEXTAUTH_URL>/api/auth/callback/google
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
