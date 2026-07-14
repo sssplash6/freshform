@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { assignMentor } from "@/lib/actions/mentors";
+import { createMentor } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
 import type { ProgramOption } from "@/lib/queries";
@@ -11,18 +11,16 @@ const inputClass =
   "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
 /**
- * Assign a mentor to a whole program, or to one cohort in programs that
- * have them (Global Admissions). Target values are "p:<programId>" /
- * "c:<cohortId>".
+ * Admin registers a mentor directly: email, full name, and the program (or
+ * cohort) they work in with their Calendly link. The mentor signs in with
+ * Google afterwards — no self-signup step needed.
  */
-export function AssignMentorForm({
-  mentors,
+export function CreateMentorForm({
   programs,
 }: {
-  mentors: { id: string; label: string }[];
   programs: ProgramOption[];
 }) {
-  const [state, action, pending] = useActionState(assignMentor, null);
+  const [state, action, pending] = useActionState(createMentor, null);
 
   const targets = programs.flatMap((p) => [
     {
@@ -40,24 +38,26 @@ export function AssignMentorForm({
       action={action}
       className="rounded-lg border border-mist bg-white p-4"
     >
-      <h2 className="text-base font-semibold text-navy">
-        Assign a mentor to a program
-      </h2>
+      <h2 className="text-base font-semibold text-navy">Register a mentor</h2>
       <p className="mt-1 text-xs text-gray-500">
-        The Calendly link is per pairing. Re-assigning an existing pairing
-        updates its link.
+        The mentor signs in with this email using Google — nothing else to set
+        up on their side.
       </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <div className="block text-sm">
-          <span className="text-gray-600">Mentor *</span>
-          <div className="mt-0.5">
-            <Select
-              name="mentorId"
-              ariaLabel="Mentor"
-              options={mentors.map((m) => ({ value: m.id, label: m.label }))}
-            />
-          </div>
-        </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="block text-sm">
+          <span className="text-gray-600">Email *</span>
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="mentor@example.com"
+            className={inputClass}
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="text-gray-600">Full name *</span>
+          <input name="name" type="text" required className={inputClass} />
+        </label>
         <div className="block text-sm">
           <span className="text-gray-600">Program / cohort *</span>
           <div className="mt-0.5">
@@ -85,7 +85,7 @@ export function AssignMentorForm({
           disabled={pending}
           className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
         >
-          {pending ? "Assigning…" : "Assign mentor"}
+          {pending ? "Registering…" : "Register mentor"}
         </button>
       </div>
       <ActionFeedback state={state} />

@@ -15,7 +15,8 @@ export default async function StudentHomePage() {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
     include: {
-      cohort: { include: { program: true } },
+      program: true,
+      cohort: true,
       sessions: {
         include: { mentor: true },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -23,8 +24,15 @@ export default async function StudentHomePage() {
     },
   });
 
-  // Self-signed-up student who hasn't picked a cohort yet.
-  if (!profile) redirect("/student/onboarding");
+  // Self-signed-up student who hasn't registered yet, or a staff-registered
+  // student who hasn't confirmed their name / Telegram username.
+  if (!profile || !user.name?.trim() || !profile.telegramUsername) {
+    redirect("/student/onboarding");
+  }
+
+  const enrollmentLabel = profile.cohort
+    ? `${profile.program.name} / ${profile.cohort.name}`
+    : profile.program.name;
 
   // Registered but not yet approved by an admin.
   if (user.status === USER_STATUS.PENDING) {
@@ -34,10 +42,9 @@ export default async function StudentHomePage() {
           Registration received
         </h1>
         <p className="mt-2 text-sm text-gray-600">
-          You&apos;re registered for {profile.cohort.program.name} /{" "}
-          {profile.cohort.name}. An admin is reviewing your registration.
-          Once approved, your mentoring hours will be allocated and appear
-          here.
+          You&apos;re registered for {enrollmentLabel}. An admin is reviewing
+          your registration. Once approved, your mentoring hours will be
+          allocated and appear here.
         </p>
       </div>
     );
@@ -52,9 +59,7 @@ export default async function StudentHomePage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-navy">My hours</h1>
-        <p className="mt-1.5 text-base text-gray-500">
-          {profile.cohort.program.name} / {profile.cohort.name}
-        </p>
+        <p className="mt-1.5 text-base text-gray-500">{enrollmentLabel}</p>
       </div>
 
       <StatCardGrid>

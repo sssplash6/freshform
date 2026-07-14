@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
+import { assignmentsForStudentWhere } from "@/lib/queries";
 import type { ActionState } from "@/lib/actions/shared";
 
 function parseRating(raw: FormDataEntryValue | null): number | null {
@@ -23,9 +24,9 @@ async function requireStudentProfile() {
 
 /**
  * Student rates a mentor (1–5 + optional comment). The mentor must be
- * relevant to the student: currently assigned to their cohort, or someone
- * they've had a session with. Mentor-facing display is anonymous; the
- * student link is stored for admin/leader views.
+ * relevant to the student: currently assigned to their program (or cohort),
+ * or someone they've had a session with. Mentor-facing display is anonymous;
+ * the student link is stored for admin/leader views.
  */
 export async function submitMentorFeedback(
   _prev: ActionState,
@@ -42,8 +43,8 @@ export async function submitMentorFeedback(
 
   const mentorId = String(formData.get("mentorId") ?? "");
   const [assignment, pastSession] = await Promise.all([
-    prisma.mentorAssignment.findUnique({
-      where: { mentorId_cohortId: { mentorId, cohortId: profile.cohortId } },
+    prisma.mentorAssignment.findFirst({
+      where: { mentorId, ...assignmentsForStudentWhere(profile) },
     }),
     prisma.session.findFirst({
       where: { mentorId, studentId: profile.id },

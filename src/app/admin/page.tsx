@@ -33,10 +33,12 @@ export default async function AdminHomePage() {
   const overall = totals(students);
 
   // Group by program, then cohort (input is already sorted by program).
+  // Students in programs without cohorts land in the "" group and render as
+  // one table without a cohort heading.
   const byProgram = new Map<string, Map<string, StudentWithHours[]>>();
   for (const s of students) {
-    const program = s.cohort.program.name;
-    const cohort = s.cohort.name;
+    const program = s.program.name;
+    const cohort = s.cohort?.name ?? "";
     if (!byProgram.has(program)) byProgram.set(program, new Map());
     const cohorts = byProgram.get(program)!;
     if (!cohorts.has(cohort)) cohorts.set(cohort, []);
@@ -113,13 +115,16 @@ export default async function AdminHomePage() {
               </div>
               <div className="space-y-4">
                 {[...cohorts.entries()].map(([cohortName, cohortStudents]) => (
-                  <div key={cohortName}>
-                    <h3 className="mb-1 text-sm font-medium text-gray-600">
-                      {cohortName}
-                    </h3>
+                  <div key={cohortName || "program"}>
+                    {cohortName && (
+                      <h3 className="mb-1 text-sm font-medium text-gray-600">
+                        {cohortName}
+                      </h3>
+                    )}
                     <StudentsTable
                       students={cohortStudents}
                       showProgram={false}
+                      showCohort={Boolean(cohortName)}
                     />
                   </div>
                 ))}

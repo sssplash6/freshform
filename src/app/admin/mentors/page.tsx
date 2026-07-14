@@ -1,20 +1,22 @@
 import { AssignMentorForm } from "@/components/forms/assign-mentor-form";
+import { CreateMentorForm } from "@/components/forms/create-mentor-form";
 import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { cohortOptions } from "@/lib/queries";
+import { programOptions, toProgramOptions } from "@/lib/queries";
 
 export default async function AdminMentorsPage() {
-  const [mentors, cohorts, assignments] = await Promise.all([
+  const [mentors, programs, assignments] = await Promise.all([
     prisma.user.findMany({
       where: { role: ROLES.MENTOR },
       orderBy: { createdAt: "asc" },
     }),
-    cohortOptions(),
+    programOptions(),
     prisma.mentorAssignment.findMany({
       include: {
         mentor: true,
-        cohort: { include: { program: true } },
+        program: true,
+        cohort: true,
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -23,6 +25,7 @@ export default async function AdminMentorsPage() {
   const unassigned = mentors.filter(
     (m) => m.status === USER_STATUS.UNASSIGNED
   );
+  const programSelectOptions = toProgramOptions(programs);
 
   return (
     <div className="space-y-6">
@@ -33,6 +36,10 @@ export default async function AdminMentorsPage() {
           <h2 className="text-base font-semibold text-navy">
             Awaiting assignment ({unassigned.length})
           </h2>
+          <p className="mt-1 text-xs text-gray-600">
+            These mentors signed in before being registered. Assign them to a
+            program below to activate them.
+          </p>
           <ul className="mt-2 space-y-1 text-sm text-gray-700">
             {unassigned.map((m) => (
               <li key={m.id}>
@@ -45,12 +52,9 @@ export default async function AdminMentorsPage() {
         </div>
       )}
 
-      {mentors.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No mentors yet. Mentors self-register by signing in with their
-          @freshman.academy Google account.
-        </p>
-      ) : (
+      <CreateMentorForm programs={programSelectOptions} />
+
+      {mentors.length > 0 && (
         <AssignMentorForm
           mentors={mentors.map((m) => ({
             id: m.id,
@@ -58,10 +62,7 @@ export default async function AdminMentorsPage() {
               m.status === USER_STATUS.UNASSIGNED ? " (unassigned)" : ""
             }`,
           }))}
-          cohorts={cohorts.map((c) => ({
-            id: c.id,
-            label: `${c.program.name} / ${c.name}`,
-          }))}
+          programs={programSelectOptions}
         />
       )}
 
@@ -96,7 +97,8 @@ export default async function AdminMentorsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {a.cohort.program.name} / {a.cohort.name}
+                      {a.program.name}
+                      {a.cohort ? ` / ${a.cohort.name}` : ""}
                     </td>
                     <td className="max-w-64 truncate px-4 py-3">
                       <a

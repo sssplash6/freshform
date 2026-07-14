@@ -11,7 +11,7 @@ export default async function LeaderFeedbackPage() {
     where: {
       mentor: {
         mentorAssignments: {
-          some: { cohort: { programId: user.programId ?? "" } },
+          some: { programId: user.programId ?? "" },
         },
       },
     },

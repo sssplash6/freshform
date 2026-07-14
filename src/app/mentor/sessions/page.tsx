@@ -10,7 +10,7 @@ export default async function MentorSessionsPage() {
 
   const sessions = await prisma.session.findMany({
     where: { mentorId: user.id },
-    include: { student: { include: { user: true, cohort: true } } },
+    include: { student: { include: { user: true, program: true, cohort: true } } },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 
@@ -59,7 +59,8 @@ export default async function MentorSessionsPage() {
                         {s.student.user.name ?? s.student.user.email}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {s.student.cohort.name}
+                        {s.student.program.name}
+                        {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">

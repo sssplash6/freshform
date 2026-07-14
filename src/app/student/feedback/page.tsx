@@ -6,6 +6,7 @@ import { Rating } from "@/components/rating";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+import { assignmentsForStudentWhere } from "@/lib/queries";
 
 export default async function StudentFeedbackPage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -16,18 +17,18 @@ export default async function StudentFeedbackPage() {
   if (!profile) {
     return (
       <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        Your account isn&apos;t linked to a cohort. Ask your program contact to
-        fix your registration.
+        Your account isn&apos;t linked to a program. Ask your program contact
+        to fix your registration.
       </p>
     );
   }
 
-  // Mentors the student can rate: assigned to their cohort, plus anyone
-  // they've had a session with (covers mentors reassigned since).
+  // Mentors the student can rate: assigned to their program (or cohort),
+  // plus anyone they've had a session with (covers mentors reassigned since).
   const [assignments, pastMentors, myMentorFeedback, myWebsiteFeedback] =
     await Promise.all([
       prisma.mentorAssignment.findMany({
-        where: { cohortId: profile.cohortId },
+        where: assignmentsForStudentWhere(profile),
         include: { mentor: true },
       }),
       prisma.session.findMany({
@@ -67,7 +68,7 @@ export default async function StudentFeedbackPage() {
         ) : (
           <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
             You&apos;ll be able to rate mentors once one is assigned to your
-            cohort.
+            program.
           </p>
         )}
         <WebsiteFeedbackForm />

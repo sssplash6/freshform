@@ -21,7 +21,7 @@ export default async function MentorOnboardingPage() {
         </h1>
         <p className="mt-1.5 text-base text-gray-500">
           Tell us your full name so students and staff see who you are. An
-          admin will assign you to cohorts before you can log sessions.
+          admin will assign you to a program before you can log sessions.
         </p>
       </div>
       <div className="rounded-lg border border-mist bg-white p-6">

@@ -11,11 +11,12 @@ import { prisma } from "@/lib/prisma";
  * - Emails already in the User table (seeded staff, staff-created students,
  *   returning mentors/students) may sign in.
  * - Unknown emails on ALLOWED_MENTOR_DOMAIN self-register as UNASSIGNED
- *   mentors; an admin must assign them to cohorts before they can do
- *   anything.
+ *   mentors; an admin must assign them to a program before they can do
+ *   anything. (Admins normally register mentors directly instead.)
  * - All other unknown emails self-register as PENDING students: they pick
- *   their cohort during onboarding, then wait for an admin to approve them
- *   and allocate mentor hours before anything counts.
+ *   their program during onboarding, then wait for an admin to approve them
+ *   and allocate mentor hours before anything counts. (Staff-registered
+ *   emails skip this — they just confirm name + Telegram on first sign-in.)
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [

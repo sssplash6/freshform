@@ -9,13 +9,14 @@
 export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 
 /**
- * Programs are fixed for the MVP. Cohorts under each program are seeded as
- * starters; admins create students into them.
+ * Programs are fixed for the MVP. Only the Global Admissions Program has set
+ * cohorts (seeded as starters); students in the other programs belong to the
+ * program directly.
  */
 export const PROGRAMS: { name: string; cohorts: string[] }[] = [
-  { name: "Master's", cohorts: ["Cohort 1"] },
-  { name: "Admissions Program", cohorts: ["Cohort 1"] },
-  { name: "Global Support", cohorts: ["Cohort 1"] },
+  { name: "Global Admissions Program", cohorts: ["Cohort 1"] },
+  { name: "Flexible Program", cohorts: [] },
+  { name: "Master's Program", cohorts: [] },
 ];
 
 /**
@@ -40,39 +41,39 @@ export const STAFF_SEED: {
   },
   // ── Placeholders — replace with real people ──────────────────────────
   {
+    email: "leader.admissions@freshman.academy",
+    name: "Global Admissions Dept Leader (placeholder)",
+    role: "DEPT_LEADER",
+    program: "Global Admissions Program",
+  },
+  {
+    email: "leader.flexible@freshman.academy",
+    name: "Flexible Dept Leader (placeholder)",
+    role: "DEPT_LEADER",
+    program: "Flexible Program",
+  },
+  {
     email: "leader.masters@freshman.academy",
     name: "Master's Dept Leader (placeholder)",
     role: "DEPT_LEADER",
-    program: "Master's",
+    program: "Master's Program",
   },
   {
-    email: "leader.admissions@freshman.academy",
-    name: "Admissions Dept Leader (placeholder)",
-    role: "DEPT_LEADER",
-    program: "Admissions Program",
+    email: "sales.admissions@freshman.academy",
+    name: "Global Admissions Sales (placeholder)",
+    role: "SALES",
+    program: "Global Admissions Program",
   },
   {
-    email: "leader.global@freshman.academy",
-    name: "Global Support Dept Leader (placeholder)",
-    role: "DEPT_LEADER",
-    program: "Global Support",
+    email: "sales.flexible@freshman.academy",
+    name: "Flexible Sales (placeholder)",
+    role: "SALES",
+    program: "Flexible Program",
   },
   {
     email: "sales.masters@freshman.academy",
     name: "Master's Sales (placeholder)",
     role: "SALES",
-    program: "Master's",
-  },
-  {
-    email: "sales.admissions@freshman.academy",
-    name: "Admissions Sales (placeholder)",
-    role: "SALES",
-    program: "Admissions Program",
-  },
-  {
-    email: "sales.global@freshman.academy",
-    name: "Global Support Sales (placeholder)",
-    role: "SALES",
-    program: "Global Support",
+    program: "Master's Program",
   },
 ];

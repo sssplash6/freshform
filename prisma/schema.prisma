@@ -45,6 +45,9 @@ model Program {
   name    String   @unique
   cohorts Cohort[]
   staff   User[]
+
+  students          StudentProfile[]
+  mentorAssignments MentorAssignment[]
 }
 
 model Cohort {
@@ -59,31 +62,40 @@ model Cohort {
   @@unique([programId, name])
 }
 
-// A mentor's assignment to a cohort, including their Calendly booking link
-// for that cohort (links live on the pairing, not the mentor).
+// A mentor's assignment to a program — or to one cohort within it, for
+// programs that have cohorts (only Global Admissions) — including their
+// Calendly booking link for that pairing (links live on the pairing, not
+// the mentor). cohortId is null for program-wide assignments.
+// NOTE: SQLite treats NULLs as distinct in unique indexes, so uniqueness of
+// program-wide rows (cohortId null) is enforced in the assignMentor action.
 model MentorAssignment {
   id          String   @id @default(cuid())
   mentorId    String
-  cohortId    String
+  programId   String
+  cohortId    String?
   calendlyUrl String
   createdAt   DateTime @default(now())
 
-  mentor User   @relation("MentorUser", fields: [mentorId], references: [id])
-  cohort Cohort @relation(fields: [cohortId], references: [id])
+  mentor  User    @relation("MentorUser", fields: [mentorId], references: [id])
+  program Program @relation(fields: [programId], references: [id])
+  cohort  Cohort? @relation(fields: [cohortId], references: [id])
 
-  @@unique([mentorId, cohortId])
+  @@unique([mentorId, programId, cohortId])
 }
 
 model StudentProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  cohortId    String
-  createdById String // staff user who created the student, or the student themself (self-signup)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  programId        String
+  cohortId         String? // only set in programs that have cohorts (Global Admissions)
+  telegramUsername String? // collected during the student's first sign-in
+  createdById      String // staff user who created the student, or the student themself (self-signup)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   user             User                  @relation("StudentUser", fields: [userId], references: [id])
-  cohort           Cohort                @relation(fields: [cohortId], references: [id])
+  program          Program               @relation(fields: [programId], references: [id])
+  cohort           Cohort?               @relation(fields: [cohortId], references: [id])
   createdBy        User                  @relation("CreatedBy", fields: [createdById], references: [id])
   sessions         Session[]
   hourAllocations  HourAllocation[]

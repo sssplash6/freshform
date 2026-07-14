@@ -15,7 +15,7 @@ export function RemoveAssignmentButton({
     <form
       action={action}
       onSubmit={(e) => {
-        if (!confirm("Remove this mentor from the cohort?")) e.preventDefault();
+        if (!confirm("Remove this mentor assignment?")) e.preventDefault();
       }}
       className="inline"
     >

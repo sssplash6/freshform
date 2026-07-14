@@ -8,15 +8,18 @@ import type { StudentWithHours } from "@/lib/queries";
  * Students with derived hour totals (allotted = sum of per-mentor
  * allocations). Negative remaining renders red (overdraw is allowed but
  * warned). `manageBase` (admin only) links each row to its detail page where
- * approval and per-mentor allocations live.
+ * approval and per-mentor allocations live. `showCohort` is off for lists
+ * scoped to programs without cohorts.
  */
 export function StudentsTable({
   students,
   showProgram,
+  showCohort = true,
   manageBase,
 }: {
   students: StudentWithHours[];
   showProgram: boolean;
+  showCohort?: boolean;
   manageBase?: string;
 }) {
   if (students.length === 0) {
@@ -34,7 +37,8 @@ export function StudentsTable({
           <tr>
             <th className="px-4 py-3">Student</th>
             {showProgram && <th className="px-4 py-3">Program</th>}
-            <th className="px-4 py-3">Cohort</th>
+            {showCohort && <th className="px-4 py-3">Cohort</th>}
+            <th className="px-4 py-3">Telegram</th>
             <th className="px-4 py-3 text-right">Allotted</th>
             <th className="px-4 py-3 text-right">Completed</th>
             <th className="px-4 py-3 text-right">Remaining</th>
@@ -54,9 +58,14 @@ export function StudentsTable({
                 <div className="text-xs text-gray-500">{s.user.email}</div>
               </td>
               {showProgram && (
-                <td className="px-4 py-3">{s.cohort.program.name}</td>
+                <td className="px-4 py-3">{s.program.name}</td>
               )}
-              <td className="px-4 py-3">{s.cohort.name}</td>
+              {showCohort && (
+                <td className="px-4 py-3">{s.cohort?.name ?? "—"}</td>
+              )}
+              <td className="px-4 py-3">
+                {s.telegramUsername ? `@${s.telegramUsername}` : "—"}
+              </td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {formatHours(s.allottedHours)}
               </td>

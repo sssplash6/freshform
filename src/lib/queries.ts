@@ -17,9 +17,10 @@ export async function studentsWithHours(
     where,
     include: {
       user: true,
-      cohort: { include: { program: true } },
+      program: true,
+      cohort: true,
     },
-    orderBy: [{ cohort: { program: { name: "asc" } } }, { createdAt: "asc" }],
+    orderBy: [{ program: { name: "asc" } }, { createdAt: "asc" }],
   });
   const ids = profiles.map((p) => p.id);
 
@@ -58,22 +59,25 @@ export type StudentWithHours = Awaited<
   ReturnType<typeof studentsWithHours>
 >[number];
 
-/** The cohorts a mentor is assigned to, with booking links. */
+/**
+ * The programs (and, for Global Admissions, cohorts) a mentor is assigned
+ * to, with booking links. cohort is null for program-wide assignments.
+ */
 export async function mentorAssignments(mentorId: string) {
   return prisma.mentorAssignment.findMany({
     where: { mentorId },
-    include: { cohort: { include: { program: true } } },
+    include: { program: true, cohort: true },
     orderBy: { createdAt: "asc" },
   });
 }
 
 /**
- * The distinct mentors working in a program (i.e. assigned to any of its
- * cohorts) — the pool an admin may allocate a student's hours from.
+ * The distinct mentors working in a program (assigned program-wide or to any
+ * of its cohorts) — the pool an admin may allocate a student's hours from.
  */
 export async function mentorsInProgram(programId: string) {
   const assignments = await prisma.mentorAssignment.findMany({
-    where: { cohort: { programId } },
+    where: { programId },
     include: { mentor: true },
     orderBy: { createdAt: "asc" },
   });
@@ -83,11 +87,47 @@ export async function mentorsInProgram(programId: string) {
     .filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
 }
 
-/** All cohorts grouped for select inputs, optionally limited to a program. */
-export async function cohortOptions(programId?: string) {
-  return prisma.cohort.findMany({
-    where: programId ? { programId } : {},
-    include: { program: true },
-    orderBy: [{ program: { name: "asc" } }, { name: "asc" }],
+/**
+ * The mentor assignments visible to one student: program-wide assignments in
+ * their program, plus their own cohort's assignments if they're in one.
+ */
+export function assignmentsForStudentWhere(profile: {
+  programId: string;
+  cohortId: string | null;
+}): Prisma.MentorAssignmentWhereInput {
+  return {
+    programId: profile.programId,
+    OR: [
+      { cohortId: null },
+      ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+    ],
+  };
+}
+
+/**
+ * All programs with their cohorts, for enrollment/assignment selects. Only
+ * programs with cohorts (Global Admissions) require picking one.
+ */
+export async function programOptions() {
+  return prisma.program.findMany({
+    include: { cohorts: { orderBy: { name: "asc" } } },
+    orderBy: { name: "asc" },
   });
+}
+
+/** Shape passed to the client-side enrollment forms. */
+export type ProgramOption = {
+  id: string;
+  name: string;
+  cohorts: { id: string; name: string }[];
+};
+
+export function toProgramOptions(
+  programs: Awaited<ReturnType<typeof programOptions>>
+): ProgramOption[] {
+  return programs.map((p) => ({
+    id: p.id,
+    name: p.name,
+    cohorts: p.cohorts.map((c) => ({ id: c.id, name: c.name })),
+  }));
 }

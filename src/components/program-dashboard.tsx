@@ -19,7 +19,7 @@ export async function ProgramDashboard({
 }) {
   const [program, students] = await Promise.all([
     prisma.program.findUnique({ where: { id: programId } }),
-    studentsWithHours({ cohort: { programId } }),
+    studentsWithHours({ programId }),
   ]);
 
   if (!program) {
@@ -40,10 +40,12 @@ export async function ProgramDashboard({
     { allotted: 0, completed: 0, remaining: 0 }
   );
 
+  // Programs without cohorts (all but Global Admissions) get one flat table.
   const byCohort = new Map<string, StudentWithHours[]>();
   for (const s of students) {
-    if (!byCohort.has(s.cohort.name)) byCohort.set(s.cohort.name, []);
-    byCohort.get(s.cohort.name)!.push(s);
+    const cohort = s.cohort?.name ?? "";
+    if (!byCohort.has(cohort)) byCohort.set(cohort, []);
+    byCohort.get(cohort)!.push(s);
   }
 
   return (
@@ -76,11 +78,17 @@ export async function ProgramDashboard({
         </p>
       ) : (
         [...byCohort.entries()].map(([cohortName, cohortStudents]) => (
-          <section key={cohortName}>
-            <h2 className="mb-1 text-sm font-medium text-gray-600">
-              {cohortName}
-            </h2>
-            <StudentsTable students={cohortStudents} showProgram={false} />
+          <section key={cohortName || "program"}>
+            {cohortName && (
+              <h2 className="mb-1 text-sm font-medium text-gray-600">
+                {cohortName}
+              </h2>
+            )}
+            <StudentsTable
+              students={cohortStudents}
+              showProgram={false}
+              showCohort={Boolean(cohortName)}
+            />
           </section>
         ))
       )}

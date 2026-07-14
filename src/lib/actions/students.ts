@@ -13,14 +13,67 @@ import {
   parseHoursField,
   type ActionState,
 } from "@/lib/actions/shared";
+import type { Cohort, Program } from "@/generated/prisma/client";
 
 const STAFF_ROLES: string[] = [ROLES.ADMIN, ROLES.DEPT_LEADER, ROLES.SALES];
 
+/** "Program" or "Program / Cohort" display label. */
+function enrollmentLabel(programName: string, cohortName?: string | null) {
+  return cohortName ? `${programName} / ${cohortName}` : programName;
+}
+
+const TELEGRAM_RE = /^[A-Za-z0-9_]{5,32}$/;
+
 /**
- * Create a student directly (email + cohort), skipping the self-signup
- * approval queue. Admin may create anywhere; Dept Leader / Sales only inside
- * their own program. Hours are NOT granted here — an admin allocates them
- * per mentor afterwards.
+ * Normalize a Telegram username field ("@name" or "name"). Returns the bare
+ * username or an error message.
+ */
+function parseTelegramField(
+  raw: FormDataEntryValue | null
+): { value: string } | { error: string } {
+  const value = String(raw ?? "")
+    .trim()
+    .replace(/^@/, "");
+  if (!TELEGRAM_RE.test(value)) {
+    return {
+      error:
+        "Enter your Telegram username (5–32 letters, digits or underscores).",
+    };
+  }
+  return { value };
+}
+
+/**
+ * Resolve the program (+ cohort, required only in programs that have
+ * cohorts) submitted by an enrollment form.
+ */
+async function resolveEnrollment(
+  formData: FormData
+): Promise<
+  | { error: string }
+  | { program: Program; cohort: Cohort | null }
+> {
+  const programId = String(formData.get("programId") ?? "");
+  const program = await prisma.program.findUnique({
+    where: { id: programId },
+    include: { cohorts: true },
+  });
+  if (!program) return { error: "Pick a program." };
+
+  if (program.cohorts.length === 0) return { program, cohort: null };
+
+  const cohortId = String(formData.get("cohortId") ?? "");
+  const cohort = program.cohorts.find((c) => c.id === cohortId);
+  if (!cohort) return { error: `Pick a cohort in ${program.name}.` };
+  return { program, cohort };
+}
+
+/**
+ * Register a student's email into a program (+ cohort where the program has
+ * them), skipping the self-signup approval queue. Admin may create anywhere;
+ * Dept Leader / Sales only inside their own program. The student completes
+ * their profile (full name, Telegram username) on first sign-in; hours are
+ * NOT granted here — an admin allocates them per mentor afterwards.
  */
 export async function createStudent(
   _prev: ActionState,
@@ -37,14 +90,11 @@ export async function createStudent(
   }
   const name = String(formData.get("name") ?? "").trim() || null;
 
-  const cohortId = String(formData.get("cohortId") ?? "");
-  const cohort = await prisma.cohort.findUnique({
-    where: { id: cohortId },
-    include: { program: true },
-  });
-  if (!cohort) return { ok: false, error: "Pick a cohort." };
+  const enrollment = await resolveEnrollment(formData);
+  if ("error" in enrollment) return { ok: false, error: enrollment.error };
+  const { program, cohort } = enrollment;
 
-  if (actor.role !== ROLES.ADMIN && cohort.programId !== actor.programId) {
+  if (actor.role !== ROLES.ADMIN && program.id !== actor.programId) {
     return {
       ok: false,
       error: "You can only create students in your own program.",
@@ -68,7 +118,8 @@ export async function createStudent(
     await tx.studentProfile.create({
       data: {
         userId: studentUser.id,
-        cohortId: cohort.id,
+        programId: program.id,
+        cohortId: cohort?.id ?? null,
         createdById: actor.id,
       },
     });
@@ -77,14 +128,53 @@ export async function createStudent(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Student ${email} created in ${cohort.program.name} / ${cohort.name}.`,
+    message: `Student ${email} created in ${enrollmentLabel(program.name, cohort?.name)}. They'll confirm their name and Telegram username when they first sign in.`,
   };
 }
 
 /**
- * Self-signup step 2: a PENDING student picks their cohort (and confirms
- * their name). Creates the profile and notifies every admin that an
- * approval is waiting.
+ * First sign-in step for staff-registered students: confirm full name and
+ * Telegram username, completing the profile the staff member created.
+ */
+export async function completeStudentProfile(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.STUDENT) {
+    return { ok: false, error: "Only students can complete this step." };
+  }
+
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId: actor.id },
+  });
+  if (!profile) {
+    return { ok: false, error: "Complete your registration first." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Enter your full name." };
+
+  const telegram = parseTelegramField(formData.get("telegramUsername"));
+  if ("error" in telegram) return { ok: false, error: telegram.error };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: actor.id }, data: { name } });
+    await tx.studentProfile.update({
+      where: { id: profile.id },
+      data: { telegramUsername: telegram.value },
+    });
+  });
+
+  revalidatePath("/", "layout");
+  redirect("/student");
+}
+
+/**
+ * Self-signup step 2 (fallback for emails staff didn't pre-register): a
+ * PENDING student picks their program (+ cohort where the program has them)
+ * and confirms their name and Telegram username. Creates the profile and
+ * notifies every admin that an approval is waiting.
  */
 export async function completeOnboarding(
   _prev: ActionState,
@@ -105,12 +195,12 @@ export async function completeOnboarding(
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter your full name." };
 
-  const cohortId = String(formData.get("cohortId") ?? "");
-  const cohort = await prisma.cohort.findUnique({
-    where: { id: cohortId },
-    include: { program: true },
-  });
-  if (!cohort) return { ok: false, error: "Pick your cohort." };
+  const telegram = parseTelegramField(formData.get("telegramUsername"));
+  if ("error" in telegram) return { ok: false, error: telegram.error };
+
+  const enrollment = await resolveEnrollment(formData);
+  if ("error" in enrollment) return { ok: false, error: enrollment.error };
+  const { program, cohort } = enrollment;
 
   const admins = await prisma.user.findMany({
     where: { role: ROLES.ADMIN },
@@ -125,7 +215,9 @@ export async function completeOnboarding(
     await tx.studentProfile.create({
       data: {
         userId: actor.id,
-        cohortId: cohort.id,
+        programId: program.id,
+        cohortId: cohort?.id ?? null,
+        telegramUsername: telegram.value,
         createdById: actor.id,
       },
     });
@@ -133,7 +225,7 @@ export async function completeOnboarding(
       data: admins.map((admin) => ({
         userId: admin.id,
         type: NOTIFICATION_TYPES.STUDENT_SIGNUP,
-        message: `${name} (${actor.email}) signed up for ${cohort.program.name} / ${cohort.name} and is awaiting approval.`,
+        message: `${name} (${actor.email}) signed up for ${enrollmentLabel(program.name, cohort?.name)} and is awaiting approval.`,
       })),
     });
   });
@@ -158,7 +250,7 @@ export async function approveStudent(
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
-    include: { user: true, cohort: { include: { program: true } } },
+    include: { user: true, program: true, cohort: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
   if (profile.user.status !== USER_STATUS.PENDING) {
@@ -174,7 +266,7 @@ export async function approveStudent(
       data: {
         userId: profile.userId,
         type: NOTIFICATION_TYPES.ACCOUNT_APPROVED,
-        message: `Your registration for ${profile.cohort.program.name} / ${profile.cohort.name} was approved. You'll be notified as mentor hours are allocated to you.`,
+        message: `Your registration for ${enrollmentLabel(profile.program.name, profile.cohort?.name)} was approved. You'll be notified as mentor hours are allocated to you.`,
       },
     });
   });
@@ -252,7 +344,7 @@ export async function setMentorAllocation(
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
-    include: { user: true, cohort: true },
+    include: { user: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
 
@@ -261,15 +353,16 @@ export async function setMentorAllocation(
     return { ok: false, error: "Pick a mentor." };
   }
 
-  // The mentor must work in the student's program (assigned to any of its
-  // cohorts) — hours can only be granted from mentors within the program.
+  // The mentor must work in the student's program (assigned program-wide or
+  // to any of its cohorts) — hours can only be granted from mentors within
+  // the program.
   const inProgram = await prisma.mentorAssignment.findFirst({
-    where: { mentorId, cohort: { programId: profile.cohort.programId } },
+    where: { mentorId, programId: profile.programId },
   });
   if (!inProgram) {
     return {
       ok: false,
-      error: "That mentor isn't assigned to any cohort in the student's program.",
+      error: "That mentor isn't assigned to the student's program.",
     };
   }
 

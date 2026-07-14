@@ -27,7 +27,8 @@ export default async function AdminStudentDetailPage({
     where: { id },
     include: {
       user: true,
-      cohort: { include: { program: true } },
+      program: true,
+      cohort: true,
       allotmentChanges: {
         include: { mentor: true, changedBy: true },
         orderBy: { createdAt: "desc" },
@@ -39,7 +40,7 @@ export default async function AdminStudentDetailPage({
 
   const isPending = profile.user.status === USER_STATUS.PENDING;
   const [mentors, hours] = await Promise.all([
-    mentorsInProgram(profile.cohort.programId),
+    mentorsInProgram(profile.programId),
     allocationSummary(profile.id),
   ]);
   const byMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
@@ -63,8 +64,24 @@ export default async function AdminStudentDetailPage({
           )}
         </div>
         <p className="mt-1.5 text-base text-gray-500">
-          {profile.user.email} · {profile.cohort.program.name} /{" "}
-          {profile.cohort.name} · registered {formatDate(profile.createdAt)}
+          {profile.user.email} · {profile.program.name}
+          {profile.cohort ? ` / ${profile.cohort.name}` : ""}
+          {profile.telegramUsername ? (
+            <>
+              {" · Telegram "}
+              <a
+                href={`https://t.me/${profile.telegramUsername}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+              >
+                @{profile.telegramUsername}
+              </a>
+            </>
+          ) : (
+            " · Telegram not set yet"
+          )}{" "}
+          · registered {formatDate(profile.createdAt)}
         </p>
       </div>
 
@@ -104,9 +121,8 @@ export default async function AdminStudentDetailPage({
         </h2>
         {mentors.length === 0 ? (
           <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No mentors are assigned to cohorts in{" "}
-            {profile.cohort.program.name} yet. Assign mentors first, then
-            allocate hours here.
+            No mentors are assigned to {profile.program.name} yet. Assign
+            mentors first, then allocate hours here.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-mist bg-white">

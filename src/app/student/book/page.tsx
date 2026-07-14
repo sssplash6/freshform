@@ -6,18 +6,19 @@ import { requireRole } from "@/lib/dal";
 import { formatHours } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
+import { assignmentsForStudentWhere } from "@/lib/queries";
 
 /**
  * Booking is entirely external Calendly links (spec §8) — this page lists
- * the mentors assigned to the student's cohort with each mentor's link and
- * the hours the student still holds with them.
+ * the mentors assigned to the student's program (or cohort) with each
+ * mentor's link and the hours the student still holds with them.
  */
 export default async function StudentBookPage() {
   const user = await requireRole(ROLES.STUDENT);
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
-    include: { cohort: { include: { program: true } } },
+    include: { program: true, cohort: true },
   });
 
   // Not onboarded / not approved yet — the home page explains what's next.
@@ -25,7 +26,7 @@ export default async function StudentBookPage() {
 
   const [assignments, hours] = await Promise.all([
     prisma.mentorAssignment.findMany({
-      where: { cohortId: profile.cohortId },
+      where: assignmentsForStudentWhere(profile),
       include: { mentor: true },
       orderBy: { createdAt: "asc" },
     }),
@@ -40,16 +41,16 @@ export default async function StudentBookPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-navy">Book a session</h1>
         <p className="mt-1.5 text-base text-gray-500">
-          Mentors for {profile.cohort.program.name} / {profile.cohort.name}.
-          Booking happens on the mentor&apos;s calendar; the session appears in
-          your history and draws down your hours with that mentor after
-          the mentor logs it.
+          Mentors for {profile.program.name}
+          {profile.cohort ? ` / ${profile.cohort.name}` : ""}. Booking happens
+          on the mentor&apos;s calendar; the session appears in your history
+          and draws down your hours with that mentor after the mentor logs it.
         </p>
       </div>
 
       {assignments.length === 0 ? (
         <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No mentors are assigned to your cohort yet. Check back soon.
+          No mentors are assigned to your program yet. Check back soon.
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">

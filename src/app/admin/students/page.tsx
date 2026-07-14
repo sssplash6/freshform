@@ -4,11 +4,15 @@ import { CreateStudentForm } from "@/components/forms/create-student-form";
 import { StudentsTable } from "@/components/students-table";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { cohortOptions, studentsWithHours } from "@/lib/queries";
+import {
+  programOptions,
+  studentsWithHours,
+  toProgramOptions,
+} from "@/lib/queries";
 
 export default async function AdminStudentsPage() {
-  const [cohorts, students] = await Promise.all([
-    cohortOptions(),
+  const [programs, students] = await Promise.all([
+    programOptions(),
     studentsWithHours(),
   ]);
   const pending = students.filter(
@@ -39,8 +43,10 @@ export default async function AdminStudentsPage() {
                     {s.user.name ?? s.user.email}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {s.user.email} · {s.cohort.program.name} / {s.cohort.name}{" "}
-                    · signed up {formatDate(s.createdAt)}
+                    {s.user.email} · {s.program.name}
+                    {s.cohort ? ` / ${s.cohort.name}` : ""}
+                    {s.telegramUsername ? ` · @${s.telegramUsername}` : ""} ·
+                    signed up {formatDate(s.createdAt)}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -58,12 +64,7 @@ export default async function AdminStudentsPage() {
         </section>
       )}
 
-      <CreateStudentForm
-        cohorts={cohorts.map((c) => ({
-          id: c.id,
-          label: `${c.program.name} / ${c.name}`,
-        }))}
-      />
+      <CreateStudentForm programs={toProgramOptions(programs)} />
       <StudentsTable
         students={students}
         showProgram

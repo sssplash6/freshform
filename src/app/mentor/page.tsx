@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { Chip } from "@/components/chip";
+import { ArrowLink } from "@/components/arrow-link";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
@@ -17,7 +20,7 @@ export default async function MentorHomePage() {
           Welcome, {user.name ?? user.email}
         </h1>
         <p className="mt-2 text-sm text-gray-600">
-          Your mentor account is created but not yet assigned to any cohorts.
+          Your mentor account is created but not yet assigned to a program.
           An admin needs to assign you before you can see students or log
           sessions, so check back soon.
         </p>
@@ -34,10 +37,7 @@ export default async function MentorHomePage() {
         where: { mentorId: user.id },
         include: {
           student: {
-            include: {
-              user: true,
-              cohort: { include: { program: true } },
-            },
+            include: { user: true, program: true, cohort: true },
           },
         },
         orderBy: { createdAt: "asc" },
@@ -68,14 +68,26 @@ export default async function MentorHomePage() {
     };
   });
 
+  // One island per program (item 6): mentors working across programs see
+  // each program's students in its own box.
+  const byProgram = new Map<string, typeof students>();
+  for (const s of students) {
+    const key = s.profile.program.name;
+    if (!byProgram.has(key)) byProgram.set(key, []);
+    byProgram.get(key)!.push(s);
+  }
+  const programCount = new Set(assignments.map((a) => a.programId)).size;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-navy">My students</h1>
         <p className="mt-1.5 text-base text-gray-500">
-          Cohorts:{" "}
+          Assigned to:{" "}
           {assignments
-            .map((a) => `${a.cohort.program.name} / ${a.cohort.name}`)
+            .map((a) =>
+              a.cohort ? `${a.program.name} / ${a.cohort.name}` : a.program.name
+            )
             .join(", ") || "none"}
         </p>
       </div>
@@ -88,7 +100,7 @@ export default async function MentorHomePage() {
           value={formatHours(delivered._sum.hours ?? 0)}
           tone="brand"
         />
-        <StatCard label="Cohorts" value={String(assignments.length)} />
+        <StatCard label="Programs" value={String(programCount)} />
       </StatCardGrid>
 
       <LogSessionForm
@@ -96,7 +108,7 @@ export default async function MentorHomePage() {
           .filter((s) => s.approved)
           .map((s) => ({
             profileId: s.profile.id,
-            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.cohort.name})`,
+            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
           }))}
       />
 
@@ -106,57 +118,95 @@ export default async function MentorHomePage() {
           those.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-mist bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Program</th>
-                <th className="px-4 py-3">Cohort</th>
-                <th className="px-4 py-3 text-right">Allocated to you</th>
-                <th className="px-4 py-3 text-right">Completed</th>
-                <th className="px-4 py-3 text-right">Remaining</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-mist/60">
-              {students.map((s) => (
-                <tr
-                  key={s.profile.id}
-                  className="transition-colors hover:bg-mist/20"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      {s.profile.user.name ?? "—"}
-                      {!s.approved && (
-                        <Chip tone="amber">Pending approval</Chip>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {s.profile.user.email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {s.profile.cohort.program.name}
-                  </td>
-                  <td className="px-4 py-3">{s.profile.cohort.name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {formatHours(s.allocated)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {formatHours(s.completed)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 text-right font-medium tabular-nums ${
-                      s.remaining < 0 ? "text-red-700" : "text-navy"
-                    }`}
-                  >
-                    {formatHours(s.remaining)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        [...byProgram.entries()].map(([programName, programStudents]) => (
+          <section
+            key={programName}
+            className="rounded-lg border border-mist bg-white"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
+              <h2 className="text-base font-semibold text-navy">
+                {programName}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {programStudents.length} student
+                {programStudents.length === 1 ? "" : "s"} ·{" "}
+                {formatHours(
+                  programStudents.reduce((sum, s) => sum + s.remaining, 0)
+                )}{" "}
+                hours remaining with you
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3">Student</th>
+                    <th className="px-4 py-3">Telegram</th>
+                    <th className="px-4 py-3">Cohort</th>
+                    <th className="px-4 py-3 text-right">Allocated to you</th>
+                    <th className="px-4 py-3 text-right">Completed</th>
+                    <th className="px-4 py-3 text-right">Remaining</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-mist/60">
+                  {programStudents.map((s) => (
+                    <tr
+                      key={s.profile.id}
+                      className="transition-colors hover:bg-mist/20"
+                    >
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/mentor/students/${s.profile.id}`}
+                          className="group block"
+                        >
+                          <span className="flex items-center gap-2 font-medium text-gray-900 group-hover:text-navy">
+                            {s.profile.user.name ?? "—"}
+                            {!s.approved && (
+                              <Chip tone="amber">Pending approval</Chip>
+                            )}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            {s.profile.user.email}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        {s.profile.telegramUsername
+                          ? `@${s.profile.telegramUsername}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {s.profile.cohort?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {formatHours(s.allocated)}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {formatHours(s.completed)}
+                      </td>
+                      <td
+                        className={`px-4 py-3 text-right font-medium tabular-nums ${
+                          s.remaining < 0 ? "text-red-700" : "text-navy"
+                        }`}
+                      >
+                        {formatHours(s.remaining)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <ArrowLink
+                          href={`/mentor/students/${s.profile.id}`}
+                          className="text-[13px]"
+                        >
+                          View
+                        </ArrowLink>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))
       )}
     </div>
   );
