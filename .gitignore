@@ -37,6 +37,7 @@ yarn-error.log*
 # SQLite database files
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db.backup*
 
 # vercel
 .vercel
