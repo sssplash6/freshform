@@ -9,13 +9,14 @@ import type { StudentWithHours } from "@/lib/queries";
  * allocations). Negative remaining renders red (overdraw is allowed but
  * warned). `manageBase` (admin only) links each row to its detail page where
  * approval and per-mentor allocations live. `showCohort` is off for lists
- * scoped to programs without cohorts. `framed=false` drops the outer border
- * for tables embedded in a program island box.
+ * scoped to programs without cohorts — programs are flat by default, so the
+ * column is opt-in. `framed=false` drops the outer border for tables
+ * embedded in a program island box.
  */
 export function StudentsTable({
   students,
   showProgram,
-  showCohort = true,
+  showCohort = false,
   manageBase,
   framed = true,
 }: {

@@ -159,7 +159,6 @@ export default async function MentorHomePage() {
                   <tr>
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3">Telegram</th>
-                    <th className="px-4 py-3">Cohort</th>
                     <th className="px-4 py-3 text-right">Allocated to you</th>
                     <th className="px-4 py-3 text-right">Completed</th>
                     <th className="px-4 py-3 text-right">Remaining</th>
@@ -193,9 +192,6 @@ export default async function MentorHomePage() {
                         {s.profile.telegramUsername
                           ? `@${s.profile.telegramUsername}`
                           : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.profile.cohort?.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.allocated)}
