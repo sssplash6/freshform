@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Chip } from "@/components/chip";
 import { ArrowLink } from "@/components/arrow-link";
+import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
@@ -102,6 +103,18 @@ export default async function MentorHomePage() {
         />
         <StatCard label="Programs" value={String(programCount)} />
       </StatCardGrid>
+
+      {assignments.length > 0 && (
+        <BookingLinksForm
+          assignments={assignments.map((a) => ({
+            id: a.id,
+            label: a.cohort
+              ? `${a.program.name} / ${a.cohort.name}`
+              : a.program.name,
+            calendlyUrl: a.calendlyUrl,
+          }))}
+        />
+      )}
 
       <LogSessionForm
         students={students

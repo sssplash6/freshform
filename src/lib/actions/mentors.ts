@@ -65,7 +65,7 @@ async function resolveAssignmentTarget(target: string) {
 /**
  * Admin registers a mentor directly (the mentor pool is small): email, full
  * name, and the program — or cohort, where the program has them — they work
- * in, with their Calendly link. The mentor then just signs in with Google.
+ * in. The mentor then signs in with Google and sets their own booking link.
  */
 export async function createMentor(
   _prev: ActionState,
@@ -82,17 +82,6 @@ export async function createMentor(
   }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the mentor's full name." };
-
-  const calendlyUrl = String(formData.get("calendlyUrl") ?? "").trim();
-  let url: URL;
-  try {
-    url = new URL(calendlyUrl);
-  } catch {
-    return { ok: false, error: "Enter a valid booking URL." };
-  }
-  if (url.protocol !== "https:") {
-    return { ok: false, error: "The booking URL must use https." };
-  }
 
   const target = await resolveAssignmentTarget(
     String(formData.get("target") ?? "")
@@ -118,7 +107,6 @@ export async function createMentor(
         mentorId: mentor.id,
         programId: target.programId,
         cohortId: target.cohortId,
-        calendlyUrl,
       },
     });
   });
@@ -126,16 +114,16 @@ export async function createMentor(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Mentor ${name} (${email}) registered in ${target.label}. They can sign in with Google right away.`,
+    message: `Mentor ${name} (${email}) registered in ${target.label}. They can sign in with Google right away and set their booking link.`,
   };
 }
 
 /**
  * Assign a mentor to a program — or to one cohort within it, for programs
- * that have cohorts — with their Calendly link for that pairing (spec §8:
- * links live on the pairing). The target comes as "p:<programId>" or
- * "c:<cohortId>". Re-assigning updates the link. A first assignment
- * activates an UNASSIGNED mentor.
+ * that have cohorts. The target comes as "p:<programId>" or "c:<cohortId>".
+ * The mentor sets the booking link for the pairing themselves afterwards
+ * (spec §8: links live on the pairing). A first assignment activates an
+ * UNASSIGNED mentor.
  */
 export async function assignMentor(
   _prev: ActionState,
@@ -147,18 +135,6 @@ export async function assignMentor(
   }
 
   const mentorId = String(formData.get("mentorId") ?? "");
-  const calendlyUrl = String(formData.get("calendlyUrl") ?? "").trim();
-
-  let url: URL;
-  try {
-    url = new URL(calendlyUrl);
-  } catch {
-    return { ok: false, error: "Enter a valid booking URL." };
-  }
-  if (url.protocol !== "https:") {
-    return { ok: false, error: "The booking URL must use https." };
-  }
-
   const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
   if (!mentor || mentor.role !== ROLES.MENTOR) {
     return { ok: false, error: "Pick a mentor." };
@@ -170,22 +146,22 @@ export async function assignMentor(
   if (!target) return { ok: false, error: "Pick a program or cohort." };
   const { programId, cohortId, label } = target;
 
+  // Not an upsert: SQLite unique indexes treat NULL cohortIds as distinct,
+  // so program-wide pairings are deduplicated here instead.
+  const existing = await prisma.mentorAssignment.findFirst({
+    where: { mentorId, programId, cohortId },
+  });
+  if (existing) {
+    return {
+      ok: true,
+      message: `${mentor.name ?? mentor.email} is already assigned to ${label}.`,
+    };
+  }
+
   await prisma.$transaction(async (tx) => {
-    // Not an upsert: SQLite unique indexes treat NULL cohortIds as distinct,
-    // so program-wide pairings are deduplicated here instead.
-    const existing = await tx.mentorAssignment.findFirst({
-      where: { mentorId, programId, cohortId },
+    await tx.mentorAssignment.create({
+      data: { mentorId, programId, cohortId },
     });
-    if (existing) {
-      await tx.mentorAssignment.update({
-        where: { id: existing.id },
-        data: { calendlyUrl },
-      });
-    } else {
-      await tx.mentorAssignment.create({
-        data: { mentorId, programId, cohortId, calendlyUrl },
-      });
-    }
     if (mentor.status === USER_STATUS.UNASSIGNED) {
       await tx.user.update({
         where: { id: mentorId },
@@ -197,8 +173,53 @@ export async function assignMentor(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${mentor.name ?? mentor.email} assigned to ${label}.`,
+    message: `${mentor.name ?? mentor.email} assigned to ${label}. They set their booking link from their mentor page.`,
   };
+}
+
+/**
+ * A mentor sets or updates the booking link on ONE of their own assignments
+ * (links are per pairing; admins create the pairing but never set the link).
+ */
+export async function setBookingLink(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.MENTOR) {
+    return { ok: false, error: "Only mentors can set their booking link." };
+  }
+
+  const assignmentId = String(formData.get("assignmentId") ?? "");
+  const assignment = await prisma.mentorAssignment.findUnique({
+    where: { id: assignmentId },
+    include: { program: true, cohort: true },
+  });
+  if (!assignment || assignment.mentorId !== actor.id) {
+    return { ok: false, error: "You can only edit your own booking links." };
+  }
+
+  const calendlyUrl = String(formData.get("calendlyUrl") ?? "").trim();
+  let url: URL;
+  try {
+    url = new URL(calendlyUrl);
+  } catch {
+    return { ok: false, error: "Enter a valid booking URL." };
+  }
+  if (url.protocol !== "https:") {
+    return { ok: false, error: "The booking URL must use https." };
+  }
+
+  await prisma.mentorAssignment.update({
+    where: { id: assignment.id },
+    data: { calendlyUrl },
+  });
+
+  revalidatePath("/", "layout");
+  const label = assignment.cohort
+    ? `${assignment.program.name} / ${assignment.cohort.name}`
+    : assignment.program.name;
+  return { ok: true, message: `Booking link for ${label} saved.` };
 }
 
 /** Remove a mentor-program/cohort assignment (admin correction). */

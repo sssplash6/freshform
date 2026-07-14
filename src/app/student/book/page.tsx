@@ -88,15 +88,22 @@ export default async function StudentBookPage() {
                     )}
                   </p>
                 </div>
-                <a
-                  href={a.calendlyUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep"
-                >
-                  Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"}
-                  <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </a>
+                {a.calendlyUrl ? (
+                  <a
+                    href={a.calendlyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-brand-deep"
+                  >
+                    Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"}
+                    <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </a>
+                ) : (
+                  <p className="mt-5 flex min-h-11 items-center justify-center rounded-md border border-dashed border-mist px-4 py-2.5 text-center text-sm text-gray-500">
+                    No booking link yet — reach them on Telegram or check back
+                    soon.
+                  </p>
+                )}
               </li>
             );
           })}

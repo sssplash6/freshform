@@ -139,6 +139,7 @@ export default async function MentorStudentDetailPage({
                 <tr>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3 text-right">Hours</th>
+                  <th className="px-4 py-3">Task</th>
                   <th className="px-4 py-3">Note</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
@@ -153,6 +154,9 @@ export default async function MentorStudentDetailPage({
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.hours)}
+                      </td>
+                      <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                        {s.task ?? "—"}
                       </td>
                       <td className="max-w-56 truncate px-4 py-3 text-gray-600">
                         {s.note ?? "—"}

@@ -101,14 +101,20 @@ export default async function AdminMentorsPage() {
                       {a.cohort ? ` / ${a.cohort.name}` : ""}
                     </td>
                     <td className="max-w-64 truncate px-4 py-3">
-                      <a
-                        href={a.calendlyUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
-                      >
-                        {a.calendlyUrl}
-                      </a>
+                      {a.calendlyUrl ? (
+                        <a
+                          href={a.calendlyUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+                        >
+                          {a.calendlyUrl}
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">
+                          Not set by the mentor yet
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <RemoveAssignmentButton assignmentId={a.id} />

@@ -12,8 +12,8 @@ const inputClass =
 
 /**
  * Admin registers a mentor directly: email, full name, and the program (or
- * cohort) they work in with their Calendly link. The mentor signs in with
- * Google afterwards — no self-signup step needed.
+ * cohort) they work in. The mentor signs in with Google afterwards and sets
+ * their own booking link — no self-signup step needed.
  */
 export function CreateMentorForm({
   programs,
@@ -40,10 +40,10 @@ export function CreateMentorForm({
     >
       <h2 className="text-base font-semibold text-navy">Register a mentor</h2>
       <p className="mt-1 text-xs text-gray-500">
-        The mentor signs in with this email using Google — nothing else to set
-        up on their side.
+        The mentor signs in with this email using Google and sets their own
+        booking link from their mentor page.
       </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block text-sm">
           <span className="text-gray-600">Email *</span>
           <input
@@ -68,16 +68,6 @@ export function CreateMentorForm({
             />
           </div>
         </div>
-        <label className="block text-sm">
-          <span className="text-gray-600">Calendly URL *</span>
-          <input
-            name="calendlyUrl"
-            type="url"
-            required
-            placeholder="https://calendly.com/…"
-            className={inputClass}
-          />
-        </label>
       </div>
       <div className="mt-3">
         <button

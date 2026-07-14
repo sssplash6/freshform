@@ -7,9 +7,6 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
 import type { ProgramOption } from "@/lib/queries";
 
-const inputClass =
-  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
-
 /**
  * Assign a mentor to a whole program, or to one cohort in programs that
  * have them (Global Admissions). Target values are "p:<programId>" /
@@ -44,10 +41,10 @@ export function AssignMentorForm({
         Assign a mentor to a program
       </h2>
       <p className="mt-1 text-xs text-gray-500">
-        The Calendly link is per pairing. Re-assigning an existing pairing
-        updates its link.
+        The mentor sets their own booking link for each program they&apos;re
+        assigned to, from their mentor page.
       </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="block text-sm">
           <span className="text-gray-600">Mentor *</span>
           <div className="mt-0.5">
@@ -68,16 +65,6 @@ export function AssignMentorForm({
             />
           </div>
         </div>
-        <label className="block text-sm">
-          <span className="text-gray-600">Calendly URL *</span>
-          <input
-            name="calendlyUrl"
-            type="url"
-            required
-            placeholder="https://calendly.com/…"
-            className={inputClass}
-          />
-        </label>
       </div>
       <div className="mt-3">
         <button

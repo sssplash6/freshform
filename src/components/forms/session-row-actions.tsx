@@ -14,7 +14,13 @@ const inputClass =
 export function SessionRowActions({
   session,
 }: {
-  session: { id: string; hours: number; date: string; note: string | null };
+  session: {
+    id: string;
+    hours: number;
+    date: string;
+    task: string | null;
+    note: string | null;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
@@ -65,6 +71,15 @@ export function SessionRowActions({
                 required
                 defaultValue={session.date}
                 className={`${inputClass} block`}
+              />
+            </label>
+            <label className="block flex-1 text-xs text-gray-600">
+              Task focused on
+              <input
+                name="task"
+                type="text"
+                defaultValue={session.task ?? ""}
+                className={`${inputClass} block w-full`}
               />
             </label>
             <label className="block flex-1 text-xs text-gray-600">

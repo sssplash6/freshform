@@ -63,9 +63,10 @@ model Cohort {
 }
 
 // A mentor's assignment to a program — or to one cohort within it, for
-// programs that have cohorts (only Global Admissions) — including their
-// Calendly booking link for that pairing (links live on the pairing, not
-// the mentor). cohortId is null for program-wide assignments.
+// programs that have cohorts (only Global Admissions). cohortId is null for
+// program-wide assignments. The Calendly booking link lives on the pairing
+// but is set by the MENTOR (admins only create the pairing); it stays null
+// until the mentor fills it in.
 // NOTE: SQLite treats NULLs as distinct in unique indexes, so uniqueness of
 // program-wide rows (cohortId null) is enforced in the assignMentor action.
 model MentorAssignment {
@@ -73,7 +74,7 @@ model MentorAssignment {
   mentorId    String
   programId   String
   cohortId    String?
-  calendlyUrl String
+  calendlyUrl String?
   createdAt   DateTime @default(now())
 
   mentor  User    @relation("MentorUser", fields: [mentorId], references: [id])
@@ -130,6 +131,7 @@ model Session {
   mentorId  String
   hours     Float
   date      DateTime
+  task      String? // what the session focused on (optional, mentor-entered)
   note      String?
   status    String   @default("ACTIVE") // ACTIVE | VOIDED
   createdAt DateTime @default(now())

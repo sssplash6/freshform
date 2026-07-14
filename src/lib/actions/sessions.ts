@@ -63,6 +63,7 @@ export async function logSession(
   if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
+  const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
 
   const profile = await prisma.studentProfile.findUnique({
@@ -99,6 +100,7 @@ export async function logSession(
         mentorId: mentor.id,
         hours: hoursParsed.value,
         date: dateParsed.value,
+        task,
         note,
       },
     });
@@ -135,7 +137,7 @@ async function findOwnActiveSession(mentorId: string, sessionId: string) {
 }
 
 /**
- * Edit a session the mentor logged in error (hours/date/note). The hour
+ * Edit a session the mentor logged in error (hours/date/task/note). The hour
  * delta flows through derived totals; the student is notified.
  */
 export async function editSession(
@@ -163,6 +165,7 @@ export async function editSession(
   if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
+  const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
 
   await prisma.$transaction(async (tx) => {
@@ -171,6 +174,7 @@ export async function editSession(
       data: {
         hours: hoursParsed.value,
         date: dateParsed.value,
+        task,
         note,
       },
     });

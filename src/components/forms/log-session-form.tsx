@@ -25,7 +25,7 @@ export function LogSessionForm({
       <h2 className="text-base font-semibold text-navy">
         Log a completed session
       </h2>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="block text-sm">
           <span className="text-gray-600">Student *</span>
           <div className="mt-0.5">
@@ -59,6 +59,15 @@ export function LogSessionForm({
             required
             defaultValue={today}
             max={today}
+            className={inputClass}
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="text-gray-600">Task focused on</span>
+          <input
+            name="task"
+            type="text"
+            placeholder="Optional — e.g. personal statement draft"
             className={inputClass}
           />
         </label>

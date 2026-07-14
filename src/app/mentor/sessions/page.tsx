@@ -41,6 +41,7 @@ export default async function MentorSessionsPage() {
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Student</th>
                 <th className="px-4 py-3 text-right">Hours</th>
+                <th className="px-4 py-3">Task</th>
                 <th className="px-4 py-3">Note</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3" />
@@ -67,6 +68,9 @@ export default async function MentorSessionsPage() {
                       {formatHours(s.hours)}
                     </td>
                     <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                      {s.task ?? "—"}
+                    </td>
+                    <td className="max-w-56 truncate px-4 py-3 text-gray-600">
                       {s.note ?? "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -83,6 +87,7 @@ export default async function MentorSessionsPage() {
                             id: s.id,
                             hours: s.hours,
                             date: formatDate(s.date),
+                            task: s.task,
                             note: s.note,
                           }}
                         />
