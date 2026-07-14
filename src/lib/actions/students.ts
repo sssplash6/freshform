@@ -354,7 +354,7 @@ export async function deleteStudent(
   });
 
   revalidatePath("/", "layout");
-  redirect("/admin/students");
+  redirect(`/admin/programs/${profile.programId}`);
 }
 
 /**

@@ -9,12 +9,12 @@
 export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 
 /**
- * Programs are fixed for the MVP. Only the Global Admissions Program has set
- * cohorts (seeded as starters); students in the other programs belong to the
- * program directly.
+ * Starter programs. All are flat single programs — no seeded cohorts;
+ * students belong to the program directly. Admins can add cohorts (and whole
+ * programs) from the dashboard when a program grows into them.
  */
 export const PROGRAMS: { name: string; cohorts: string[] }[] = [
-  { name: "Global Admissions Program", cohorts: ["Cohort 1"] },
+  { name: "Global Admissions Program", cohorts: [] },
   { name: "Flexible Program", cohorts: [] },
   { name: "Master's Program", cohorts: [] },
 ];

@@ -1,11 +1,14 @@
 import Link from "next/link";
 
+import { ArrowLink } from "@/components/arrow-link";
+import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";
+import { ProgramIslandCard } from "@/components/program-island-card";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatHours } from "@/lib/format";
+import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
 
@@ -22,12 +25,13 @@ function totals(students: StudentWithHours[]) {
 
 /**
  * Cross-program dashboard: one island per running program with its vitals;
- * each island opens the program's own page with everything in it.
+ * each island expands into the program's own page with everything in it.
+ * Pending self-signups are approved right here.
  */
 export default async function AdminHomePage() {
   await ensureDeadlineReminders();
 
-  const [programs, students, assignments, unassignedMentors, pendingStudents] =
+  const [programs, students, assignments, unassignedMentors] =
     await Promise.all([
       prisma.program.findMany({
         include: { cohorts: true },
@@ -38,12 +42,12 @@ export default async function AdminHomePage() {
       prisma.user.count({
         where: { role: ROLES.MENTOR, status: USER_STATUS.UNASSIGNED },
       }),
-      prisma.user.count({
-        where: { role: ROLES.STUDENT, status: USER_STATUS.PENDING },
-      }),
     ]);
 
   const overall = totals(students);
+  const pending = students.filter(
+    (s) => s.user.status === USER_STATUS.PENDING
+  );
 
   return (
     <div className="space-y-8">
@@ -51,29 +55,58 @@ export default async function AdminHomePage() {
         <h1 className="text-3xl font-bold tracking-tight text-navy">
           Cross-program dashboard
         </h1>
-        <div className="flex items-center gap-2">
-          {pendingStudents > 0 && (
-            <Link
-              href="/admin/students"
-              className="group inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
-            >
-              {pendingStudents} student{pendingStudents === 1 ? "" : "s"}{" "}
-              awaiting approval
-              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          )}
-          {unassignedMentors > 0 && (
-            <Link
-              href="/admin/mentors"
-              className="group inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand-deep transition-colors hover:bg-brand/10"
-            >
-              {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
-              awaiting assignment
-              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          )}
-        </div>
+        {unassignedMentors > 0 && (
+          <Link
+            href="/admin/mentors"
+            className="group inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand-deep transition-colors hover:bg-brand/10"
+          >
+            {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
+            awaiting assignment
+            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        )}
       </div>
+
+      {pending.length > 0 && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <h2 className="text-sm font-semibold text-amber-800">
+            Pending approvals ({pending.length})
+          </h2>
+          <p className="mt-1 text-xs text-amber-700">
+            These students signed up themselves. Approve them, then allocate
+            their hours from mentors in their program via “Manage”.
+          </p>
+          <ul className="mt-3 divide-y divide-amber-200">
+            {pending.map((s) => (
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-2"
+              >
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {s.user.name ?? s.user.email}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {s.user.email} · {s.program.name}
+                    {s.cohort ? ` / ${s.cohort.name}` : ""}
+                    {s.telegramUsername ? ` · @${s.telegramUsername}` : ""} ·
+                    signed up {formatDate(s.createdAt)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <ApproveStudentButtons studentProfileId={s.id} />
+                  <ArrowLink
+                    href={`/admin/students/${s.id}`}
+                    className="text-[13px]"
+                  >
+                    Manage
+                  </ArrowLink>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <StatCardGrid>
         <StatCard label="Students" value={String(students.length)} />
@@ -107,58 +140,23 @@ export default async function AdminHomePage() {
                 .map((a) => a.mentorId)
             ).size;
             return (
-              <Link
+              <ProgramIslandCard
                 key={p.id}
+                name={p.name}
                 href={`/admin/programs/${p.id}`}
-                className="group block rounded-lg border border-mist bg-white p-5 transition hover:border-brand/60 hover:shadow-sm"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="text-lg font-semibold text-navy">{p.name}</h3>
-                  {p.cohorts.length > 0 && (
-                    <span className="text-xs text-gray-500">
-                      {p.cohorts.length} cohort{p.cohorts.length === 1 ? "" : "s"}
-                    </span>
-                  )}
-                </div>
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <dt className="text-[11px] uppercase tracking-wide text-gray-500">
-                      Students
-                    </dt>
-                    <dd className="text-xl font-bold tabular-nums text-navy">
-                      {ps.length}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] uppercase tracking-wide text-gray-500">
-                      Mentors
-                    </dt>
-                    <dd className="text-xl font-bold tabular-nums text-navy">
-                      {mentorCount}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] uppercase tracking-wide text-gray-500">
-                      Hrs left
-                    </dt>
-                    <dd
-                      className={`text-xl font-bold tabular-nums ${
-                        pt.remaining < 0 ? "text-red-700" : "text-brand-deep"
-                      }`}
-                    >
-                      {formatHours(pt.remaining)}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="mt-3 text-xs text-gray-500">
-                  {formatHours(pt.completed)} of {formatHours(pt.allotted)}{" "}
-                  hours completed
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-navy">
-                  Open program
-                  <ArrowRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </p>
-              </Link>
+                cohortCount={p.cohorts.length}
+                stats={[
+                  { label: "Students", value: String(ps.length) },
+                  { label: "Mentors", value: String(mentorCount) },
+                  {
+                    label: "Hrs left",
+                    value: formatHours(pt.remaining),
+                    danger: pt.remaining < 0,
+                    brand: pt.remaining >= 0,
+                  },
+                ]}
+                caption={`${formatHours(pt.completed)} of ${formatHours(pt.allotted)} hours completed`}
+              />
             );
           })}
         </div>

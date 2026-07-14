@@ -57,11 +57,11 @@ export default async function AdminStudentDetailPage({
     <div className="space-y-8">
       <div>
         <Link
-          href="/admin/students"
+          href={`/admin/programs/${profile.programId}`}
           className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
         >
           <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          All students
+          {profile.program.name}
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight text-navy">

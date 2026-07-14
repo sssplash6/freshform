@@ -11,9 +11,10 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
+  // No separate Students entry: students live inside each program's page,
+  // reached from the dashboard islands.
   [ROLES.ADMIN]: [
     { href: "/admin", label: "Dashboard" },
-    { href: "/admin/students", label: "Students" },
     { href: "/admin/mentors", label: "Mentors" },
     { href: "/admin/feedback", label: "Feedback" },
   ],
