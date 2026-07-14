@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/chip";
+import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
-import { StudentsTable } from "@/components/students-table";
-import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { ROLES, USER_STATUS } from "@/lib/constants";
+import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
+import { formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
 
@@ -22,15 +22,10 @@ function totals(students: StudentWithHours[]) {
 
 /**
  * Cross-program dashboard: one island per running program with its vitals;
- * picking an island (?program=id) opens that program's monitor below — its
- * students, mentors, and latest sessions in one place.
+ * each island opens the program's own page with everything in it.
  */
-export default async function AdminHomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ program?: string }>;
-}) {
-  const { program: selectedId } = await searchParams;
+export default async function AdminHomePage() {
+  await ensureDeadlineReminders();
 
   const [programs, students, assignments, unassignedMentors, pendingStudents] =
     await Promise.all([
@@ -39,10 +34,7 @@ export default async function AdminHomePage({
         orderBy: { name: "asc" },
       }),
       studentsWithHours(),
-      prisma.mentorAssignment.findMany({
-        include: { mentor: true, cohort: true },
-        orderBy: { createdAt: "asc" },
-      }),
+      prisma.mentorAssignment.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.user.count({
         where: { role: ROLES.MENTOR, status: USER_STATUS.UNASSIGNED },
       }),
@@ -52,31 +44,6 @@ export default async function AdminHomePage({
     ]);
 
   const overall = totals(students);
-  const selected = programs.find((p) => p.id === selectedId);
-
-  const studentsOf = (programId: string) =>
-    students.filter((s) => s.programId === programId);
-  const mentorsOf = (programId: string) => {
-    const seen = new Set<string>();
-    return assignments
-      .filter((a) => a.programId === programId)
-      .filter((a) =>
-        seen.has(a.mentorId) ? false : (seen.add(a.mentorId), true)
-      );
-  };
-
-  // The selected program's latest sessions, newest first.
-  const recentSessions = selected
-    ? await prisma.session.findMany({
-        where: { student: { programId: selected.id } },
-        include: {
-          student: { include: { user: true } },
-          mentor: true,
-        },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-        take: 10,
-      })
-    : [];
 
   return (
     <div className="space-y-8">
@@ -124,24 +91,26 @@ export default async function AdminHomePage({
       </StatCardGrid>
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
-          Programs currently running
-        </h2>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-navy">
+            Programs currently running
+          </h2>
+          <CreateProgramForm />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map((p) => {
-            const ps = studentsOf(p.id);
+            const ps = students.filter((s) => s.programId === p.id);
             const pt = totals(ps);
-            const mentorCount = mentorsOf(p.id).length;
-            const isSelected = p.id === selectedId;
+            const mentorCount = new Set(
+              assignments
+                .filter((a) => a.programId === p.id)
+                .map((a) => a.mentorId)
+            ).size;
             return (
               <Link
                 key={p.id}
-                href={isSelected ? "/admin" : `/admin?program=${p.id}`}
-                className={`block rounded-lg border bg-white p-5 transition hover:shadow-sm ${
-                  isSelected
-                    ? "border-brand shadow-sm ring-1 ring-brand/40"
-                    : "border-mist hover:border-brand/50"
-                }`}
+                href={`/admin/programs/${p.id}`}
+                className="group block rounded-lg border border-mist bg-white p-5 transition hover:border-brand/60 hover:shadow-sm"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="text-lg font-semibold text-navy">{p.name}</h3>
@@ -185,97 +154,15 @@ export default async function AdminHomePage({
                   {formatHours(pt.completed)} of {formatHours(pt.allotted)}{" "}
                   hours completed
                 </p>
-                <p className="mt-2 text-[13px] font-medium text-navy">
-                  {isSelected ? "Monitoring — click to close" : "Monitor →"}
+                <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-navy">
+                  Open program
+                  <ArrowRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </p>
               </Link>
             );
           })}
         </div>
       </section>
-
-      {selected && (
-        <section className="space-y-6 rounded-lg border border-brand/40 bg-brand/[.03] p-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-navy">
-              {selected.name} — monitor
-            </h2>
-            <Link href="/admin" className="text-sm text-gray-500 hover:text-navy">
-              Close ✕
-            </Link>
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-navy">Students</h3>
-            <StudentsTable
-              students={studentsOf(selected.id)}
-              showProgram={false}
-              showCohort={selected.cohorts.length > 0}
-              manageBase="/admin/students"
-            />
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-navy">Mentors</h3>
-            {mentorsOf(selected.id).length === 0 ? (
-              <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
-                No mentors assigned to {selected.name} yet.
-              </p>
-            ) : (
-              <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
-                {mentorsOf(selected.id).map((a) => (
-                  <li
-                    key={a.mentorId}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <div>
-                      <span className="font-medium text-gray-900">
-                        {a.mentor.name ?? a.mentor.email}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        {a.mentor.email}
-                        {a.cohort ? ` · ${a.cohort.name}` : ""}
-                      </span>
-                    </div>
-                    {a.calendlyUrl ? (
-                      <Chip tone="green">Booking link set</Chip>
-                    ) : (
-                      <Chip tone="gray">No booking link yet</Chip>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-navy">
-              Latest sessions
-            </h3>
-            {recentSessions.length === 0 ? (
-              <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
-                No sessions logged in {selected.name} yet.
-              </p>
-            ) : (
-              <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
-                {recentSessions.map((s) => (
-                  <li key={s.id} className="flex flex-wrap gap-x-2 px-4 py-3">
-                    <span className="tabular-nums text-gray-500">
-                      {formatDate(s.date)}
-                    </span>
-                    <span className={s.status === SESSION_STATUS.VOIDED ? "text-gray-400 line-through" : ""}>
-                      {s.mentor.name ?? s.mentor.email} ·{" "}
-                      {s.student.user.name ?? s.student.user.email} ·{" "}
-                      <span className="tabular-nums">{formatHours(s.hours)}h</span>
-                      {s.task ? ` · ${s.task}` : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

@@ -115,6 +115,7 @@ model HourAllocation {
   mentorId  String
   hours     Float
   deadline  DateTime? // date the hours should be used by; visible to student and mentor, overdue is flagged (not blocked)
+  deadlineStage String? // reminder bookkeeping: null | UPCOMING_SENT | PASSED_SENT; reset when the deadline changes
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

@@ -69,6 +69,7 @@ export default async function AdminStudentsPage() {
           program={program}
           students={students.filter((s) => s.programId === program.id)}
           manageBase="/admin/students"
+          programHref={`/admin/programs/${program.id}`}
         />
       ))}
     </div>

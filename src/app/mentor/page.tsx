@@ -8,12 +8,14 @@ import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
+import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments } from "@/lib/queries";
 
 export default async function MentorHomePage() {
   const user = await requireMentor();
+  await ensureDeadlineReminders();
 
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (

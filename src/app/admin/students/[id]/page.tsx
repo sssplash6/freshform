@@ -7,11 +7,16 @@ import { ArrowLeftIcon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { StudentCorrections } from "@/components/forms/student-corrections";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
-import { mentorsInProgram } from "@/lib/queries";
+import {
+  mentorsInProgram,
+  programOptions,
+  toProgramOptions,
+} from "@/lib/queries";
 
 /**
  * Admin detail page for one student: approve a pending self-signup and
@@ -40,9 +45,11 @@ export default async function AdminStudentDetailPage({
   if (!profile) notFound();
 
   const isPending = profile.user.status === USER_STATUS.PENDING;
-  const [mentors, hours] = await Promise.all([
+  const [mentors, hours, programs, sessionCount] = await Promise.all([
     mentorsInProgram(profile.programId),
     allocationSummary(profile.id),
+    programOptions(),
+    prisma.session.count({ where: { studentId: profile.id } }),
   ]);
   const byMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
 
@@ -192,6 +199,14 @@ export default async function AdminStudentDetailPage({
           </div>
         )}
       </section>
+
+      <StudentCorrections
+        studentProfileId={profile.id}
+        programs={toProgramOptions(programs)}
+        currentProgramId={profile.programId}
+        currentCohortId={profile.cohortId}
+        hasSessions={sessionCount > 0}
+      />
 
       <section>
         <h2 className="mb-2 text-base font-semibold text-navy">

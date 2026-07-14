@@ -259,6 +259,105 @@ export async function completeOnboarding(
 }
 
 /**
+ * Move a student to a different cohort or program (admin correction for
+ * mis-enrollments). Hour allocations and session history follow the student
+ * untouched; the student is notified. Mentors visible to the student change
+ * with the enrollment.
+ */
+export async function moveStudent(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return { ok: false, error: "Only admins can move students." };
+  }
+
+  const profileId = String(formData.get("studentProfileId") ?? "");
+  const profile = await prisma.studentProfile.findUnique({
+    where: { id: profileId },
+    include: { user: true, program: true, cohort: true },
+  });
+  if (!profile) return { ok: false, error: "Student not found." };
+
+  const enrollment = await resolveEnrollment(formData);
+  if ("error" in enrollment) return { ok: false, error: enrollment.error };
+  const { program, cohort } = enrollment;
+
+  if (
+    program.id === profile.programId &&
+    (cohort?.id ?? null) === profile.cohortId
+  ) {
+    return { ok: true, message: "No change: they're already enrolled there." };
+  }
+
+  const from = enrollmentLabel(profile.program.name, profile.cohort?.name);
+  const to = enrollmentLabel(program.name, cohort?.name);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.studentProfile.update({
+      where: { id: profile.id },
+      data: { programId: program.id, cohortId: cohort?.id ?? null },
+    });
+    await tx.notification.create({
+      data: {
+        userId: profile.userId,
+        type: NOTIFICATION_TYPES.ENROLLMENT_MOVED,
+        message: `Your enrollment was moved from ${from} to ${to}. Your hours and session history came with you.`,
+      },
+    });
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: `${profile.user.name ?? profile.user.email} moved from ${from} to ${to}.`,
+  };
+}
+
+/**
+ * Remove a student added by mistake (admin only). Blocked once any session
+ * has been logged — at that point the record is history, not a typo; void
+ * the sessions first if it truly must go.
+ */
+export async function deleteStudent(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return { ok: false, error: "Only admins can remove students." };
+  }
+
+  const profileId = String(formData.get("studentProfileId") ?? "");
+  const profile = await prisma.studentProfile.findUnique({
+    where: { id: profileId },
+    include: { user: true, _count: { select: { sessions: true } } },
+  });
+  if (!profile) return { ok: false, error: "Student not found." };
+  if (profile._count.sessions > 0) {
+    return {
+      ok: false,
+      error:
+        "This student has logged sessions, so their record can't be deleted.",
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.hourAllotmentChange.deleteMany({ where: { studentId: profile.id } });
+    await tx.hourAllocation.deleteMany({ where: { studentId: profile.id } });
+    await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
+    await tx.websiteFeedback.deleteMany({ where: { studentId: profile.id } });
+    await tx.notification.deleteMany({ where: { userId: profile.userId } });
+    await tx.studentProfile.delete({ where: { id: profile.id } });
+    await tx.user.delete({ where: { id: profile.userId } });
+  });
+
+  revalidatePath("/", "layout");
+  redirect("/admin/students");
+}
+
+/**
  * Approve a self-signed-up student (admin only). Activates the account;
  * hours are allocated separately, per mentor.
  */
@@ -417,7 +516,12 @@ export async function setMentorAllocation(
   await prisma.$transaction(async (tx) => {
     await tx.hourAllocation.upsert({
       where: { studentId_mentorId: { studentId: profile.id, mentorId } },
-      update: { hours: newHours, deadline },
+      update: {
+        hours: newHours,
+        deadline,
+        // A new deadline restarts the reminder cycle.
+        ...(sameDeadline ? {} : { deadlineStage: null }),
+      },
       create: { studentId: profile.id, mentorId, hours: newHours, deadline },
     });
     if (newHours !== oldHours) {

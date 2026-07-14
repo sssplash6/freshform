@@ -7,11 +7,13 @@ import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDate, formatHours } from "@/lib/format";
+import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 
 export default async function StudentHomePage() {
   const user = await requireRole(ROLES.STUDENT);
+  await ensureDeadlineReminders();
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },

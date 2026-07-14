@@ -34,6 +34,8 @@ export const NOTIFICATION_TYPES = {
   STUDENT_SIGNUP: "STUDENT_SIGNUP", // to admins: a student finished onboarding
   ACCOUNT_APPROVED: "ACCOUNT_APPROVED", // to the student: admin approved them
   MENTOR_ASSIGNED: "MENTOR_ASSIGNED", // to the mentor: assigned to a program, set your booking link
+  HOURS_DEADLINE: "HOURS_DEADLINE", // to student + mentor: allocation deadline approaching or passed
+  ENROLLMENT_MOVED: "ENROLLMENT_MOVED", // to the student: admin corrected their program/cohort
 } as const;
 
 export type NotificationType =
