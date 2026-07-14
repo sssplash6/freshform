@@ -37,9 +37,38 @@ services:
       # Render generates a strong secret on first deploy.
       - key: NEXTAUTH_SECRET
         generateValue: true
+      # Shared with the cron job below; guards /api/cron/* endpoints.
+      - key: CRON_SECRET
+        generateValue: true
       # From Google Cloud console → APIs & Services → Credentials.
       # Add redirect URI: <NEXTAUTH_URL>/api/auth/callback/google
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+
+  # Daily deadline reminders. The SQLite disk belongs to the web service, so
+  # the cron job can't touch the database directly — it calls the app's
+  # authenticated cron endpoint instead and the web service does the work.
+  # 04:00 UTC = 09:00 in Tashkent.
+  - type: cron
+    name: freshform-deadline-reminders
+    runtime: node
+    plan: starter
+    schedule: "0 4 * * *"
+    buildCommand: "true"
+    startCommand: >-
+      curl -fsS --retry 3 --retry-delay 10
+      -H "Authorization: Bearer $CRON_SECRET"
+      "https://$APP_HOST/api/cron/deadline-reminders"
+    envVars:
+      - key: APP_HOST
+        fromService:
+          type: web
+          name: freshform
+          property: host
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: freshform
+          envVarKey: CRON_SECRET

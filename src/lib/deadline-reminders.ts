@@ -7,11 +7,12 @@ import { formatDate, formatHours } from "@/lib/format";
 const UPCOMING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Lazily generated deadline reminders (no cron on the MVP host): called from
- * the dashboards, it notifies the student AND the mentor once when an
+ * Deadline reminders: notifies the student AND the mentor once when an
  * allocation's deadline enters the 7-day window, and once more if it passes
  * with hours still unused. `deadlineStage` on the allocation dedupes the
- * sends and is reset whenever an admin changes the deadline.
+ * sends and is reset whenever an admin changes the deadline. Runs from the
+ * daily Render cron (see /api/cron/deadline-reminders) and, as a fallback,
+ * from the dashboards on page load.
  */
 export async function ensureDeadlineReminders() {
   const now = new Date();
@@ -30,7 +31,8 @@ export async function ensureDeadlineReminders() {
       student: { include: { user: true } },
     },
   });
-  if (due.length === 0) return;
+  if (due.length === 0) return { checked: 0, remindersSent: 0 };
+  let remindersSent = 0;
 
   const sums = await prisma.session.groupBy({
     by: ["studentId", "mentorId"],
@@ -68,6 +70,7 @@ export async function ensureDeadlineReminders() {
         data: { deadlineStage: stage },
       });
       if (!notify) return;
+      remindersSent += 1;
       await tx.notification.createMany({
         data: [
           {
@@ -88,4 +91,5 @@ export async function ensureDeadlineReminders() {
       });
     });
   }
+  return { checked: due.length, remindersSent };
 }

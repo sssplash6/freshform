@@ -27,6 +27,9 @@ export default function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Everything except the auth endpoints, Next internals, and static assets.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  // Everything except the auth endpoints, the cron endpoints (which carry
+  // their own CRON_SECRET bearer check), Next internals, and static assets.
+  matcher: [
+    "/((?!api/auth|api/cron|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  ],
 };
