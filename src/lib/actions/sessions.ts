@@ -116,12 +116,16 @@ export async function logSession(
   revalidatePath("/", "layout");
 
   const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
+  const deadlinePassed =
+    allocation.deadline && allocation.deadline.getTime() < Date.now()
+      ? ` Heads up: these hours had a ${formatDate(allocation.deadline)} deadline, which has passed.`
+      : "";
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged. Heads up: ${profile.user.name ?? profile.user.email} is now overdrawn by ${formatHours(-remaining)} hours with you.`
-        : `Session logged. ${profile.user.name ?? profile.user.email} has ${formatHours(remaining)} hours left with you.`,
+        ? `Session logged. Heads up: ${profile.user.name ?? profile.user.email} is now overdrawn by ${formatHours(-remaining)} hours with you.${deadlinePassed}`
+        : `Session logged. ${profile.user.name ?? profile.user.email} has ${formatHours(remaining)} hours left with you.${deadlinePassed}`,
   };
 }
 

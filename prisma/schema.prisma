@@ -110,12 +110,13 @@ model StudentProfile {
 // is the sum of their allocations; sessions logged by a mentor draw down
 // that mentor's allocation.
 model HourAllocation {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   studentId String
   mentorId  String
   hours     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deadline  DateTime? // date the hours should be used by; visible to student and mentor, overdue is flagged (not blocked)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   student StudentProfile @relation(fields: [studentId], references: [id])
   mentor  User           @relation("AllocationMentor", fields: [mentorId], references: [id])

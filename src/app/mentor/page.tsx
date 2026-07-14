@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Chip } from "@/components/chip";
 import { ArrowLink } from "@/components/arrow-link";
+import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
@@ -65,6 +66,7 @@ export default async function MentorHomePage() {
       allocated: a.hours,
       completed,
       remaining: a.hours - completed,
+      deadline: a.deadline,
       approved: a.student.user.status === USER_STATUS.ACTIVE,
     };
   });
@@ -159,6 +161,7 @@ export default async function MentorHomePage() {
                     <th className="px-4 py-3 text-right">Allocated to you</th>
                     <th className="px-4 py-3 text-right">Completed</th>
                     <th className="px-4 py-3 text-right">Remaining</th>
+                    <th className="px-4 py-3">Use by</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -204,6 +207,9 @@ export default async function MentorHomePage() {
                         }`}
                       >
                         {formatHours(s.remaining)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Deadline deadline={s.deadline} remaining={s.remaining} />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <ArrowLink

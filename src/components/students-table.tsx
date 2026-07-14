@@ -9,29 +9,40 @@ import type { StudentWithHours } from "@/lib/queries";
  * allocations). Negative remaining renders red (overdraw is allowed but
  * warned). `manageBase` (admin only) links each row to its detail page where
  * approval and per-mentor allocations live. `showCohort` is off for lists
- * scoped to programs without cohorts.
+ * scoped to programs without cohorts. `framed=false` drops the outer border
+ * for tables embedded in a program island box.
  */
 export function StudentsTable({
   students,
   showProgram,
   showCohort = true,
   manageBase,
+  framed = true,
 }: {
   students: StudentWithHours[];
   showProgram: boolean;
   showCohort?: boolean;
   manageBase?: string;
+  framed?: boolean;
 }) {
   if (students.length === 0) {
     return (
-      <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+      <p
+        className={
+          framed
+            ? "rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500"
+            : "p-8 text-[15px] text-gray-500"
+        }
+      >
         No students yet.
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-mist bg-white">
+    <div
+      className={`overflow-x-auto ${framed ? "rounded-lg border border-mist bg-white" : ""}`}
+    >
       <table className="w-full text-left text-sm">
         <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
           <tr>
@@ -54,6 +65,10 @@ export function StudentsTable({
                   {s.user.status === USER_STATUS.PENDING && (
                     <Chip tone="amber">Pending approval</Chip>
                   )}
+                  {s.user.status === USER_STATUS.ACTIVE &&
+                    !s.telegramUsername && (
+                      <Chip tone="gray">Hasn&apos;t signed in yet</Chip>
+                    )}
                 </div>
                 <div className="text-xs text-gray-500">{s.user.email}</div>
               </td>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { Deadline } from "@/components/deadline";
 import { ArrowUpRightIcon } from "@/components/icons";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -32,9 +33,7 @@ export default async function StudentBookPage() {
     }),
     allocationSummary(profile.id),
   ]);
-  const remainingByMentor = new Map(
-    hours.perMentor.map((m) => [m.mentor.id, m.remaining])
-  );
+  const hoursByMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
 
   return (
     <div className="space-y-6">
@@ -55,7 +54,8 @@ export default async function StudentBookPage() {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {assignments.map((a) => {
-            const remaining = remainingByMentor.get(a.mentorId);
+            const withMentor = hoursByMentor.get(a.mentorId);
+            const remaining = withMentor?.remaining;
             return (
               <li
                 key={a.id}
@@ -87,6 +87,15 @@ export default async function StudentBookPage() {
                       </span>
                     )}
                   </p>
+                  {withMentor?.deadline && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Use them by{" "}
+                      <Deadline
+                        deadline={withMentor.deadline}
+                        remaining={withMentor.remaining}
+                      />
+                    </p>
+                  )}
                 </div>
                 {a.calendlyUrl ? (
                   <a

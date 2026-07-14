@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { ROLES, USER_STATUS } from "@/lib/constants";
+import { NOTIFICATION_TYPES, ROLES, USER_STATUS } from "@/lib/constants";
 import {
   EMAIL_RE,
   normalizeEmail,
@@ -109,6 +109,14 @@ export async function createMentor(
         cohortId: target.cohortId,
       },
     });
+    // Greets them on first sign-in.
+    await tx.notification.create({
+      data: {
+        userId: mentor.id,
+        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+        message: `You were registered as a mentor in ${target.label}. Set your booking link on your mentor page so students there can book you.`,
+      },
+    });
   });
 
   revalidatePath("/", "layout");
@@ -168,6 +176,13 @@ export async function assignMentor(
         data: { status: USER_STATUS.ACTIVE },
       });
     }
+    await tx.notification.create({
+      data: {
+        userId: mentorId,
+        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+        message: `You were assigned to ${label}. Set your booking link on your mentor page so students there can book you.`,
+      },
+    });
   });
 
   revalidatePath("/", "layout");

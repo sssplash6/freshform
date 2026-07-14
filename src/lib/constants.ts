@@ -33,6 +33,7 @@ export const NOTIFICATION_TYPES = {
   SESSION_VOIDED: "SESSION_VOIDED",
   STUDENT_SIGNUP: "STUDENT_SIGNUP", // to admins: a student finished onboarding
   ACCOUNT_APPROVED: "ACCOUNT_APPROVED", // to the student: admin approved them
+  MENTOR_ASSIGNED: "MENTOR_ASSIGNED", // to the mentor: assigned to a program, set your booking link
 } as const;
 
 export type NotificationType =

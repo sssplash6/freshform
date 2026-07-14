@@ -44,6 +44,7 @@ export async function allocationSummary(studentProfileId: string) {
       allocated: a.hours,
       completed,
       remaining: a.hours - completed,
+      deadline: a.deadline,
     };
   });
 

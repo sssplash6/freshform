@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
+import { Deadline } from "@/components/deadline";
 import { ArrowLeftIcon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
@@ -133,6 +134,7 @@ export default async function AdminStudentDetailPage({
                   <th className="px-4 py-3 text-right">Allocated</th>
                   <th className="px-4 py-3 text-right">Completed</th>
                   <th className="px-4 py-3 text-right">Remaining</th>
+                  <th className="px-4 py-3">Use by</th>
                   <th className="px-4 py-3">Set allocation</th>
                 </tr>
               </thead>
@@ -165,10 +167,21 @@ export default async function AdminStudentDetailPage({
                         {formatHours(alloc?.remaining ?? 0)}
                       </td>
                       <td className="px-4 py-3">
+                        <Deadline
+                          deadline={alloc?.deadline ?? null}
+                          remaining={alloc?.remaining ?? 0}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
                         <AllocateHoursForm
                           studentProfileId={profile.id}
                           mentorId={mentor.id}
                           currentHours={alloc?.allocated ?? 0}
+                          currentDeadline={
+                            alloc?.deadline
+                              ? alloc.deadline.toISOString().slice(0, 10)
+                              : null
+                          }
                         />
                       </td>
                     </tr>

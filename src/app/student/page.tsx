@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { ArrowLink } from "@/components/arrow-link";
 import { Chip } from "@/components/chip";
+import { Deadline } from "@/components/deadline";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -101,6 +102,7 @@ export default async function StudentHomePage() {
                   <th className="px-4 py-3 text-right">Allotted</th>
                   <th className="px-4 py-3 text-right">Completed</th>
                   <th className="px-4 py-3 text-right">Remaining</th>
+                  <th className="px-4 py-3">Use by</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-mist/60">
@@ -124,6 +126,9 @@ export default async function StudentHomePage() {
                       }`}
                     >
                       {formatHours(m.remaining)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Deadline deadline={m.deadline} remaining={m.remaining} />
                     </td>
                   </tr>
                 ))}

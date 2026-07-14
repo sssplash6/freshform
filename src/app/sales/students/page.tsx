@@ -1,5 +1,4 @@
-import { CreateStudentForm } from "@/components/forms/create-student-form";
-import { StudentsTable } from "@/components/students-table";
+import { ProgramStudentsIsland } from "@/components/program-students-island";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
@@ -18,14 +17,17 @@ export default async function SalesStudentsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight text-navy">Students</h1>
-      {program && (
-        <CreateStudentForm programs={toProgramOptions([program])} />
+      {program ? (
+        <ProgramStudentsIsland
+          program={toProgramOptions([program])[0]}
+          students={students}
+        />
+      ) : (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+          Your account isn&apos;t linked to a program. Ask an admin to fix the
+          staff configuration.
+        </p>
       )}
-      <StudentsTable
-        students={students}
-        showProgram={false}
-        showCohort={(program?.cohorts.length ?? 0) > 0}
-      />
     </div>
   );
 }

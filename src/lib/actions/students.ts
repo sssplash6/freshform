@@ -6,10 +6,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { NOTIFICATION_TYPES, ROLES, USER_STATUS } from "@/lib/constants";
-import { formatHours } from "@/lib/format";
+import { formatDate, formatHours } from "@/lib/format";
 import {
   EMAIL_RE,
   normalizeEmail,
+  parseDateField,
   parseHoursField,
   type ActionState,
 } from "@/lib/actions/shared";
@@ -69,13 +70,15 @@ async function resolveEnrollment(
 }
 
 /**
- * Register a student's email into a program (+ cohort where the program has
- * them), skipping the self-signup approval queue. Admin may create anywhere;
- * Dept Leader / Sales only inside their own program. The student completes
- * their profile (full name, Telegram username) on first sign-in; hours are
- * NOT granted here — an admin allocates them per mentor afterwards.
+ * Register a LIST of student emails into a program (+ cohort where the
+ * program has them), skipping the self-signup approval queue. Admin may
+ * create anywhere; Dept Leader / Sales only inside their own program. Each
+ * student confirms their full name and Telegram username on first sign-in;
+ * hours are NOT granted here — an admin allocates them per mentor afterwards.
+ * Emails may be separated by newlines, commas, semicolons, or spaces.
+ * Already-registered and malformed entries are skipped and reported.
  */
-export async function createStudent(
+export async function createStudents(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
@@ -84,11 +87,19 @@ export async function createStudent(
     return { ok: false, error: "You aren't allowed to create students." };
   }
 
-  const email = normalizeEmail(formData.get("email"));
-  if (!EMAIL_RE.test(email)) {
-    return { ok: false, error: "Enter a valid email address." };
+  const raw = String(formData.get("emails") ?? "");
+  const entries = [...new Set(
+    raw
+      .split(/[\s,;]+/)
+      .map((e) => normalizeEmail(e))
+      .filter(Boolean)
+  )];
+  if (entries.length === 0) {
+    return { ok: false, error: "Paste at least one email address." };
   }
-  const name = String(formData.get("name") ?? "").trim() || null;
+
+  const invalid = entries.filter((e) => !EMAIL_RE.test(e));
+  const valid = entries.filter((e) => EMAIL_RE.test(e));
 
   const enrollment = await resolveEnrollment(formData);
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
@@ -101,34 +112,47 @@ export async function createStudent(
     };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return { ok: false, error: `${email} already has an account.` };
-  }
+  const existing = await prisma.user.findMany({
+    where: { email: { in: valid } },
+    select: { email: true },
+  });
+  const taken = new Set(existing.map((u) => u.email));
+  const fresh = valid.filter((e) => !taken.has(e));
 
   await prisma.$transaction(async (tx) => {
-    const studentUser = await tx.user.create({
-      data: {
-        email,
-        name,
-        role: ROLES.STUDENT,
-        status: USER_STATUS.ACTIVE,
-      },
-    });
-    await tx.studentProfile.create({
-      data: {
-        userId: studentUser.id,
-        programId: program.id,
-        cohortId: cohort?.id ?? null,
-        createdById: actor.id,
-      },
-    });
+    for (const email of fresh) {
+      const studentUser = await tx.user.create({
+        data: { email, role: ROLES.STUDENT, status: USER_STATUS.ACTIVE },
+      });
+      await tx.studentProfile.create({
+        data: {
+          userId: studentUser.id,
+          programId: program.id,
+          cohortId: cohort?.id ?? null,
+          createdById: actor.id,
+        },
+      });
+    }
   });
+
+  const skipped = [
+    ...[...taken].map((e) => `${e} (already registered)`),
+    ...invalid.map((e) => `${e} (not a valid email)`),
+  ];
+  if (fresh.length === 0) {
+    return {
+      ok: false,
+      error: `No students added. ${skipped.join(", ")}.`,
+    };
+  }
 
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Student ${email} created in ${enrollmentLabel(program.name, cohort?.name)}. They'll confirm their name and Telegram username when they first sign in.`,
+    message:
+      `${fresh.length} student${fresh.length === 1 ? "" : "s"} added to ${enrollmentLabel(program.name, cohort?.name)}. ` +
+      `They'll confirm their name and Telegram username when they first sign in.` +
+      (skipped.length > 0 ? ` Skipped: ${skipped.join(", ")}.` : ""),
   };
 }
 
@@ -320,7 +344,9 @@ export async function rejectStudent(
 
 /**
  * Set the hours a student holds with ONE mentor (spec §3 key rule: admin
- * only, always audited, always notifies the student). The student's total
+ * only, always audited, always notifies the student), with an optional
+ * deadline the hours should be used by — shown to the student and the
+ * mentor; passing it flags the balance but never blocks. The student's total
  * allotment is derived as the sum of these allocations; sessions logged by
  * the mentor draw the allocation down toward 0.
  */
@@ -341,6 +367,16 @@ export async function setMentorAllocation(
   });
   if ("error" in parsed) return { ok: false, error: parsed.error };
   const newHours = parsed.value;
+
+  const rawDeadline = String(formData.get("deadline") ?? "").trim();
+  let deadline: Date | null = null;
+  if (rawDeadline) {
+    const parsedDeadline = parseDateField(rawDeadline);
+    if ("error" in parsedDeadline) {
+      return { ok: false, error: "Pick a valid deadline date." };
+    }
+    deadline = parsedDeadline.value;
+  }
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
@@ -370,26 +406,31 @@ export async function setMentorAllocation(
     where: { studentId_mentorId: { studentId: profile.id, mentorId } },
   });
   const oldHours = existing?.hours ?? 0;
-  if (newHours === oldHours) {
+  const oldDeadline = existing?.deadline ?? null;
+  const sameDeadline = (oldDeadline?.getTime() ?? null) === (deadline?.getTime() ?? null);
+  if (newHours === oldHours && sameDeadline) {
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
   const mentorLabel = mentor.name ?? mentor.email;
+  const deadlineNote = deadline ? ` They should be used by ${formatDate(deadline)}.` : "";
   await prisma.$transaction(async (tx) => {
     await tx.hourAllocation.upsert({
       where: { studentId_mentorId: { studentId: profile.id, mentorId } },
-      update: { hours: newHours },
-      create: { studentId: profile.id, mentorId, hours: newHours },
+      update: { hours: newHours, deadline },
+      create: { studentId: profile.id, mentorId, hours: newHours, deadline },
     });
-    await tx.hourAllotmentChange.create({
-      data: {
-        studentId: profile.id,
-        mentorId,
-        changedById: actor.id,
-        oldHours,
-        newHours,
-      },
-    });
+    if (newHours !== oldHours) {
+      await tx.hourAllotmentChange.create({
+        data: {
+          studentId: profile.id,
+          mentorId,
+          changedById: actor.id,
+          oldHours,
+          newHours,
+        },
+      });
+    }
     const delta = newHours - oldHours;
     await tx.notification.create({
       data: {
@@ -397,8 +438,10 @@ export async function setMentorAllocation(
         type: NOTIFICATION_TYPES.HOURS_GRANTED,
         message:
           delta > 0
-            ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).`
-            : `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.`,
+            ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).${deadlineNote}`
+            : delta < 0
+              ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
+              : `The deadline for your hours with ${mentorLabel} was ${deadline ? `set to ${formatDate(deadline)}` : "removed"}.`,
       },
     });
   });
@@ -406,6 +449,6 @@ export async function setMentorAllocation(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}.`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}${deadline ? `, to use by ${formatDate(deadline)}` : ""}.`,
   };
 }

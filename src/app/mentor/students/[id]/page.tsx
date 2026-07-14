@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Chip } from "@/components/chip";
+import { Deadline } from "@/components/deadline";
 import { ArrowLeftIcon } from "@/components/icons";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
@@ -86,6 +87,12 @@ export default async function MentorStudentDetailPage({
             " · Telegram not set yet"
           )}
         </p>
+        {allocation?.deadline && (
+          <p className="mt-1 text-sm text-gray-500">
+            Hours to be used by{" "}
+            <Deadline deadline={allocation.deadline} remaining={remaining} />
+          </p>
+        )}
       </div>
 
       <StatCardGrid>

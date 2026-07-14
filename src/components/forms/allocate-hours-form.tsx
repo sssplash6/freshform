@@ -4,15 +4,18 @@ import { useActionState } from "react";
 
 import { setMentorAllocation } from "@/lib/actions/students";
 
-/** Inline per-mentor allocation editor for one student (admin only). */
+/** Inline per-mentor allocation editor for one student (admin only): the
+ * hours plus the optional deadline they should be used by. */
 export function AllocateHoursForm({
   studentProfileId,
   mentorId,
   currentHours,
+  currentDeadline,
 }: {
   studentProfileId: string;
   mentorId: string;
   currentHours: number;
+  currentDeadline: string | null;
 }) {
   const [state, action, pending] = useActionState(setMentorAllocation, null);
 
@@ -28,6 +31,14 @@ export function AllocateHoursForm({
         defaultValue={currentHours}
         aria-label="Allocated hours with this mentor"
         className="min-h-11 w-20 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
+      />
+      <input
+        name="deadline"
+        type="date"
+        defaultValue={currentDeadline ?? ""}
+        aria-label="Deadline to use these hours by (optional)"
+        title="Deadline to use these hours by (optional)"
+        className="min-h-11 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
       />
       <button
         type="submit"

@@ -1,7 +1,6 @@
 import { ArrowLink } from "@/components/arrow-link";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
-import { CreateStudentForm } from "@/components/forms/create-student-form";
-import { StudentsTable } from "@/components/students-table";
+import { ProgramStudentsIsland } from "@/components/program-students-island";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import {
@@ -64,12 +63,14 @@ export default async function AdminStudentsPage() {
         </section>
       )}
 
-      <CreateStudentForm programs={toProgramOptions(programs)} />
-      <StudentsTable
-        students={students}
-        showProgram
-        manageBase="/admin/students"
-      />
+      {toProgramOptions(programs).map((program) => (
+        <ProgramStudentsIsland
+          key={program.id}
+          program={program}
+          students={students.filter((s) => s.programId === program.id)}
+          manageBase="/admin/students"
+        />
+      ))}
     </div>
   );
 }
