@@ -69,19 +69,15 @@ export default async function AdminProgramPage({
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-navy">
           {program.name}
         </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {program.cohorts.map((c) => (
-            <Chip key={c.id} tone="gray">
-              {c.name}
-            </Chip>
-          ))}
-          {program.cohorts.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No cohorts — students belong to the program directly. Add a
-              cohort to switch new enrollments to cohort-based.
-            </p>
-          )}
-        </div>
+        {program.cohorts.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {program.cohorts.map((c) => (
+              <Chip key={c.id} tone="gray">
+                {c.name}
+              </Chip>
+            ))}
+          </div>
+        )}
         <div className="mt-3">
           <CreateCohortForm programId={program.id} />
         </div>

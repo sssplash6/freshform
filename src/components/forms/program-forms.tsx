@@ -57,23 +57,51 @@ export function CreateProgramForm() {
   );
 }
 
-/** Inline "add a cohort" control on a program's page. */
+/**
+ * Collapsed "add a cohort" control on a program's page. Programs are flat by
+ * default, so no input is shown until the admin explicitly reaches for
+ * cohorts.
+ */
 export function CreateCohortForm({ programId }: { programId: string }) {
+  const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createCohort, null);
+
+  if (!open) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-xs font-medium text-gray-400 transition-colors hover:text-navy"
+        >
+          + Add a cohort to this program
+        </button>
+        <ActionFeedback state={state} />
+      </div>
+    );
+  }
 
   return (
     <div>
-      <form action={action} className="flex flex-wrap items-center gap-2">
+      <form action={action} className="rise-in flex flex-wrap items-center gap-2">
         <input type="hidden" name="programId" value={programId} />
         <input
           name="name"
           type="text"
           required
-          placeholder="e.g. Cohort 2"
+          autoFocus
+          placeholder="e.g. Cohort 1"
           className={inputClass}
         />
         <button type="submit" disabled={pending} className={buttonClass}>
           {pending ? "Adding…" : "Add cohort"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="min-h-11 rounded-md px-2.5 py-2 text-sm text-gray-500 transition-colors hover:bg-mist/60"
+        >
+          Cancel
         </button>
       </form>
       <ActionFeedback state={state} />
