@@ -155,6 +155,7 @@ export default async function AdminHomePage() {
                   },
                 ]}
                 caption={`${formatHours(pt.completed)} of ${formatHours(pt.allotted)} hours completed`}
+                completion={{ completed: pt.completed, allotted: pt.allotted }}
               />
             );
           })}

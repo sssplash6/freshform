@@ -13,12 +13,14 @@ export function ProgramIslandCard({
   cohortCount,
   stats,
   caption,
+  completion,
 }: {
   name: string;
   href: string;
   cohortCount: number;
   stats: { label: string; value: string; danger?: boolean; brand?: boolean }[];
   caption: string;
+  completion?: { completed: number; allotted: number };
 }) {
   return (
     <Link
@@ -54,6 +56,16 @@ export function ProgramIslandCard({
           </div>
         ))}
       </dl>
+      {completion && completion.allotted > 0 && (
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-mist">
+          <div
+            className="h-full rounded-full bg-brand"
+            style={{
+              width: `${Math.min(100, Math.round((completion.completed / completion.allotted) * 100))}%`,
+            }}
+          />
+        </div>
+      )}
       <p className="mt-3 text-xs text-gray-500">{caption}</p>
       <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-navy">
         Open program

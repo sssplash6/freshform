@@ -2,13 +2,10 @@
 
 import { useActionState, useState } from "react";
 
-import { createCohort, createProgram } from "@/lib/actions/programs";
 import { ActionFeedback } from "@/components/forms/action-feedback";
-
-const inputClass =
-  "min-h-11 rounded-md border border-mist px-3.5 py-2 text-sm focus:border-navy focus:outline-none";
-const buttonClass =
-  "min-h-11 rounded-md bg-navy px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
+import { createCohort, createProgram } from "@/lib/actions/programs";
 
 /** Inline "open a new program" control on the admin dashboard. */
 export function CreateProgramForm() {
@@ -18,13 +15,9 @@ export function CreateProgramForm() {
   if (!open) {
     return (
       <div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-md border border-navy px-3.5 py-2 text-sm font-medium text-navy transition-colors hover:bg-navy hover:text-white"
-        >
+        <Button variant="secondary" onClick={() => setOpen(true)}>
           New program
-        </button>
+        </Button>
         <ActionFeedback state={state} />
       </div>
     );
@@ -33,24 +26,21 @@ export function CreateProgramForm() {
   return (
     <div>
       <form action={action} className="rise-in flex flex-wrap items-center gap-2">
-        <input
-          name="name"
-          type="text"
-          required
-          autoFocus
-          placeholder="Program name"
-          className={inputClass}
-        />
-        <button type="submit" disabled={pending} className={buttonClass}>
+        <div className="w-56">
+          <Input
+            name="name"
+            type="text"
+            required
+            autoFocus
+            placeholder="Program name"
+          />
+        </div>
+        <Button type="submit" disabled={pending}>
           {pending ? "Creating…" : "Create program"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="min-h-11 rounded-md px-2.5 py-2 text-sm text-gray-500 transition-colors hover:bg-mist/60"
-        >
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
-        </button>
+        </Button>
       </form>
       <ActionFeedback state={state} />
     </div>
@@ -85,24 +75,21 @@ export function CreateCohortForm({ programId }: { programId: string }) {
     <div>
       <form action={action} className="rise-in flex flex-wrap items-center gap-2">
         <input type="hidden" name="programId" value={programId} />
-        <input
-          name="name"
-          type="text"
-          required
-          autoFocus
-          placeholder="e.g. Cohort 1"
-          className={inputClass}
-        />
-        <button type="submit" disabled={pending} className={buttonClass}>
+        <div className="w-56">
+          <Input
+            name="name"
+            type="text"
+            required
+            autoFocus
+            placeholder="e.g. Cohort 1"
+          />
+        </div>
+        <Button type="submit" disabled={pending}>
           {pending ? "Adding…" : "Add cohort"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="min-h-11 rounded-md px-2.5 py-2 text-sm text-gray-500 transition-colors hover:bg-mist/60"
-        >
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
-        </button>
+        </Button>
       </form>
       <ActionFeedback state={state} />
     </div>

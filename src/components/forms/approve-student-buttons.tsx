@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { approveStudent, rejectStudent } from "@/lib/actions/students";
 
 /** Approve / reject controls for one PENDING self-signed-up student. */
@@ -27,23 +28,20 @@ export function ApproveStudentButtons({
     <div className="flex items-center gap-2">
       <form action={approveAction}>
         <input type="hidden" name="studentProfileId" value={studentProfileId} />
-        <button
-          type="submit"
-          disabled={approving || rejecting}
-          className="rounded-md bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
-        >
+        <Button type="submit" size="sm" disabled={approving || rejecting}>
           {approving ? "Approving…" : "Approve"}
-        </button>
+        </Button>
       </form>
       <form action={rejectAction}>
         <input type="hidden" name="studentProfileId" value={studentProfileId} />
-        <button
+        <Button
           type="submit"
+          variant="danger"
+          size="sm"
           disabled={approving || rejecting}
-          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
         >
           {rejecting ? "Rejecting…" : "Reject"}
-        </button>
+        </Button>
       </form>
       {error && (
         <span role="alert" className="text-xs text-red-700">

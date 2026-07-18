@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { setMentorAllocation } from "@/lib/actions/students";
 
 /** Inline per-mentor allocation editor for one student (admin only): the
@@ -40,13 +41,9 @@ export function AllocateHoursForm({
         title="Deadline to use these hours by (optional)"
         className="min-h-11 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 rounded-md border border-navy px-2 py-1 text-xs font-medium text-navy transition-colors hover:bg-navy hover:text-white disabled:opacity-50"
-      >
+      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
         {pending ? "…" : "Set"}
-      </button>
+      </Button>
       {state && !state.ok && (
         <span role="alert" className="text-xs text-red-700">
           {state.error}

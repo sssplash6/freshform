@@ -1,37 +1,48 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { removeAssignment } from "@/lib/actions/mentors";
 
+/**
+ * Remove a mentor↔program assignment. Uses the app's inline two-step confirm
+ * (like voiding a session or deleting a student) rather than a native
+ * confirm() dialog, so the whole app confirms destructive actions the same way.
+ */
 export function RemoveAssignmentButton({
   assignmentId,
 }: {
   assignmentId: string;
 }) {
   const [state, action, pending] = useActionState(removeAssignment, null);
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <div className="inline-flex items-center gap-2">
+        <Button variant="danger" size="sm" onClick={() => setConfirming(true)}>
+          Remove
+        </Button>
+        {state && !state.ok && (
+          <span role="alert" className="text-xs text-red-700">
+            {state.error}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <form
-      action={action}
-      onSubmit={(e) => {
-        if (!confirm("Remove this mentor assignment?")) e.preventDefault();
-      }}
-      className="inline"
-    >
+    <form action={action} className="rise-in inline-flex items-center gap-2">
       <input type="hidden" name="assignmentId" value={assignmentId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
-      >
-        {pending ? "…" : "Remove"}
-      </button>
-      {state && !state.ok && (
-        <span role="alert" className="ml-2 text-xs text-red-700">
-          {state.error}
-        </span>
-      )}
+      <span className="text-xs text-gray-600">Remove assignment?</span>
+      <Button type="submit" variant="danger" size="sm" disabled={pending}>
+        {pending ? "Removing…" : "Yes, remove"}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+        Cancel
+      </Button>
     </form>
   );
 }
