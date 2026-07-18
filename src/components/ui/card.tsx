@@ -4,10 +4,15 @@ import { cn } from "@/lib/cn";
 
 /** The white bordered surface used for grouped content. Flat by default
  * (DESIGN.md prefers rules + whitespace); pass shadow classes when elevation
- * communicates real hierarchy. */
-export function Card({ className, ...props }: ComponentProps<"div">) {
+ * communicates real hierarchy. `as` picks the element so callers keep correct
+ * semantics (e.g. a card that is really a <section>). */
+export function Card({
+  as: As = "div",
+  className,
+  ...props
+}: ComponentProps<"div"> & { as?: "div" | "section" | "article" }) {
   return (
-    <div
+    <As
       className={cn("rounded-lg border border-mist bg-white", className)}
       {...props}
     />

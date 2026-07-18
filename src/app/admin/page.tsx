@@ -6,6 +6,7 @@ import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";
 import { ProgramIslandCard } from "@/components/program-island-card";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Callout } from "@/components/ui/callout";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatHours } from "@/lib/format";
@@ -68,14 +69,12 @@ export default async function AdminHomePage() {
       </div>
 
       {pending.length > 0 && (
-        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-          <h2 className="text-sm font-semibold text-amber-800">
-            Pending approvals ({pending.length})
-          </h2>
-          <p className="mt-1 text-xs text-amber-700">
-            These students signed up themselves. Approve them, then allocate
-            their hours from mentors in their program via “Manage”.
-          </p>
+        <Callout
+          tone="warning"
+          title={`Pending approvals (${pending.length})`}
+        >
+          These students signed up themselves. Approve them, then allocate
+          their hours from mentors in their program via “Manage”.
           <ul className="mt-3 divide-y divide-amber-200">
             {pending.map((s) => (
               <li
@@ -105,7 +104,7 @@ export default async function AdminHomePage() {
               </li>
             ))}
           </ul>
-        </section>
+        </Callout>
       )}
 
       <StatCardGrid>

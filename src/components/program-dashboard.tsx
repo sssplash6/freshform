@@ -1,7 +1,8 @@
-import Link from "next/link";
-
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentsTable } from "@/components/students-table";
+import { LinkButton } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
@@ -24,10 +25,10 @@ export async function ProgramDashboard({
 
   if (!program) {
     return (
-      <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+      <Callout tone="danger" title="No program linked">
         Your account isn&apos;t linked to a program. Ask an admin to fix the
         staff configuration.
-      </p>
+      </Callout>
     );
   }
 
@@ -70,12 +71,16 @@ export async function ProgramDashboard({
       </StatCardGrid>
 
       {students.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No students in {program.name} yet.{" "}
-          <Link href={studentsHref} className="text-navy underline">
-            Create the first one.
-          </Link>
-        </p>
+        <EmptyState
+          title={`No students in ${program.name} yet`}
+          action={
+            <LinkButton href={studentsHref} variant="secondary" size="sm">
+              Add students
+            </LinkButton>
+          }
+        >
+          Add students by email to start tracking their mentoring hours.
+        </EmptyState>
       ) : (
         [...byCohort.entries()].map(([cohortName, cohortStudents]) => (
           <section key={cohortName || "program"}>

@@ -1,13 +1,15 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
 import { Deadline } from "@/components/deadline";
-import { ArrowLeftIcon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
+import { Callout } from "@/components/ui/callout";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Table, Td, Tr } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
@@ -55,57 +57,48 @@ export default async function AdminStudentDetailPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <Link
-          href={`/admin/programs/${profile.programId}`}
-          className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
-        >
-          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          {profile.program.name}
-        </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-navy">
+      <PageHeader
+        backHref={`/admin/programs/${profile.programId}`}
+        backLabel={profile.program.name}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
             {profile.user.name ?? profile.user.email}
-          </h1>
-          {isPending && (
-            <Chip tone="amber">Pending approval</Chip>
-          )}
-        </div>
-        <p className="mt-1.5 text-base text-gray-500">
-          {profile.user.email} · {profile.program.name}
-          {profile.cohort ? ` / ${profile.cohort.name}` : ""}
-          {profile.telegramUsername ? (
-            <>
-              {" · Telegram "}
-              <a
-                href={`https://t.me/${profile.telegramUsername}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
-              >
-                @{profile.telegramUsername}
-              </a>
-            </>
-          ) : (
-            " · Telegram not set yet"
-          )}{" "}
-          · registered {formatDate(profile.createdAt)}
-        </p>
-      </div>
+            {isPending && <Chip tone="amber">Pending approval</Chip>}
+          </span>
+        }
+        subtitle={
+          <>
+            {profile.user.email} · {profile.program.name}
+            {profile.cohort ? ` / ${profile.cohort.name}` : ""}
+            {profile.telegramUsername ? (
+              <>
+                {" · Telegram "}
+                <a
+                  href={`https://t.me/${profile.telegramUsername}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+                >
+                  @{profile.telegramUsername}
+                </a>
+              </>
+            ) : (
+              " · Telegram not set yet"
+            )}{" "}
+            · registered {formatDate(profile.createdAt)}
+          </>
+        }
+      />
 
       {isPending && (
-        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-          <h2 className="text-sm font-semibold text-amber-800">
-            Approve this student
-          </h2>
-          <p className="mt-1 text-xs text-amber-700">
-            Until approved, the student can&apos;t use their hours and mentors
-            can&apos;t log sessions for them.
-          </p>
-          <div className="mt-3">
-            <ApproveStudentButtons studentProfileId={profile.id} />
-          </div>
-        </section>
+        <Callout
+          tone="warning"
+          title="Approve this student"
+          action={<ApproveStudentButtons studentProfileId={profile.id} />}
+        >
+          Until approved, the student can&apos;t use their hours and mentors
+          can&apos;t log sessions for them.
+        </Callout>
       )}
 
       <StatCardGrid>
@@ -128,75 +121,67 @@ export default async function AdminStudentDetailPage({
           Hour allocations by mentor
         </h2>
         {mentors.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No mentors are assigned to {profile.program.name} yet. Assign
-            mentors first, then allocate hours here.
-          </p>
+          <EmptyState title="No mentors assigned yet">
+            Assign mentors to {profile.program.name} first, then allocate hours
+            here.
+          </EmptyState>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-mist bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="px-4 py-3">Mentor</th>
-                  <th className="px-4 py-3 text-right">Allocated</th>
-                  <th className="px-4 py-3 text-right">Completed</th>
-                  <th className="px-4 py-3 text-right">Remaining</th>
-                  <th className="px-4 py-3">Use by</th>
-                  <th className="px-4 py-3">Set allocation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-mist/60">
-                {mentors.map((mentor) => {
-                  const alloc = byMentor.get(mentor.id);
-                  return (
-                    <tr key={mentor.id}>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {mentor.name ?? "—"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {mentor.email}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatHours(alloc?.allocated ?? 0)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatHours(alloc?.completed ?? 0)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-medium tabular-nums ${
-                          (alloc?.remaining ?? 0) < 0
-                            ? "text-red-700"
-                            : "text-navy"
-                        }`}
-                      >
-                        {formatHours(alloc?.remaining ?? 0)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Deadline
-                          deadline={alloc?.deadline ?? null}
-                          remaining={alloc?.remaining ?? 0}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <AllocateHoursForm
-                          studentProfileId={profile.id}
-                          mentorId={mentor.id}
-                          currentHours={alloc?.allocated ?? 0}
-                          currentDeadline={
-                            alloc?.deadline
-                              ? alloc.deadline.toISOString().slice(0, 10)
-                              : null
-                          }
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            columns={[
+              { label: "Mentor" },
+              { label: "Allocated", align: "right" },
+              { label: "Completed", align: "right" },
+              { label: "Remaining", align: "right" },
+              { label: "Use by" },
+              { label: "Set allocation" },
+            ]}
+          >
+            {mentors.map((mentor) => {
+              const alloc = byMentor.get(mentor.id);
+              return (
+                <Tr key={mentor.id}>
+                  <Td>
+                    <div className="font-medium text-gray-900">
+                      {mentor.name ?? "—"}
+                    </div>
+                    <div className="text-xs text-gray-500">{mentor.email}</div>
+                  </Td>
+                  <Td align="right" className="tabular-nums">
+                    {formatHours(alloc?.allocated ?? 0)}
+                  </Td>
+                  <Td align="right" className="tabular-nums">
+                    {formatHours(alloc?.completed ?? 0)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className={`font-medium tabular-nums ${
+                      (alloc?.remaining ?? 0) < 0 ? "text-red-700" : "text-navy"
+                    }`}
+                  >
+                    {formatHours(alloc?.remaining ?? 0)}
+                  </Td>
+                  <Td>
+                    <Deadline
+                      deadline={alloc?.deadline ?? null}
+                      remaining={alloc?.remaining ?? 0}
+                    />
+                  </Td>
+                  <Td>
+                    <AllocateHoursForm
+                      studentProfileId={profile.id}
+                      mentorId={mentor.id}
+                      currentHours={alloc?.allocated ?? 0}
+                      currentDeadline={
+                        alloc?.deadline
+                          ? alloc.deadline.toISOString().slice(0, 10)
+                          : null
+                      }
+                    />
+                  </Td>
+                </Tr>
+              );
+            })}
+          </Table>
         )}
       </section>
 
@@ -213,9 +198,7 @@ export default async function AdminStudentDetailPage({
           Allocation history
         </h2>
         {profile.allotmentChanges.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No allocation changes yet.
-          </p>
+          <EmptyState>No allocation changes yet.</EmptyState>
         ) : (
           <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
             {profile.allotmentChanges.map((c) => (

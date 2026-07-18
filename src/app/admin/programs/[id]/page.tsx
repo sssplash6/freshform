@@ -5,9 +5,11 @@ import { Chip } from "@/components/chip";
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { CreateCohortForm } from "@/components/forms/program-forms";
 import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
-import { ArrowLeftIcon } from "@/components/icons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentsTable } from "@/components/students-table";
+import { Card, SectionHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { SESSION_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -58,27 +60,14 @@ export default async function AdminProgramPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <Link
-          href="/admin"
-          className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
-        >
-          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          Dashboard
-        </Link>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-navy">
-          {program.name}
-        </h1>
-        {program.cohorts.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {program.cohorts.map((c) => (
-              <Chip key={c.id} tone="gray">
-                {c.name}
-              </Chip>
-            ))}
-          </div>
-        )}
-        <div className="mt-3">
+      <div className="space-y-3">
+        <PageHeader backHref="/admin" backLabel="Dashboard" title={program.name} />
+        <div className="flex flex-wrap items-center gap-2">
+          {program.cohorts.map((c) => (
+            <Chip key={c.id} tone="gray">
+              {c.name}
+            </Chip>
+          ))}
           <CreateCohortForm programId={program.id} />
         </div>
       </div>
@@ -98,14 +87,12 @@ export default async function AdminProgramPage({
         />
       </StatCardGrid>
 
-      <section className="rounded-lg border border-mist bg-white">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
-          <h2 className="text-base font-semibold text-navy">Students</h2>
-          <p className="text-xs text-gray-500">
-            {formatHours(totals.completed)} of {formatHours(totals.allotted)}{" "}
-            hours completed
-          </p>
-        </div>
+      <Card as="section">
+        <SectionHeader
+          className="border-b border-mist px-4 py-3"
+          title="Students"
+          caption={`${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
+        />
         <div className="border-b border-mist px-4 py-3">
           <AddStudentsForm program={programOption} />
         </div>
@@ -116,22 +103,23 @@ export default async function AdminProgramPage({
           manageBase="/admin/students"
           framed={false}
         />
-      </section>
+      </Card>
 
       <section>
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold text-navy">Mentors</h2>
-          <Link
-            href="/admin/mentors"
-            className="text-sm font-medium text-navy hover:text-brand-deep"
-          >
-            Register or assign mentors →
-          </Link>
-        </div>
+        <SectionHeader
+          className="mb-2"
+          title="Mentors"
+          action={
+            <Link
+              href="/admin/mentors"
+              className="text-sm font-medium text-navy hover:text-brand-deep"
+            >
+              Register or assign mentors →
+            </Link>
+          }
+        />
         {assignments.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
-            No mentors assigned to {program.name} yet.
-          </p>
+          <EmptyState>No mentors assigned to {program.name} yet.</EmptyState>
         ) : (
           <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
             {assignments.map((a) => (
@@ -167,9 +155,7 @@ export default async function AdminProgramPage({
           Latest sessions
         </h2>
         {recentSessions.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-6 text-sm text-gray-500">
-            No sessions logged in {program.name} yet.
-          </p>
+          <EmptyState>No sessions logged in {program.name} yet.</EmptyState>
         ) : (
           <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
             {recentSessions.map((s) => (

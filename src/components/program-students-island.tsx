@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
+import { Card, SectionHeader } from "@/components/ui/card";
 import { formatHours } from "@/lib/format";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
 
@@ -30,23 +31,20 @@ export function ProgramStudentsIsland({
   );
 
   return (
-    <section className="rounded-lg border border-mist bg-white">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
-        <h2 className="text-base font-semibold text-navy">
-          {programHref ? (
+    <Card as="section">
+      <SectionHeader
+        className="border-b border-mist px-4 py-3"
+        title={
+          programHref ? (
             <Link href={programHref} className="hover:text-brand-deep">
               {program.name} →
             </Link>
           ) : (
             program.name
-          )}
-        </h2>
-        <p className="text-xs text-gray-500">
-          {students.length} student{students.length === 1 ? "" : "s"} ·{" "}
-          {formatHours(totals.completed)} of {formatHours(totals.allotted)}{" "}
-          hours completed
-        </p>
-      </div>
+          )
+        }
+        caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
+      />
       <div className="border-b border-mist px-4 py-3">
         <AddStudentsForm program={program} />
       </div>
@@ -57,6 +55,6 @@ export function ProgramStudentsIsland({
         manageBase={manageBase}
         framed={false}
       />
-    </section>
+    </Card>
   );
 }
