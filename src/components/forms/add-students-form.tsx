@@ -1,47 +1,87 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
-import { createStudents } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Button } from "@/components/ui/button";
+import { Field, Textarea, inputClasses } from "@/components/ui/field";
+import { createStudents } from "@/lib/actions/students";
+import { EMAIL_RE, normalizeEmail } from "@/lib/actions/shared";
+import { cn } from "@/lib/cn";
 import type { ProgramOption } from "@/lib/queries";
-
-const selectClass =
-  "min-h-11 rounded-md border border-mist bg-white px-3.5 py-2.5 text-[15px] text-gray-900 transition hover:border-navy/40 focus:border-navy focus:outline-none";
 
 /**
  * Staff pastes a list of student emails into ONE program (a cohort is only
- * asked for in programs that have them). Each student confirms their name
- * and Telegram username on first sign-in.
+ * asked for in programs that have them). We parse the paste as they type so
+ * they can see exactly how many valid addresses will be enrolled — and which
+ * ones need fixing — before submitting. Each student confirms their name and
+ * Telegram username on first sign-in.
  */
 export function AddStudentsForm({ program }: { program: ProgramOption }) {
   const [state, action, pending] = useActionState(createStudents, null);
+  const [raw, setRaw] = useState("");
+
+  const { valid, invalid } = useMemo(() => {
+    const entries = [
+      ...new Set(raw.split(/[\s,;]+/).map(normalizeEmail).filter(Boolean)),
+    ];
+    return {
+      valid: entries.filter((e) => EMAIL_RE.test(e)),
+      invalid: entries.filter((e) => !EMAIL_RE.test(e)),
+    };
+  }, [raw]);
+
+  // Clear the paste box once the students have been added.
+  useEffect(() => {
+    if (state?.ok) setRaw("");
+  }, [state]);
 
   return (
-    <form action={action}>
+    <form action={action} className="space-y-3">
       <input type="hidden" name="programId" value={program.id} />
-      <label className="block text-sm">
-        <span className="text-gray-600">
-          Add students by email — paste one or many, separated by new lines or
-          commas
-        </span>
-        <textarea
+      <Field
+        label="Add students by email"
+        hint="Paste one or many, separated by new lines, commas or spaces."
+      >
+        <Textarea
           name="emails"
           required
-          rows={2}
-          placeholder={"student1@example.com\nstudent2@example.com"}
-          className="mt-0.5 w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none"
+          rows={3}
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          placeholder={"ada@example.com\ngrace@example.com"}
         />
-      </label>
-      <div className="mt-2 flex flex-wrap items-center gap-3">
+      </Field>
+
+      {(valid.length > 0 || invalid.length > 0) && (
+        <p className="text-xs text-gray-500" aria-live="polite">
+          <span className="font-medium tabular-nums text-navy">
+            {valid.length}
+          </span>{" "}
+          ready to add
+          {invalid.length > 0 && (
+            <>
+              {" · "}
+              <span className="font-medium tabular-nums text-red-700">
+                {invalid.length}
+              </span>{" "}
+              need a valid address
+            </>
+          )}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
         {program.cohorts.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-gray-600">
-            Cohort *
+            Cohort
             <select
               name="cohortId"
               required
-              defaultValue={program.cohorts.length === 1 ? program.cohorts[0].id : ""}
-              className={selectClass}
+              defaultValue={
+                program.cohorts.length === 1 ? program.cohorts[0].id : ""
+              }
+              className={cn(inputClasses, "w-auto")}
             >
               <option value="" disabled>
                 Select…
@@ -54,13 +94,13 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
             </select>
           </label>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
-        >
-          {pending ? "Adding…" : `Add to ${program.name}`}
-        </button>
+        <Button type="submit" disabled={pending || valid.length === 0}>
+          {pending
+            ? "Adding…"
+            : valid.length > 0
+              ? `Add ${valid.length} student${valid.length === 1 ? "" : "s"}`
+              : `Add to ${program.name}`}
+        </Button>
       </div>
       <ActionFeedback state={state} />
     </form>
