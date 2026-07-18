@@ -1,0 +1,88 @@
+import { Deadline } from "@/components/deadline";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatHours } from "@/lib/format";
+import { cn } from "@/lib/cn";
+
+type MentorHours = {
+  mentor: { id: string; name: string | null; email: string };
+  allocated: number;
+  completed: number;
+  remaining: number;
+  deadline: Date | null;
+};
+
+/**
+ * The student's hours with each mentor, as a calm ledger meter: the remaining
+ * balance leads, a thin orange bar shows how much of the allotment has been
+ * used (orange = hours/progress per DESIGN.md), and the exact "used / total"
+ * plus any use-by date sit underneath. Approachable for external students
+ * without turning hours into a game.
+ */
+export function MentorHoursList({ items }: { items: MentorHours[] }) {
+  if (items.length === 0) {
+    return (
+      <EmptyState title="No mentor hours yet">
+        An admin will allocate your mentoring hours soon. They&apos;ll appear
+        here.
+      </EmptyState>
+    );
+  }
+
+  return (
+    <Card>
+      <ul className="divide-y divide-mist/60">
+        {items.map((m) => {
+          const overdrawn = m.remaining < 0;
+          const pct =
+            m.allocated > 0
+              ? Math.min(100, Math.round((m.completed / m.allocated) * 100))
+              : 0;
+          return (
+            <li key={m.mentor.id} className="px-4 py-4 sm:px-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="truncate font-medium text-gray-900">
+                  {m.mentor.name ?? m.mentor.email}
+                </span>
+                <span className="whitespace-nowrap text-sm text-gray-500">
+                  <span
+                    className={cn(
+                      "text-lg font-bold tabular-nums",
+                      overdrawn ? "text-red-700" : "text-navy",
+                    )}
+                  >
+                    {formatHours(overdrawn ? -m.remaining : m.remaining)}
+                  </span>{" "}
+                  {overdrawn ? "h over" : "h left"}
+                </span>
+              </div>
+              <div
+                className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-mist"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={m.allocated}
+                aria-valuenow={m.completed}
+                aria-label={`Hours used with ${m.mentor.name ?? m.mentor.email}`}
+              >
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    overdrawn ? "bg-red-500" : "bg-brand",
+                  )}
+                  style={{ width: `${overdrawn ? 100 : pct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
+                <span className="tabular-nums">
+                  {formatHours(m.completed)} of {formatHours(m.allocated)} hours
+                  used
+                </span>
+                <Deadline deadline={m.deadline} remaining={m.remaining} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}

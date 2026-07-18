@@ -16,7 +16,7 @@ export function Deadline({
   if (passed && remaining > 0) {
     return (
       <span className="font-medium text-red-700">
-        {formatDate(deadline)} — passed
+        {formatDate(deadline)} · overdue
       </span>
     );
   }
