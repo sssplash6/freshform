@@ -5,6 +5,8 @@ import { useActionState } from "react";
 import { assignMentor } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import type { ProgramOption } from "@/lib/queries";
 
 /**
@@ -45,35 +47,21 @@ export function AssignMentorForm({
         assigned to, from their mentor page.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="block text-sm">
-          <span className="text-gray-600">Mentor *</span>
-          <div className="mt-0.5">
-            <Select
-              name="mentorId"
-              ariaLabel="Mentor"
-              options={mentors.map((m) => ({ value: m.id, label: m.label }))}
-            />
-          </div>
-        </div>
-        <div className="block text-sm">
-          <span className="text-gray-600">Program / cohort *</span>
-          <div className="mt-0.5">
-            <Select
-              name="target"
-              ariaLabel="Program or cohort"
-              options={targets}
-            />
-          </div>
-        </div>
+        <Field label="Mentor" required>
+          <Select
+            name="mentorId"
+            ariaLabel="Mentor"
+            options={mentors.map((m) => ({ value: m.id, label: m.label }))}
+          />
+        </Field>
+        <Field label="Program / cohort" required>
+          <Select name="target" ariaLabel="Program or cohort" options={targets} />
+        </Field>
       </div>
       <div className="mt-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Assigning…" : "Assign mentor"}
-        </button>
+        </Button>
       </div>
       <ActionFeedback state={state} />
     </form>

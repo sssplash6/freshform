@@ -1,3 +1,4 @@
+import { Callout } from "@/components/ui/callout";
 import { signIn } from "@/lib/auth";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -19,21 +20,26 @@ export default async function LoginPage({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-mist/40 p-6">
-      <div className="w-full max-w-md rounded-2xl border border-mist bg-white p-10 shadow-sm">
-        <h1 className="text-3xl font-bold tracking-tight text-navy">
-          Freshman Academy
+      <div className="w-full max-w-md rounded-2xl border border-mist bg-white p-8 shadow-sm sm:p-10">
+        <div>
+          <span className="text-2xl font-bold tracking-tight text-navy">
+            Freshman Academy
+          </span>
+          {/* The same orange accent the header uses for the active state. */}
+          <div className="mt-2 h-0.5 w-10 rounded-full bg-brand" />
+        </div>
+
+        <h1 className="mt-6 text-2xl font-bold tracking-tight text-navy">
+          Welcome back
         </h1>
-        <p className="mt-2 text-base text-gray-500">
-          Welcome! Sign in to see your mentoring hours.
+        <p className="mt-1.5 text-[15px] text-gray-500">
+          Sign in to see your mentoring hours and book your next session.
         </p>
 
         {errorMessage && (
-          <p
-            role="alert"
-            className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-          >
+          <Callout tone="danger" className="mt-5">
             {errorMessage}
-          </p>
+          </Callout>
         )}
 
         <form
@@ -45,7 +51,7 @@ export default async function LoginPage({
         >
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-md border border-mist bg-white px-4 py-3 text-[15px] font-medium text-gray-900 transition hover:border-navy/40 hover:bg-mist/20"
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-mist bg-white px-4 py-3 text-[15px] font-medium text-gray-900 transition-colors hover:border-navy/40 hover:bg-mist/20"
           >
             <GoogleIcon />
             Continue with Google

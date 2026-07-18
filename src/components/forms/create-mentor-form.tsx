@@ -2,24 +2,19 @@
 
 import { useActionState } from "react";
 
-import { createMentor } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { createMentor } from "@/lib/actions/mentors";
 import type { ProgramOption } from "@/lib/queries";
-
-const inputClass =
-  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
 
 /**
  * Admin registers a mentor directly: email, full name, and the program (or
  * cohort) they work in. The mentor signs in with Google afterwards and sets
  * their own booking link — no self-signup step needed.
  */
-export function CreateMentorForm({
-  programs,
-}: {
-  programs: ProgramOption[];
-}) {
+export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
   const [state, action, pending] = useActionState(createMentor, null);
 
   const targets = programs.flatMap((p) => [
@@ -34,49 +29,32 @@ export function CreateMentorForm({
   ]);
 
   return (
-    <form
-      action={action}
-      className="rounded-lg border border-mist bg-white p-4"
-    >
+    <form action={action} className="rounded-lg border border-mist bg-white p-4">
       <h2 className="text-base font-semibold text-navy">Register a mentor</h2>
       <p className="mt-1 text-xs text-gray-500">
         The mentor signs in with this email using Google and sets their own
         booking link from their mentor page.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="block text-sm">
-          <span className="text-gray-600">Email *</span>
-          <input
+        <Field label="Email" required>
+          <Input
             name="email"
             type="email"
             required
             placeholder="mentor@example.com"
-            className={inputClass}
           />
-        </label>
-        <label className="block text-sm">
-          <span className="text-gray-600">Full name *</span>
-          <input name="name" type="text" required className={inputClass} />
-        </label>
-        <div className="block text-sm">
-          <span className="text-gray-600">Program / cohort *</span>
-          <div className="mt-0.5">
-            <Select
-              name="target"
-              ariaLabel="Program or cohort"
-              options={targets}
-            />
-          </div>
-        </div>
+        </Field>
+        <Field label="Full name" required>
+          <Input name="name" type="text" required />
+        </Field>
+        <Field label="Program / cohort" required>
+          <Select name="target" ariaLabel="Program or cohort" options={targets} />
+        </Field>
       </div>
       <div className="mt-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Registering…" : "Register mentor"}
-        </button>
+        </Button>
       </div>
       <ActionFeedback state={state} />
     </form>
