@@ -127,7 +127,7 @@ export async function AppShell({
               <summary className="flex h-11 cursor-pointer list-none items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink [&::-webkit-details-marker]:hidden">
                 Menu
               </summary>
-              <div className="pop-in absolute right-0 z-20 mt-1 w-56 rounded-xl border border-line bg-surface p-1 shadow-lg">
+              <div className="pop-in absolute right-0 z-20 mt-1 w-56 rounded-xl border border-line bg-surface p-1 shadow-lg [--pop-origin:top_right]">
                 <nav aria-label="Primary navigation" className="grid gap-1">
                   <NavLinks items={NAV_BY_ROLE[role]} variant="menu" />
                 </nav>

@@ -79,7 +79,7 @@ export function BookingLinksForm({
         </span>
       </button>
       {open && (
-        <>
+        <div className="rise-in">
           <p className="mt-1 text-xs text-muted-fg">
             Students book sessions through these links (e.g. your Calendly),
             one per program you&apos;re assigned to.
@@ -91,7 +91,7 @@ export function BookingLinksForm({
               <BookingLinkRow key={a.id} assignment={a} />
             ))}
           </div>
-        </>
+        </div>
       )}
     </section>
   );

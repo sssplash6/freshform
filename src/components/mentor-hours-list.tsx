@@ -1,6 +1,7 @@
 import { Deadline } from "@/components/deadline";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Meter } from "@/components/ui/meter";
 import { formatHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -56,22 +57,14 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                   {overdrawn ? "h over" : "h left"}
                 </span>
               </div>
-              <div
-                className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-line"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={m.allocated}
-                aria-valuenow={m.completed}
-                aria-label={`Hours used with ${m.mentor.name ?? m.mentor.email}`}
-              >
-                <div
-                  className={cn(
-                    "h-full rounded-full",
-                    overdrawn ? "bg-red-500" : "bg-accent",
-                  )}
-                  style={{ width: `${overdrawn ? 100 : pct}%` }}
-                />
-              </div>
+              <Meter
+                className="mt-2.5"
+                pct={overdrawn ? 100 : pct}
+                tone={overdrawn ? "danger" : "accent"}
+                ariaValueNow={m.completed}
+                ariaValueMax={m.allocated}
+                ariaLabel={`Hours used with ${m.mentor.name ?? m.mentor.email}`}
+              />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
                 <span className="tabular-nums">
                   {formatHours(m.completed)} of {formatHours(m.allocated)} hours

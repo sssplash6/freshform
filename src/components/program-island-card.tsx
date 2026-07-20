@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ArrowRightIcon } from "@/components/icons";
+import { Meter } from "@/components/ui/meter";
 
 /**
  * A compact program "island": a few headline numbers on a card that expands
@@ -25,7 +26,7 @@ export function ProgramIslandCard({
   return (
     <Link
       href={href}
-      className="group block rounded-xl border border-line bg-surface p-5 transition hover:border-accent/60 hover:shadow-sm"
+      className="group block rounded-xl border border-line bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-soft"
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{name}</h3>
@@ -57,14 +58,14 @@ export function ProgramIslandCard({
         ))}
       </dl>
       {completion && completion.allotted > 0 && (
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-line">
-          <div
-            className="h-full rounded-full bg-accent"
-            style={{
-              width: `${Math.min(100, Math.round((completion.completed / completion.allotted) * 100))}%`,
-            }}
-          />
-        </div>
+        <Meter
+          className="mt-3"
+          size="sm"
+          pct={Math.round((completion.completed / completion.allotted) * 100)}
+          ariaValueNow={completion.completed}
+          ariaValueMax={completion.allotted}
+          ariaLabel={`${name} hours completed`}
+        />
       )}
       <p className="mt-3 text-xs text-muted-fg">{caption}</p>
       <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-ink">

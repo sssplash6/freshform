@@ -22,6 +22,11 @@
   --color-ink: #1a2733; /* primary text */
   --color-muted-fg: #6b7480; /* secondary text */
 
+  /* Elevation is rare and quiet. When a surface lifts (hovered island, menu),
+     the shadow is tinted toward the brand blue, never flat black — softer and
+     on-brand than a default grey drop shadow. */
+  --shadow-soft: 0 4px 20px -8px rgb(18 75 132 / 0.16), 0 1px 3px rgb(18 75 132 / 0.06);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 

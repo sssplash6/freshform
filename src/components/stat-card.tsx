@@ -22,7 +22,9 @@ export function StatCard({
       >
         {value}
       </div>
-      <div className="mt-1 text-sm text-muted-fg">{label}</div>
+      <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-fg">
+        {label}
+      </div>
     </div>
   );
 }

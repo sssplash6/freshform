@@ -90,7 +90,7 @@ function MentorRow({
       {editing && (
         <form
           action={action}
-          className="mt-4 border-t border-line pt-4"
+          className="rise-in mt-4 border-t border-line pt-4"
           // Remount when assignments change so the checkboxes reflect what
           // was actually saved.
           key={mentor.assignments.map((a) => a.checkedValue).join("|")}

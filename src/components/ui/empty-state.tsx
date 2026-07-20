@@ -28,7 +28,9 @@ export function EmptyState({
         className,
       )}
     >
-      {icon && <div className="mb-1 text-line [&_svg]:h-8 [&_svg]:w-8">{icon}</div>}
+      {icon && (
+        <div className="mb-1 text-muted-fg/40 [&_svg]:h-8 [&_svg]:w-8">{icon}</div>
+      )}
       {title && <p className="text-[15px] font-medium text-ink">{title}</p>}
       {children && (
         <div className="max-w-sm text-sm text-muted-fg">{children}</div>
