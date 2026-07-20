@@ -62,7 +62,7 @@ export function CreateCohortForm({ programId }: { programId: string }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-xs font-medium text-gray-400 transition-colors hover:text-navy"
+          className="text-xs font-medium text-muted-fg transition-colors hover:text-ink"
         >
           + Add a cohort to this program
         </button>

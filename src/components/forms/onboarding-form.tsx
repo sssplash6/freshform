@@ -10,12 +10,12 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import type { ProgramOption } from "@/lib/queries";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 function NameField({ defaultName }: { defaultName: string }) {
   return (
     <label className="block text-sm">
-      <span className="text-gray-600">Full name *</span>
+      <span className="text-muted-fg">Full name *</span>
       <input
         name="name"
         type="text"
@@ -30,7 +30,7 @@ function NameField({ defaultName }: { defaultName: string }) {
 function TelegramField() {
   return (
     <label className="block text-sm">
-      <span className="text-gray-600">Telegram username *</span>
+      <span className="text-muted-fg">Telegram username *</span>
       <input
         name="telegramUsername"
         type="text"
@@ -38,7 +38,7 @@ function TelegramField() {
         placeholder="@username"
         className={inputClass}
       />
-      <span className="mt-1 block text-xs text-gray-500">
+      <span className="mt-1 block text-xs text-muted-fg">
         Mentors and staff use this to reach you about sessions.
       </span>
     </label>
@@ -50,7 +50,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+      className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
     >
       {pending ? "Submitting…" : label}
     </button>
@@ -95,7 +95,7 @@ export function OnboardingForm({
       <NameField defaultName={defaultName} />
       <TelegramField />
       <label className="block text-sm">
-        <span className="text-gray-600">Your program *</span>
+        <span className="text-muted-fg">Your program *</span>
         <select
           name="programId"
           required
@@ -115,7 +115,7 @@ export function OnboardingForm({
       </label>
       {cohorts.length > 0 && (
         <label className="block text-sm">
-          <span className="text-gray-600">Your cohort *</span>
+          <span className="text-muted-fg">Your cohort *</span>
           <select
             name="cohortId"
             required

@@ -51,7 +51,7 @@ export async function ProgramDashboard({
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-navy">
+      <h1 className="text-3xl font-bold tracking-tight text-ink">
         {program.name} dashboard
       </h1>
 
@@ -85,7 +85,7 @@ export async function ProgramDashboard({
         [...byCohort.entries()].map(([cohortName, cohortStudents]) => (
           <section key={cohortName || "program"}>
             {cohortName && (
-              <h2 className="mb-1 text-sm font-medium text-gray-600">
+              <h2 className="mb-1 text-sm font-medium text-muted-fg">
                 {cohortName}
               </h2>
             )}

@@ -29,16 +29,16 @@ export default async function StudentOnboardingPage() {
     return (
       <div className="mx-auto max-w-md space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-navy">
+          <h1 className="text-3xl font-bold tracking-tight text-ink">
             Welcome to {profile.program.name}
           </h1>
-          <p className="mt-1.5 text-base text-gray-500">
+          <p className="mt-1.5 text-base text-muted-fg">
             You&apos;re registered
             {profile.cohort ? ` in ${profile.cohort.name}` : ""}. Confirm your
             name and Telegram username and you&apos;re all set.
           </p>
         </div>
-        <div className="rounded-lg border border-mist bg-white p-6">
+        <div className="rounded-lg border border-line bg-surface p-6">
           <CompleteProfileForm defaultName={user.name ?? ""} />
         </div>
       </div>
@@ -50,15 +50,15 @@ export default async function StudentOnboardingPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">
           Complete your registration
         </h1>
-        <p className="mt-1.5 text-base text-gray-500">
+        <p className="mt-1.5 text-base text-muted-fg">
           Tell us who you are and which program you&apos;re in. An admin will
           review your registration and allocate your mentoring hours.
         </p>
       </div>
-      <div className="rounded-lg border border-mist bg-white p-6">
+      <div className="rounded-lg border border-line bg-surface p-6">
         <OnboardingForm
           defaultName={user.name ?? ""}
           programs={toProgramOptions(programs)}

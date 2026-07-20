@@ -28,7 +28,7 @@ export function PageHeader({
       {backHref && (
         <Link
           href={backHref}
-          className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-muted-fg hover:text-ink"
         >
           <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
           {backLabel}
@@ -36,11 +36,11 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight text-navy">
+          <h1 className="text-3xl font-bold tracking-tight text-ink">
             {title}
           </h1>
           {subtitle && (
-            <div className="mt-1.5 text-[15px] text-gray-500">{subtitle}</div>
+            <div className="mt-1.5 text-[15px] text-muted-fg">{subtitle}</div>
           )}
         </div>
         {actions && (

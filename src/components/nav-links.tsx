@@ -31,12 +31,12 @@ export function NavLinks({
           variant === "menu"
             ? `flex min-h-11 items-center rounded px-3 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-brand text-white"
+                  ? "bg-accent text-white"
                   : "text-white/85 hover:bg-white/10 hover:text-white"
               }`
             : `inline-flex min-h-11 items-center border-b-2 px-1 transition-colors ${
                 active
-                  ? "border-brand text-white"
+                  ? "border-accent text-white"
                   : "border-transparent text-white/80 hover:text-white"
               }`;
         return (

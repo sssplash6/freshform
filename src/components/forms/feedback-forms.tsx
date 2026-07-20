@@ -11,7 +11,7 @@ import { StarIcon } from "@/components/icons";
 import { Select } from "@/components/select";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 /** Native radio inputs retain expected keyboard behavior while labels render
  * as a large, tap-friendly star picker. */
@@ -22,7 +22,7 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
 
   return (
     <fieldset className="block text-sm">
-      <legend className="text-gray-600">Rating *</legend>
+      <legend className="text-muted-fg">Rating *</legend>
       <div
         className="mt-1 flex items-center gap-0.5"
         onMouseLeave={() => setHovered(0)}
@@ -45,8 +45,8 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
             />
             <label
               htmlFor={`${idPrefix}-${n}`}
-              className={`inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${
-                n <= shown ? "text-brand" : "text-mist"
+              className={`inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${
+                n <= shown ? "text-accent" : "text-line"
               }`}
             >
             <StarIcon
@@ -58,7 +58,7 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
           </span>
         ))}
         {shown > 0 && (
-          <span className="ml-2 text-sm font-medium tabular-nums text-gray-500">
+          <span className="ml-2 text-sm font-medium tabular-nums text-muted-fg">
             {shown}/5
           </span>
         )}
@@ -75,14 +75,14 @@ export function MentorFeedbackForm({
   const [state, action, pending] = useActionState(submitMentorFeedback, null);
 
   return (
-    <form action={action} className="rounded-lg border border-mist bg-white p-4">
-      <h2 className="text-base font-semibold text-navy">Rate a mentor</h2>
-      <p className="mt-1 text-xs text-gray-500">
+    <form action={action} className="rounded-lg border border-line bg-surface p-4">
+      <h2 className="text-base font-semibold text-ink">Rate a mentor</h2>
+      <p className="mt-1 text-xs text-muted-fg">
         Your name isn&apos;t shown to the mentor.
       </p>
       <div className="mt-3 space-y-3">
         <div className="block text-sm">
-          <span className="text-gray-600">Mentor *</span>
+          <span className="text-muted-fg">Mentor *</span>
           <div className="mt-0.5">
             <Select
               name="mentorId"
@@ -93,7 +93,7 @@ export function MentorFeedbackForm({
         </div>
         <StarRating name="rating" idPrefix="mentor-rating" />
         <label className="block text-sm">
-          <span className="text-gray-600">Comment</span>
+          <span className="text-muted-fg">Comment</span>
           <textarea
             name="comment"
             rows={3}
@@ -105,7 +105,7 @@ export function MentorFeedbackForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-3 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+        className="mt-3 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Sending…" : "Submit mentor feedback"}
       </button>
@@ -118,12 +118,12 @@ export function WebsiteFeedbackForm() {
   const [state, action, pending] = useActionState(submitWebsiteFeedback, null);
 
   return (
-    <form action={action} className="rounded-lg border border-mist bg-white p-4">
-      <h2 className="text-base font-semibold text-navy">Rate this website</h2>
+    <form action={action} className="rounded-lg border border-line bg-surface p-4">
+      <h2 className="text-base font-semibold text-ink">Rate this website</h2>
       <div className="mt-3 space-y-3">
         <StarRating name="rating" idPrefix="website-rating" />
         <label className="block text-sm">
-          <span className="text-gray-600">Comment</span>
+          <span className="text-muted-fg">Comment</span>
           <textarea
             name="comment"
             rows={3}
@@ -135,7 +135,7 @@ export function WebsiteFeedbackForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-3 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+        className="mt-3 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Sending…" : "Submit website feedback"}
       </button>

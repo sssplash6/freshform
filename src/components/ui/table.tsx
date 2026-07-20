@@ -24,12 +24,12 @@ export function Table({
     <div
       className={cn(
         "overflow-x-auto",
-        framed && "rounded-lg border border-mist bg-white",
+        framed && "rounded-lg border border-line bg-surface",
         className,
       )}
     >
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+        <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
           <tr>
             {columns.map((c, i) => (
               <th
@@ -44,7 +44,7 @@ export function Table({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-mist/60">{children}</tbody>
+        <tbody className="divide-y divide-line/60">{children}</tbody>
       </table>
     </div>
   );
@@ -53,7 +53,7 @@ export function Table({
 export function Tr({ className, ...props }: ComponentProps<"tr">) {
   return (
     <tr
-      className={cn("transition-colors hover:bg-mist/20", className)}
+      className={cn("transition-colors hover:bg-canvas", className)}
       {...props}
     />
   );

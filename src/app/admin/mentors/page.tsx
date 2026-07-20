@@ -46,22 +46,22 @@ export default async function AdminMentorsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-navy">Mentors</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Mentors</h1>
 
       {unassigned.length > 0 && (
-        <div className="rounded-lg border border-brand/40 bg-brand/5 p-4">
-          <h2 className="text-base font-semibold text-navy">
+        <div className="rounded-lg border border-accent/40 bg-accent-soft p-4">
+          <h2 className="text-base font-semibold text-ink">
             Awaiting assignment ({unassigned.length})
           </h2>
-          <p className="mt-1 text-xs text-gray-600">
+          <p className="mt-1 text-xs text-muted-fg">
             These mentors signed in before being registered. Edit one below to
             assign them to a program and activate them.
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-gray-700">
+          <ul className="mt-2 space-y-1 text-sm text-ink">
             {unassigned.map((m) => (
               <li key={m.id}>
                 {m.name ?? "—"}{" "}
-                <span className="text-gray-500">({m.email})</span> · signed up{" "}
+                <span className="text-muted-fg">({m.email})</span> · signed up{" "}
                 {m.createdAt.toISOString().slice(0, 10)}
               </li>
             ))}
@@ -72,7 +72,7 @@ export default async function AdminMentorsPage() {
       <CreateMentorForm programs={programSelectOptions} />
 
       <div className="space-y-3">
-        <h2 className="text-base font-semibold text-navy">All mentors</h2>
+        <h2 className="text-base font-semibold text-ink">All mentors</h2>
         <MentorList mentors={rows} programs={programSelectOptions} />
       </div>
     </div>

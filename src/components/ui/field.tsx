@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 
 /** The one text-field look, shared by Input, Textarea and the native Select. */
 export const inputClasses =
-  "min-h-11 w-full rounded-md border border-mist bg-white px-3.5 py-2.5 text-[15px] text-gray-900 transition-colors placeholder:text-gray-400 hover:border-navy/40 focus:border-navy focus:outline-none";
+  "min-h-11 w-full rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition-colors placeholder:text-muted-fg hover:border-brand/40 focus:border-brand focus:outline-none";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(inputClasses, className)} {...props} />;
@@ -41,13 +41,13 @@ export function Field({
 }) {
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span className="block text-sm font-medium text-gray-700">
+      <span className="block text-sm font-medium text-ink">
         {label}
-        {required && <span className="text-brand-deep"> *</span>}
+        {required && <span className="text-accent-ink"> *</span>}
       </span>
       {children}
       {hint && !error && (
-        <span className="block text-xs text-gray-500">{hint}</span>
+        <span className="block text-xs text-muted-fg">{hint}</span>
       )}
       {error && (
         <span role="alert" className="block text-xs text-red-700">

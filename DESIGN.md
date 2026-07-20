@@ -8,11 +8,15 @@ like a generic SaaS dashboard.
 
 ## Color
 
-- **Navy** is structural chrome and primary action.
-- **Orange** means hours, progress, and the active navigation state. The
-  accessible orange token is deliberately dark enough for white text.
+- **Brand** (deep blue) is structural chrome and primary action. `brand-dark`
+  is its hover; `brand-soft` a tint background.
+- **Accent** (orange) means hours, progress, and the active navigation state.
+  The bright `accent` is for fills, dots, and bars; `accent-ink` is the same
+  hue darkened to pass AA for orange text and stat readouts.
 - **Red** is only destructive or overdrawn state.
-- **Mist** is borders and quiet separation, never a primary callout surface.
+- **Line** is borders and quiet separation; **canvas** is the page ground and
+  **surface** is a card — never use a fill as a primary callout.
+- Text is a two-tone system: **ink** for primary, **muted-fg** for secondary.
 
 Use the semantic tokens in `src/app/globals.css`. Do not introduce decorative
 gradients, color-coded decoration, or alternate accent colors.

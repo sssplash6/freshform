@@ -38,19 +38,19 @@ function MentorRow({
   const checked = new Set(mentor.assignments.map((a) => a.checkedValue));
 
   return (
-    <li className="rounded-lg border border-mist bg-white p-4">
+    <li className="rounded-lg border border-line bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 font-medium text-gray-900">
+          <div className="flex items-center gap-2 font-medium text-ink">
             {mentor.name ?? "—"}
             {mentor.status === USER_STATUS.UNASSIGNED && (
               <Chip tone="amber">Unassigned</Chip>
             )}
           </div>
-          <div className="text-xs text-gray-500">{mentor.email}</div>
+          <div className="text-xs text-muted-fg">{mentor.email}</div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {mentor.assignments.length === 0 ? (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-fg">
                 No programs assigned yet
               </span>
             ) : (
@@ -64,12 +64,12 @@ function MentorRow({
                       href={a.calendlyUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+                      className="text-xs text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
                     >
                       link
                     </a>
                   ) : (
-                    <span className="text-xs text-gray-400">no link</span>
+                    <span className="text-xs text-muted-fg">no link</span>
                   )}
                 </span>
               ))
@@ -80,7 +80,7 @@ function MentorRow({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-md border border-navy px-3 py-1.5 text-xs font-medium text-navy transition-colors hover:bg-navy hover:text-white"
+            className="rounded-md border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
           >
             Edit
           </button>
@@ -90,7 +90,7 @@ function MentorRow({
       {editing && (
         <form
           action={action}
-          className="mt-4 border-t border-mist pt-4"
+          className="mt-4 border-t border-line pt-4"
           // Remount when assignments change so the checkboxes reflect what
           // was actually saved.
           key={mentor.assignments.map((a) => a.checkedValue).join("|")}
@@ -110,27 +110,27 @@ function MentorRow({
             </Field>
           </div>
           <fieldset className="mt-3">
-            <legend className="text-sm font-medium text-gray-700">
+            <legend className="text-sm font-medium text-ink">
               Programs / cohorts
             </legend>
             <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-2">
               {targets.map((t) => (
                 <label
                   key={t.value}
-                  className="flex items-center gap-2 text-sm text-gray-700"
+                  className="flex items-center gap-2 text-sm text-ink"
                 >
                   <input
                     type="checkbox"
                     name="targets"
                     value={t.value}
                     defaultChecked={checked.has(t.value)}
-                    className="h-4 w-4 accent-navy"
+                    className="h-4 w-4 accent-brand"
                   />
                   {t.label}
                 </label>
               ))}
             </div>
-            <p className="mt-1.5 text-xs text-gray-500">
+            <p className="mt-1.5 text-xs text-muted-fg">
               Unchecking everything parks the mentor as unassigned again.
             </p>
           </fieldset>
@@ -141,7 +141,7 @@ function MentorRow({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-mist/60"
+              className="rounded-md px-3 py-2 text-sm text-muted-fg transition-colors hover:bg-canvas"
             >
               Cancel
             </button>
@@ -163,7 +163,7 @@ export function MentorList({
 }) {
   if (mentors.length === 0) {
     return (
-      <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+      <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
         No mentors registered yet.
       </p>
     );

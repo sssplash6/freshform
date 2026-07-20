@@ -12,8 +12,8 @@ export function StatCard({
     tone === "danger"
       ? "text-red-700"
       : tone === "brand"
-        ? "text-brand-deep"
-        : "text-navy";
+        ? "text-accent-ink"
+        : "text-ink";
 
   return (
     <div>
@@ -22,7 +22,7 @@ export function StatCard({
       >
         {value}
       </div>
-      <div className="mt-1 text-sm text-gray-500">{label}</div>
+      <div className="mt-1 text-sm text-muted-fg">{label}</div>
     </div>
   );
 }
@@ -30,7 +30,7 @@ export function StatCard({
 /** The numbers as one quiet strip between hairlines — no tile boxes. */
 export function StatCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap gap-x-14 gap-y-5 border-y border-mist px-1 py-6">
+    <div className="flex flex-wrap gap-x-14 gap-y-5 border-y border-line px-1 py-6">
       {children}
     </div>
   );

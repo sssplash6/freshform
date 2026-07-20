@@ -6,12 +6,12 @@ import { cn } from "@/lib/cn";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
-/** Navy = actions (DESIGN.md). No brand-colored buttons — orange is reserved
- * for hours/progress. Red only for destructive. */
+/** Brand (blue) = actions (DESIGN.md). No accent-colored buttons — orange is
+ * reserved for hours/progress. Red only for destructive. */
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-navy text-white hover:bg-navy/90",
-  secondary: "border border-navy/80 text-navy hover:bg-navy hover:text-white",
-  ghost: "text-navy hover:bg-mist/60",
+  primary: "bg-brand text-white hover:bg-brand-dark",
+  secondary: "border border-brand/80 text-brand hover:bg-brand hover:text-white",
+  ghost: "text-brand hover:bg-brand-soft",
   danger: "border border-red-300 text-red-700 hover:bg-red-50",
 };
 

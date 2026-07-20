@@ -2,7 +2,7 @@
 
 const TONES = {
   green: { chip: "bg-green-50 text-green-700", dot: "bg-green-500" },
-  gray: { chip: "bg-mist/60 text-gray-600", dot: "bg-gray-400" },
+  gray: { chip: "bg-canvas text-muted-fg", dot: "bg-muted-fg" },
   amber: { chip: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
 } as const;
 

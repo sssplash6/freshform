@@ -19,20 +19,20 @@ export default async function LoginPage({
     : null;
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-mist/40 p-6">
-      <div className="w-full max-w-md rounded-2xl border border-mist bg-white p-8 shadow-sm sm:p-10">
+    <main className="flex flex-1 items-center justify-center bg-canvas p-6">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 shadow-sm sm:p-10">
         <div>
-          <span className="text-2xl font-bold tracking-tight text-navy">
+          <span className="text-2xl font-bold tracking-tight text-ink">
             Freshman Academy
           </span>
           {/* The same orange accent the header uses for the active state. */}
-          <div className="mt-2 h-0.5 w-10 rounded-full bg-brand" />
+          <div className="mt-2 h-0.5 w-10 rounded-full bg-accent" />
         </div>
 
-        <h1 className="mt-6 text-2xl font-bold tracking-tight text-navy">
+        <h1 className="mt-6 text-2xl font-bold tracking-tight text-ink">
           Welcome back
         </h1>
-        <p className="mt-1.5 text-[15px] text-gray-500">
+        <p className="mt-1.5 text-[15px] text-muted-fg">
           Sign in to see your mentoring hours and book your next session.
         </p>
 
@@ -51,14 +51,14 @@ export default async function LoginPage({
         >
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-md border border-mist bg-white px-4 py-3 text-[15px] font-medium text-gray-900 transition-colors hover:border-navy/40 hover:bg-mist/20"
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-line bg-surface px-4 py-3 text-[15px] font-medium text-ink transition-colors hover:border-brand/40 hover:bg-canvas"
           >
             <GoogleIcon />
             Continue with Google
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-gray-500">
+        <p className="mt-4 text-xs text-muted-fg">
           Students: use the email your program registered. Mentors: use your
           @freshman.academy account.
         </p>

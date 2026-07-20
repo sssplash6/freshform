@@ -57,18 +57,18 @@ export default async function MentorStudentDetailPage({
       <div>
         <Link
           href="/mentor"
-          className="group inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-navy"
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-muted-fg hover:text-ink"
         >
           <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
           My students
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-navy">
+          <h1 className="text-3xl font-bold tracking-tight text-ink">
             {profile.user.name ?? profile.user.email}
           </h1>
           {!approved && <Chip tone="amber">Pending approval</Chip>}
         </div>
-        <p className="mt-1.5 text-base text-gray-500">
+        <p className="mt-1.5 text-base text-muted-fg">
           {profile.user.email} · {profile.program.name}
           {profile.cohort ? ` / ${profile.cohort.name}` : ""}
           {profile.telegramUsername ? (
@@ -78,7 +78,7 @@ export default async function MentorStudentDetailPage({
                 href={`https://t.me/${profile.telegramUsername}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+                className="text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
               >
                 @{profile.telegramUsername}
               </a>
@@ -88,7 +88,7 @@ export default async function MentorStudentDetailPage({
           )}
         </p>
         {allocation?.deadline && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-fg">
             Hours to be used by{" "}
             <Deadline deadline={allocation.deadline} remaining={remaining} />
           </p>
@@ -132,17 +132,17 @@ export default async function MentorStudentDetailPage({
       )}
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Your sessions with {profile.user.name?.split(" ")[0] ?? "them"}
         </h2>
         {sessions.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+          <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
             No sessions logged yet.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-mist bg-white">
+          <div className="overflow-x-auto rounded-lg border border-line bg-surface">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+              <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
                 <tr>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3 text-right">Hours</th>
@@ -151,7 +151,7 @@ export default async function MentorStudentDetailPage({
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mist/60">
+              <tbody className="divide-y divide-line/60">
                 {sessions.map((s) => {
                   const voided = s.status === SESSION_STATUS.VOIDED;
                   return (
@@ -162,10 +162,10 @@ export default async function MentorStudentDetailPage({
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.hours)}
                       </td>
-                      <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                      <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
                         {s.task ?? "—"}
                       </td>
-                      <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                      <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
                         {s.note ?? "—"}
                       </td>
                       <td className="px-4 py-3">

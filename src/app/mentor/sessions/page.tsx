@@ -79,8 +79,8 @@ export default async function MentorSessionsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-navy">My sessions</h1>
-        <p className="mt-1.5 text-base text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">My sessions</h1>
+        <p className="mt-1.5 text-base text-muted-fg">
           {formatHours(totalActiveHours)} active hours logged across{" "}
           {filtered.filter((s) => s.status === SESSION_STATUS.ACTIVE).length}{" "}
           sessions.
@@ -88,14 +88,14 @@ export default async function MentorSessionsPage({
       </div>
 
       {sessions.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No sessions logged yet.
         </p>
       ) : (
         <>
-          <form className="flex flex-wrap items-end gap-3 rounded-lg border border-mist bg-white p-4">
+          <form className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4">
             <label className="block text-sm">
-              <span className="text-gray-600">Student</span>
+              <span className="text-muted-fg">Student</span>
               <div className="mt-0.5 w-48">
                 <Select
                   name="student"
@@ -108,7 +108,7 @@ export default async function MentorSessionsPage({
               </div>
             </label>
             <label className="block text-sm">
-              <span className="text-gray-600">Program</span>
+              <span className="text-muted-fg">Program</span>
               <div className="mt-0.5 w-48">
                 <Select
                   name="program"
@@ -121,33 +121,33 @@ export default async function MentorSessionsPage({
               </div>
             </label>
             <label className="block text-sm">
-              <span className="text-gray-600">From</span>
+              <span className="text-muted-fg">From</span>
               <input
                 type="date"
                 name="from"
                 defaultValue={fromDate ? from : ""}
-                className="mt-0.5 block min-h-11 rounded-md border border-mist bg-white px-3.5 py-2.5 text-[15px] text-gray-900 transition hover:border-navy/40 focus:border-navy focus:outline-none"
+                className="mt-0.5 block min-h-11 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-600">To</span>
+              <span className="text-muted-fg">To</span>
               <input
                 type="date"
                 name="to"
                 defaultValue={toDate ? to : ""}
-                className="mt-0.5 block min-h-11 rounded-md border border-mist bg-white px-3.5 py-2.5 text-[15px] text-gray-900 transition hover:border-navy/40 focus:border-navy focus:outline-none"
+                className="mt-0.5 block min-h-11 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
               />
             </label>
             <button
               type="submit"
-              className="min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90"
+              className="min-h-11 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
             >
               Filter
             </button>
             {filtering && (
               <Link
                 href="/mentor/sessions"
-                className="min-h-11 rounded-md border border-mist px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-navy/40 hover:text-navy"
+                className="min-h-11 rounded-md border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
               >
                 Clear
               </Link>
@@ -155,13 +155,13 @@ export default async function MentorSessionsPage({
           </form>
 
           {filtered.length === 0 ? (
-            <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+            <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
               No sessions match these filters.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-mist bg-white">
+            <div className="overflow-x-auto rounded-lg border border-line bg-surface">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+                <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
                   <tr>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Student</th>
@@ -172,7 +172,7 @@ export default async function MentorSessionsPage({
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-mist/60">
+                <tbody className="divide-y divide-line/60">
                   {filtered.map((s) => {
                     const voided = s.status === SESSION_STATUS.VOIDED;
                     return (
@@ -181,10 +181,10 @@ export default async function MentorSessionsPage({
                           {formatDate(s.date)}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-ink">
                             {s.student.user.name ?? s.student.user.email}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-fg">
                             {s.student.program.name}
                             {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
                           </div>
@@ -192,10 +192,10 @@ export default async function MentorSessionsPage({
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatHours(s.hours)}
                         </td>
-                        <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                        <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
                           {s.task ?? "—"}
                         </td>
-                        <td className="max-w-56 truncate px-4 py-3 text-gray-600">
+                        <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
                           {s.note ?? "—"}
                         </td>
                         <td className="px-4 py-3">

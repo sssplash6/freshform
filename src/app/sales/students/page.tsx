@@ -16,7 +16,7 @@ export default async function SalesStudentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-navy">Students</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Students</h1>
       {program ? (
         <ProgramStudentsIsland
           program={toProgramOptions([program])[0]}

@@ -25,12 +25,12 @@ export function ProgramIslandCard({
   return (
     <Link
       href={href}
-      className="group block rounded-lg border border-mist bg-white p-5 transition hover:border-brand/60 hover:shadow-sm"
+      className="group block rounded-lg border border-line bg-surface p-5 transition hover:border-accent/60 hover:shadow-sm"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-lg font-semibold text-navy">{name}</h3>
+        <h3 className="text-lg font-semibold text-ink">{name}</h3>
         {cohortCount > 0 && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-fg">
             {cohortCount} cohort{cohortCount === 1 ? "" : "s"}
           </span>
         )}
@@ -43,12 +43,12 @@ export function ProgramIslandCard({
       >
         {stats.map((s) => (
           <div key={s.label}>
-            <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+            <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
               {s.label}
             </dt>
             <dd
               className={`text-xl font-bold tabular-nums ${
-                s.danger ? "text-red-700" : s.brand ? "text-brand-deep" : "text-navy"
+                s.danger ? "text-red-700" : s.brand ? "text-accent-ink" : "text-ink"
               }`}
             >
               {s.value}
@@ -57,17 +57,17 @@ export function ProgramIslandCard({
         ))}
       </dl>
       {completion && completion.allotted > 0 && (
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-mist">
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-line">
           <div
-            className="h-full rounded-full bg-brand"
+            className="h-full rounded-full bg-accent"
             style={{
               width: `${Math.min(100, Math.round((completion.completed / completion.allotted) * 100))}%`,
             }}
           />
         </div>
       )}
-      <p className="mt-3 text-xs text-gray-500">{caption}</p>
-      <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-navy">
+      <p className="mt-3 text-xs text-muted-fg">{caption}</p>
+      <p className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-ink">
         Open program
         <ArrowRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </p>

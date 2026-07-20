@@ -28,11 +28,11 @@ export default async function AdminStudentsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-navy">Students</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Students</h1>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-mist bg-white p-4">
+      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4">
         <label className="block text-sm">
-          <span className="text-gray-600">Program</span>
+          <span className="text-muted-fg">Program</span>
           <div className="mt-0.5 w-56">
             <Select
               name="program"
@@ -46,14 +46,14 @@ export default async function AdminStudentsPage({
         </label>
         <button
           type="submit"
-          className="min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90"
+          className="min-h-11 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
         >
           Filter
         </button>
         {program && (
           <Link
             href="/admin/students"
-            className="min-h-11 rounded-md border border-mist px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-navy/40 hover:text-navy"
+            className="min-h-11 rounded-md border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
           >
             Clear
           </Link>
@@ -61,7 +61,7 @@ export default async function AdminStudentsPage({
       </form>
 
       {filtered.length === 0 && students.length > 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No students in this program yet.
         </p>
       ) : (

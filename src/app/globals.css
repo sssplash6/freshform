@@ -1,52 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: oklch(0.985 0.003 70);
-  --foreground: oklch(0.22 0.01 255);
-}
-
-/* Freshman Academy palette */
+/* Brand palette — minimal: blue for chrome/actions, orange for progress, grey neutrals. */
 @theme {
-  /* Freshman Academy brand orange. */
-  --color-brand: #f18d05;
-  --color-brand-deep: #ed7a2d;
-  --color-navy: oklch(0.39 0.1 250);
-  --color-mist: oklch(0.92 0.006 70);
-  --color-surface: oklch(0.99 0.002 70);
-  --color-muted: oklch(0.5 0.012 255);
-  --color-danger: oklch(0.43 0.17 28);
+  --color-canvas: #f4f5f6; /* page background */
+  --color-surface: #ffffff; /* cards */
+  --color-line: #e5e6e8; /* borders / tracks */
 
-  /* Motion: strong ease-out as the app-wide default curve. */
+  --color-brand: #124b84; /* deep blue — structural chrome + primary action */
+  --color-brand-dark: #0e3c6a; /* hover */
+  --color-brand-soft: #e7eef5; /* tint background */
+
+  --color-accent: #f18d05; /* orange — hours / progress */
+  --color-accent-dark: #ed7a2d; /* hover */
+  --color-accent-soft: #fdebcf; /* tint background */
+  /* The bright accent sits at ~2.5:1 on white — fine for bars and dots, too
+     light for text. accent-ink is the same hue darkened to pass AA (~5:1 on
+     white) for orange text and stat readouts. */
+  --color-accent-ink: #b45309;
+  --color-accent-ink-dark: #8f4208; /* hover for accent-ink buttons */
+
+  --color-ink: #1a2733; /* primary text */
+  --color-muted-fg: #6b7480; /* secondary text */
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Motion: strong ease-out on everything interactive (default curves feel
+     flat). In-out reserved for on-screen movement like progress bars. */
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
   --default-transition-duration: 150ms;
   --default-transition-timing-function: var(--ease-out-strong);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 @layer base {
-  /* Keyboard focus: a visible navy ring on click targets. Inside the navy
-     header chrome, navy is invisible, so the ring flips to white there. */
+  /* Keyboard focus: a visible brand ring on click targets. Inside the brand
+     header chrome, a brand ring is invisible, so it flips to white there. */
   :is(button, a, select, summary, input, textarea):focus-visible {
-    outline: 2px solid var(--color-navy);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
-  header :is(button, a):focus-visible {
-    outline-color: oklch(0.99 0.002 70);
+  header :is(button, a, summary):focus-visible {
+    outline-color: #ffffff;
   }
 
-  /* Press feedback: every enabled button acknowledges the click. */
+  /* Press feedback: every enabled button acknowledges the click. Buttons with
+     a transition utility keep it (Tailwind's `transition` covers transform). */
   button:not(:disabled) {
     transition: transform 160ms var(--ease-out-strong);
   }
@@ -69,6 +74,8 @@ body {
   }
 }
 
+/* Enter transitions (exit is unmount — instant, which is the fast half). */
+
 /* Popovers and menus: scale in from their origin. */
 @utility pop-in {
   transform-origin: var(--pop-origin, top center);
@@ -81,7 +88,24 @@ body {
   }
 }
 
-/* Inline content that just got revealed (expanded rows, action results). */
+/* Modal panel (keep transform-origin centered) + its backdrop. */
+@utility modal-in {
+  transition:
+    opacity 200ms var(--ease-out-strong),
+    transform 200ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@utility overlay-in {
+  transition: opacity 200ms var(--ease-out-strong);
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Inline content that just got revealed (expanded rows, inline forms). */
 @utility rise-in {
   transition:
     opacity 180ms var(--ease-out-strong),
@@ -90,6 +114,26 @@ body {
     opacity: 0;
     transform: translateY(-4px);
   }
+}
+
+/* Attention nudge: a hint that bounces when an action is tapped too early. */
+@keyframes hint-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+  55% {
+    transform: translateY(2px);
+  }
+  75% {
+    transform: translateY(-1px);
+  }
+}
+@utility hint-bounce {
+  animation: hint-bounce 450ms var(--ease-out-strong);
 }
 
 /* Reduced motion: keep state changes instant instead of animated. */

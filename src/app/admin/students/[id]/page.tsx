@@ -77,7 +77,7 @@ export default async function AdminStudentDetailPage({
                   href={`https://t.me/${profile.telegramUsername}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
+                  className="text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
                 >
                   @{profile.telegramUsername}
                 </a>
@@ -117,7 +117,7 @@ export default async function AdminStudentDetailPage({
       </StatCardGrid>
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Hour allocations by mentor
         </h2>
         {mentors.length === 0 ? (
@@ -141,10 +141,10 @@ export default async function AdminStudentDetailPage({
               return (
                 <Tr key={mentor.id}>
                   <Td>
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-ink">
                       {mentor.name ?? "—"}
                     </div>
-                    <div className="text-xs text-gray-500">{mentor.email}</div>
+                    <div className="text-xs text-muted-fg">{mentor.email}</div>
                   </Td>
                   <Td align="right" className="tabular-nums">
                     {formatHours(alloc?.allocated ?? 0)}
@@ -155,7 +155,7 @@ export default async function AdminStudentDetailPage({
                   <Td
                     align="right"
                     className={`font-medium tabular-nums ${
-                      (alloc?.remaining ?? 0) < 0 ? "text-red-700" : "text-navy"
+                      (alloc?.remaining ?? 0) < 0 ? "text-red-700" : "text-ink"
                     }`}
                   >
                     {formatHours(alloc?.remaining ?? 0)}
@@ -194,16 +194,16 @@ export default async function AdminStudentDetailPage({
       />
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Allocation history
         </h2>
         {profile.allotmentChanges.length === 0 ? (
           <EmptyState>No allocation changes yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
+          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
             {profile.allotmentChanges.map((c) => (
               <li key={c.id} className="flex flex-wrap gap-x-2 px-4 py-3">
-                <span className="tabular-nums text-gray-500">
+                <span className="tabular-nums text-muted-fg">
                   {formatDate(c.createdAt)}
                 </span>
                 <span>

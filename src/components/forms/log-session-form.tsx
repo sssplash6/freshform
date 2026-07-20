@@ -7,7 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
 
 const inputClass =
-  "w-full rounded-md border border-mist px-3.5 py-2.5 text-[15px] focus:border-navy focus:outline-none";
+  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 export function LogSessionForm({
   students,
@@ -20,14 +20,14 @@ export function LogSessionForm({
   return (
     <form
       action={action}
-      className="rounded-lg border border-mist bg-white p-4"
+      className="rounded-lg border border-line bg-surface p-4"
     >
-      <h2 className="text-base font-semibold text-navy">
+      <h2 className="text-base font-semibold text-ink">
         Log a completed session
       </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="block text-sm">
-          <span className="text-gray-600">Student *</span>
+          <span className="text-muted-fg">Student *</span>
           <div className="mt-0.5">
             <Select
               name="studentProfileId"
@@ -40,7 +40,7 @@ export function LogSessionForm({
           </div>
         </div>
         <label className="block text-sm">
-          <span className="text-gray-600">Hours *</span>
+          <span className="text-muted-fg">Hours *</span>
           <input
             name="hours"
             type="number"
@@ -52,7 +52,7 @@ export function LogSessionForm({
           />
         </label>
         <label className="block text-sm">
-          <span className="text-gray-600">Date *</span>
+          <span className="text-muted-fg">Date *</span>
           <input
             name="date"
             type="date"
@@ -63,7 +63,7 @@ export function LogSessionForm({
           />
         </label>
         <label className="block text-sm">
-          <span className="text-gray-600">Task focused on</span>
+          <span className="text-muted-fg">Task focused on</span>
           <input
             name="task"
             type="text"
@@ -72,7 +72,7 @@ export function LogSessionForm({
           />
         </label>
         <label className="block text-sm">
-          <span className="text-gray-600">Note</span>
+          <span className="text-muted-fg">Note</span>
           <input
             name="note"
             type="text"
@@ -85,7 +85,7 @@ export function LogSessionForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
         >
           {pending ? "Logging…" : "Log session"}
         </button>

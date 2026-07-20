@@ -89,11 +89,11 @@ export default async function AdminProgramPage({
 
       <Card as="section">
         <SectionHeader
-          className="border-b border-mist px-4 py-3"
+          className="border-b border-line px-4 py-3"
           title="Students"
           caption={`${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
         />
-        <div className="border-b border-mist px-4 py-3">
+        <div className="border-b border-line px-4 py-3">
           <AddStudentsForm program={programOption} />
         </div>
         <StudentsTable
@@ -112,7 +112,7 @@ export default async function AdminProgramPage({
           action={
             <Link
               href="/admin/mentors"
-              className="text-sm font-medium text-navy hover:text-brand-deep"
+              className="text-sm font-medium text-ink hover:text-accent-ink"
             >
               Register or assign mentors →
             </Link>
@@ -121,17 +121,17 @@ export default async function AdminProgramPage({
         {assignments.length === 0 ? (
           <EmptyState>No mentors assigned to {program.name} yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
+          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
             {assignments.map((a) => (
               <li
                 key={a.id}
                 className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
               >
                 <div>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-ink">
                     {a.mentor.name ?? a.mentor.email}
                   </span>
-                  <span className="ml-2 text-xs text-gray-500">
+                  <span className="ml-2 text-xs text-muted-fg">
                     {a.mentor.email}
                     {a.cohort ? ` · ${a.cohort.name}` : ""}
                   </span>
@@ -151,22 +151,22 @@ export default async function AdminProgramPage({
       </section>
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Latest sessions
         </h2>
         {recentSessions.length === 0 ? (
           <EmptyState>No sessions logged in {program.name} yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-mist/60 rounded-lg border border-mist bg-white text-sm">
+          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
             {recentSessions.map((s) => (
               <li key={s.id} className="flex flex-wrap gap-x-2 px-4 py-3">
-                <span className="tabular-nums text-gray-500">
+                <span className="tabular-nums text-muted-fg">
                   {formatDate(s.date)}
                 </span>
                 <span
                   className={
                     s.status === SESSION_STATUS.VOIDED
-                      ? "text-gray-400 line-through"
+                      ? "text-muted-fg line-through"
                       : ""
                   }
                 >

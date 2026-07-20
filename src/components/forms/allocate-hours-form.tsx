@@ -31,7 +31,7 @@ export function AllocateHoursForm({
         step="any"
         defaultValue={currentHours}
         aria-label="Allocated hours with this mentor"
-        className="min-h-11 w-20 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
+        className="min-h-11 w-20 rounded-md border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none"
       />
       <input
         name="deadline"
@@ -39,7 +39,7 @@ export function AllocateHoursForm({
         defaultValue={currentDeadline ?? ""}
         aria-label="Deadline to use these hours by (optional)"
         title="Deadline to use these hours by (optional)"
-        className="min-h-11 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
+        className="min-h-11 rounded-md border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none"
       />
       {/* Only the clicked button's mode reaches the action: Set replaces the
         * allocation, Add tops it up by the entered amount. */}

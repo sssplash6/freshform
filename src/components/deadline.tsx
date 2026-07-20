@@ -11,7 +11,7 @@ export function Deadline({
   deadline: Date | null;
   remaining: number;
 }) {
-  if (!deadline) return <span className="text-gray-400">—</span>;
+  if (!deadline) return <span className="text-muted-fg">—</span>;
   const passed = deadline.getTime() < Date.now();
   if (passed && remaining > 0) {
     return (
@@ -20,5 +20,5 @@ export function Deadline({
       </span>
     );
   }
-  return <span className={passed ? "text-gray-400" : ""}>{formatDate(deadline)}</span>;
+  return <span className={passed ? "text-muted-fg" : ""}>{formatDate(deadline)}</span>;
 }

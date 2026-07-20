@@ -48,7 +48,7 @@ export function StudentsTable({
       {students.map((s) => (
         <Tr key={s.id}>
           <Td>
-            <div className="flex items-center gap-2 font-medium text-gray-900">
+            <div className="flex items-center gap-2 font-medium text-ink">
               {s.user.name ?? "—"}
               {s.user.status === USER_STATUS.PENDING && (
                 <Chip tone="amber">Pending approval</Chip>
@@ -57,7 +57,7 @@ export function StudentsTable({
                 <Chip tone="gray">Hasn&apos;t signed in yet</Chip>
               )}
             </div>
-            <div className="text-xs text-gray-500">{s.user.email}</div>
+            <div className="text-xs text-muted-fg">{s.user.email}</div>
           </Td>
           {showProgram && <Td>{s.program.name}</Td>}
           {showCohort && <Td>{s.cohort?.name ?? "—"}</Td>}
@@ -71,7 +71,7 @@ export function StudentsTable({
           <Td
             align="right"
             className={`font-medium tabular-nums ${
-              s.remainingHours < 0 ? "text-red-700" : "text-navy"
+              s.remainingHours < 0 ? "text-red-700" : "text-ink"
             }`}
           >
             {formatHours(s.remainingHours)}

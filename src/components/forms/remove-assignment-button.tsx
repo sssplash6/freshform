@@ -36,7 +36,7 @@ export function RemoveAssignmentButton({
   return (
     <form action={action} className="rise-in inline-flex items-center gap-2">
       <input type="hidden" name="assignmentId" value={assignmentId} />
-      <span className="text-xs text-gray-600">Remove assignment?</span>
+      <span className="text-xs text-muted-fg">Remove assignment?</span>
       <Button type="submit" variant="danger" size="sm" disabled={pending}>
         {pending ? "Removing…" : "Yes, remove"}
       </Button>

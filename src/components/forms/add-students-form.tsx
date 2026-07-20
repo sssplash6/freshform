@@ -54,8 +54,8 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
       </Field>
 
       {(valid.length > 0 || invalid.length > 0) && (
-        <p className="text-xs text-gray-500" aria-live="polite">
-          <span className="font-medium tabular-nums text-navy">
+        <p className="text-xs text-muted-fg" aria-live="polite">
+          <span className="font-medium tabular-nums text-ink">
             {valid.length}
           </span>{" "}
           ready to add
@@ -73,7 +73,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
 
       <div className="flex flex-wrap items-center gap-3">
         {program.cohorts.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          <label className="flex items-center gap-2 text-sm text-muted-fg">
             Cohort
             <select
               name="cohortId"

@@ -33,10 +33,10 @@ export function ProgramStudentsIsland({
   return (
     <Card as="section">
       <SectionHeader
-        className="border-b border-mist px-4 py-3"
+        className="border-b border-line px-4 py-3"
         title={
           programHref ? (
-            <Link href={programHref} className="hover:text-brand-deep">
+            <Link href={programHref} className="hover:text-accent-ink">
               {program.name} →
             </Link>
           ) : (
@@ -45,7 +45,7 @@ export function ProgramStudentsIsland({
         }
         caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
       />
-      <div className="border-b border-mist px-4 py-3">
+      <div className="border-b border-line px-4 py-3">
         <AddStudentsForm program={program} />
       </div>
       <StudentsTable

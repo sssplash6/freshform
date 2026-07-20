@@ -13,7 +13,7 @@ export function Card({
 }: ComponentProps<"div"> & { as?: "div" | "section" | "article" }) {
   return (
     <As
-      className={cn("rounded-lg border border-mist bg-white", className)}
+      className={cn("rounded-lg border border-line bg-surface", className)}
       {...props}
     />
   );
@@ -38,11 +38,11 @@ export function SectionHeader({
         className,
       )}
     >
-      <h2 className="text-base font-semibold text-navy">{title}</h2>
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
       {action ? (
         action
       ) : caption ? (
-        <p className="text-xs text-gray-500">{caption}</p>
+        <p className="text-xs text-muted-fg">{caption}</p>
       ) : null}
     </div>
   );

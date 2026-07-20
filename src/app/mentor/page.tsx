@@ -51,35 +51,35 @@ function ProgramToggleIsland({
       aria-current={active ? "true" : undefined}
       className={`block rounded-lg border p-5 transition ${
         active
-          ? "border-brand bg-brand/5 shadow-sm"
-          : "border-mist bg-white hover:border-brand/60 hover:shadow-sm"
+          ? "border-accent bg-accent-soft shadow-sm"
+          : "border-line bg-surface hover:border-accent/60 hover:shadow-sm"
       }`}
     >
-      <h3 className="text-lg font-semibold text-navy">{name}</h3>
+      <h3 className="text-lg font-semibold text-ink">{name}</h3>
       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
         <div>
-          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+          <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
             Students
           </dt>
-          <dd className="text-xl font-bold tabular-nums text-navy">
+          <dd className="text-xl font-bold tabular-nums text-ink">
             {students}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+          <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
             Hrs done
           </dt>
-          <dd className="text-xl font-bold tabular-nums text-brand-deep">
+          <dd className="text-xl font-bold tabular-nums text-accent-ink">
             {formatHours(completed)}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+          <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
             Hrs left
           </dt>
           <dd
             className={`text-xl font-bold tabular-nums ${
-              remaining < 0 ? "text-red-700" : "text-navy"
+              remaining < 0 ? "text-red-700" : "text-ink"
             }`}
           >
             {formatHours(remaining)}
@@ -101,11 +101,11 @@ export default async function MentorHomePage({
 
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (
-      <div className="rounded-lg border border-brand/40 bg-brand/5 p-6">
-        <h1 className="text-3xl font-bold tracking-tight text-navy">
+      <div className="rounded-lg border border-accent/40 bg-accent-soft p-6">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">
           Welcome, {user.name ?? user.email}
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-muted-fg">
           Your mentor account is created but not yet assigned to a program.
           An admin needs to assign you before you can see students or log
           sessions, so check back soon.
@@ -188,8 +188,8 @@ export default async function MentorHomePage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-navy">My students</h1>
-        <p className="mt-1.5 text-base text-gray-500">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">My students</h1>
+        <p className="mt-1.5 text-base text-muted-fg">
           Assigned to:{" "}
           {assignments
             .map((a) =>
@@ -254,7 +254,7 @@ export default async function MentorHomePage({
       />
 
       {visible.length === 0 ? (
-        <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
+        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
           {selected
             ? "No students have hours allocated with you in this program yet."
             : "No students have hours allocated with you yet. An admin assigns those."}
@@ -263,13 +263,13 @@ export default async function MentorHomePage({
         [...byProgram.entries()].map(([programId, group]) => (
           <section
             key={programId}
-            className="rounded-lg border border-mist bg-white"
+            className="rounded-lg border border-line bg-surface"
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
-              <h2 className="text-base font-semibold text-navy">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
+              <h2 className="text-base font-semibold text-ink">
                 {group.name}
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-fg">
                 {group.students.length} student
                 {group.students.length === 1 ? "" : "s"} ·{" "}
                 {formatHours(
@@ -280,7 +280,7 @@ export default async function MentorHomePage({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
+                <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
                   <tr>
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3">Telegram</th>
@@ -291,24 +291,24 @@ export default async function MentorHomePage({
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-mist/60">
+                <tbody className="divide-y divide-line/60">
                   {group.students.map((s) => (
                     <tr
                       key={s.profile.id}
-                      className="transition-colors hover:bg-mist/20"
+                      className="transition-colors hover:bg-canvas"
                     >
                       <td className="px-4 py-3">
                         <Link
                           href={`/mentor/students/${s.profile.id}`}
                           className="group block"
                         >
-                          <span className="flex items-center gap-2 font-medium text-gray-900 group-hover:text-navy">
+                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-ink">
                             {s.profile.user.name ?? "—"}
                             {!s.approved && (
                               <Chip tone="amber">Pending approval</Chip>
                             )}
                           </span>
-                          <span className="block text-xs text-gray-500">
+                          <span className="block text-xs text-muted-fg">
                             {s.profile.user.email}
                           </span>
                         </Link>
@@ -326,7 +326,7 @@ export default async function MentorHomePage({
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-medium tabular-nums ${
-                          s.remaining < 0 ? "text-red-700" : "text-navy"
+                          s.remaining < 0 ? "text-red-700" : "text-ink"
                         }`}
                       >
                         {formatHours(s.remaining)}

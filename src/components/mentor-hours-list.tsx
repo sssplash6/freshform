@@ -31,7 +31,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
 
   return (
     <Card>
-      <ul className="divide-y divide-mist/60">
+      <ul className="divide-y divide-line/60">
         {items.map((m) => {
           const overdrawn = m.remaining < 0;
           const pct =
@@ -41,14 +41,14 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
           return (
             <li key={m.mentor.id} className="px-4 py-4 sm:px-5">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate font-medium text-gray-900">
+                <span className="truncate font-medium text-ink">
                   {m.mentor.name ?? m.mentor.email}
                 </span>
-                <span className="whitespace-nowrap text-sm text-gray-500">
+                <span className="whitespace-nowrap text-sm text-muted-fg">
                   <span
                     className={cn(
                       "text-lg font-bold tabular-nums",
-                      overdrawn ? "text-red-700" : "text-navy",
+                      overdrawn ? "text-red-700" : "text-ink",
                     )}
                   >
                     {formatHours(overdrawn ? -m.remaining : m.remaining)}
@@ -57,7 +57,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                 </span>
               </div>
               <div
-                className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-mist"
+                className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-line"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={m.allocated}
@@ -67,12 +67,12 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                 <div
                   className={cn(
                     "h-full rounded-full",
-                    overdrawn ? "bg-red-500" : "bg-brand",
+                    overdrawn ? "bg-red-500" : "bg-accent",
                   )}
                   style={{ width: `${overdrawn ? 100 : pct}%` }}
                 />
               </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
                 <span className="tabular-nums">
                   {formatHours(m.completed)} of {formatHours(m.allocated)} hours
                   used

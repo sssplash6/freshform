@@ -3,24 +3,24 @@ import { cn } from "@/lib/cn";
 export type CalloutTone = "brand" | "warning" | "danger" | "neutral";
 
 const SURFACE: Record<CalloutTone, string> = {
-  brand: "border-brand/40 bg-brand/5",
+  brand: "border-accent/40 bg-accent-soft",
   warning: "border-amber-300 bg-amber-50",
   danger: "border-red-200 bg-red-50",
-  neutral: "border-mist bg-white",
+  neutral: "border-line bg-surface",
 };
 
 const TITLE: Record<CalloutTone, string> = {
-  brand: "text-navy",
+  brand: "text-ink",
   warning: "text-amber-800",
   danger: "text-red-800",
-  neutral: "text-navy",
+  neutral: "text-ink",
 };
 
 const BODY: Record<CalloutTone, string> = {
-  brand: "text-gray-700",
+  brand: "text-ink",
   warning: "text-amber-700",
   danger: "text-red-700",
-  neutral: "text-gray-600",
+  neutral: "text-muted-fg",
 };
 
 /**

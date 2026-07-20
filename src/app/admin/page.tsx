@@ -53,13 +53,13 @@ export default async function AdminHomePage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-navy">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">
           Cross-program dashboard
         </h1>
         {unassignedMentors > 0 && (
           <Link
             href="/admin/mentors"
-            className="group inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand-deep transition-colors hover:bg-brand/10"
+            className="group inline-flex items-center gap-1.5 rounded-md border border-accent/60 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
           >
             {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
             awaiting assignment
@@ -82,10 +82,10 @@ export default async function AdminHomePage() {
                 className="flex flex-wrap items-center justify-between gap-3 py-2"
               >
                 <div>
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-ink">
                     {s.user.name ?? s.user.email}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-fg">
                     {s.user.email} · {s.program.name}
                     {s.cohort ? ` / ${s.cohort.name}` : ""}
                     {s.telegramUsername ? ` · @${s.telegramUsername}` : ""} ·
@@ -124,7 +124,7 @@ export default async function AdminHomePage() {
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-navy">
+          <h2 className="text-base font-semibold text-ink">
             Programs currently running
           </h2>
           <CreateProgramForm />

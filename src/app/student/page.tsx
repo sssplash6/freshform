@@ -86,7 +86,7 @@ export default async function StudentHomePage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Hours with each mentor
         </h2>
         <MentorHoursList items={hours.perMentor} />
@@ -112,7 +112,7 @@ export default async function StudentHomePage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-base font-semibold text-navy">
+        <h2 className="mb-2 text-base font-semibold text-ink">
           Session history
         </h2>
         {profile.sessions.length === 0 ? (
@@ -139,10 +139,10 @@ export default async function StudentHomePage() {
                   <Td align="right" className="tabular-nums">
                     {formatHours(s.hours)}
                   </Td>
-                  <Td className="max-w-56 truncate text-gray-600">
+                  <Td className="max-w-56 truncate text-muted-fg">
                     {s.task ?? "—"}
                   </Td>
-                  <Td className="max-w-56 truncate text-gray-600">
+                  <Td className="max-w-56 truncate text-muted-fg">
                     {s.note ?? "—"}
                   </Td>
                   <Td>

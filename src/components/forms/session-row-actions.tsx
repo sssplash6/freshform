@@ -7,7 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { ChevronDownIcon } from "@/components/icons";
 
 const inputClass =
-  "rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none";
+  "rounded-md border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none";
 
 /** Edit + void controls for one ACTIVE session the mentor logged. Voiding
  * confirms inline (no browser dialog). */
@@ -39,7 +39,7 @@ export function SessionRowActions({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="inline-flex items-center gap-1 font-medium text-navy transition-colors hover:text-brand-deep"
+        className="inline-flex items-center gap-1 font-medium text-ink transition-colors hover:text-accent-ink"
       >
         Correct
         <ChevronDownIcon
@@ -48,10 +48,10 @@ export function SessionRowActions({
       </button>
 
       {open && (
-        <div className="rise-in mt-2 space-y-3 rounded-md border border-mist bg-mist/20 p-3">
+        <div className="rise-in mt-2 space-y-3 rounded-md border border-line bg-canvas p-3">
           <form action={editAction} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="sessionId" value={session.id} />
-            <label className="block text-xs text-gray-600">
+            <label className="block text-xs text-muted-fg">
               Hours
               <input
                 name="hours"
@@ -63,7 +63,7 @@ export function SessionRowActions({
                 className={`${inputClass} block w-20`}
               />
             </label>
-            <label className="block text-xs text-gray-600">
+            <label className="block text-xs text-muted-fg">
               Date
               <input
                 name="date"
@@ -73,7 +73,7 @@ export function SessionRowActions({
                 className={`${inputClass} block`}
               />
             </label>
-            <label className="block flex-1 text-xs text-gray-600">
+            <label className="block flex-1 text-xs text-muted-fg">
               Task focused on
               <input
                 name="task"
@@ -82,7 +82,7 @@ export function SessionRowActions({
                 className={`${inputClass} block w-full`}
               />
             </label>
-            <label className="block flex-1 text-xs text-gray-600">
+            <label className="block flex-1 text-xs text-muted-fg">
               Note
               <input
                 name="note"
@@ -94,7 +94,7 @@ export function SessionRowActions({
             <button
               type="submit"
               disabled={editPending}
-              className="rounded-md bg-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-50"
+              className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
             >
               {editPending ? "Saving…" : "Save changes"}
             </button>
@@ -105,7 +105,7 @@ export function SessionRowActions({
             <input type="hidden" name="sessionId" value={session.id} />
             {confirmingVoid ? (
               <span className="rise-in flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-gray-600">
+                <span className="text-muted-fg">
                   The hours return to the student&apos;s balance.
                 </span>
                 <button
@@ -119,7 +119,7 @@ export function SessionRowActions({
                   type="button"
                   disabled={voidPending}
                   onClick={() => setConfirmingVoid(false)}
-                  className="rounded-md px-2.5 py-1.5 text-xs text-gray-500 transition-colors hover:bg-mist/60"
+                  className="rounded-md px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
                 >
                   Cancel
                 </button>

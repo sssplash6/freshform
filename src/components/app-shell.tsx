@@ -25,13 +25,13 @@ export async function AppShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-mist bg-navy text-white">
+      <header className="border-b border-line bg-brand text-white">
         <div className="mx-auto hidden min-h-16 max-w-6xl items-center gap-8 px-4 md:flex">
           <Link href="/" className="flex items-baseline gap-2">
             <span className="text-xl font-bold tracking-tight">
               Freshman Academy
             </span>
-            <span className="rounded bg-brand px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
               {ROLE_LABELS[role]}
             </span>
           </Link>
@@ -61,7 +61,7 @@ export async function AppShell({
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -90,7 +90,7 @@ export async function AppShell({
             <span className="truncate text-lg font-bold tracking-tight">
               Freshman Academy
             </span>
-            <span className="shrink-0 rounded bg-brand px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
               {ROLE_LABELS[role]}
             </span>
           </Link>
@@ -116,7 +116,7 @@ export async function AppShell({
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold">
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -126,7 +126,7 @@ export async function AppShell({
               <summary className="flex h-11 cursor-pointer list-none items-center rounded px-3 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
                 Menu
               </summary>
-              <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-white/15 bg-navy p-2 shadow-lg">
+              <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-white/15 bg-brand p-2 shadow-lg">
                 <nav aria-label="Primary navigation" className="grid gap-1">
                   <NavLinks items={NAV_BY_ROLE[role]} variant="menu" />
                 </nav>
