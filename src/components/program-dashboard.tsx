@@ -51,7 +51,7 @@ export async function ProgramDashboard({
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-ink">
+      <h1 className="text-2xl font-bold text-ink">
         {program.name} dashboard
       </h1>
 

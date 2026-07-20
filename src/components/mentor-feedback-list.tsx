@@ -13,7 +13,7 @@ type FeedbackRow = MentorFeedback & {
 export function MentorFeedbackList({ feedback }: { feedback: FeedbackRow[] }) {
   if (feedback.length === 0) {
     return (
-      <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+      <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
         No mentor feedback yet.
       </p>
     );
@@ -33,7 +33,7 @@ export function MentorFeedbackList({ feedback }: { feedback: FeedbackRow[] }) {
         return (
           <section
             key={mentor.id}
-            className="rounded-lg border border-line bg-surface p-4"
+            className="rounded-xl border border-line bg-surface p-4"
           >
             <div className="flex items-center justify-between">
               <div>

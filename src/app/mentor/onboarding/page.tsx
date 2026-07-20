@@ -16,7 +16,7 @@ export default async function MentorOnboardingPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold text-ink">
           Complete your registration
         </h1>
         <p className="mt-1.5 text-base text-muted-fg">
@@ -24,7 +24,7 @@ export default async function MentorOnboardingPage() {
           admin will assign you to a program before you can log sessions.
         </p>
       </div>
-      <div className="rounded-lg border border-line bg-surface p-6">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <MentorProfileForm defaultName={user.name ?? ""} />
       </div>
     </div>

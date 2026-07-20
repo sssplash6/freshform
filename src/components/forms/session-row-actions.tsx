@@ -7,7 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { ChevronDownIcon } from "@/components/icons";
 
 const inputClass =
-  "rounded-md border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none";
+  "rounded-lg border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none";
 
 /** Edit + void controls for one ACTIVE session the mentor logged. Voiding
  * confirms inline (no browser dialog). */
@@ -48,7 +48,7 @@ export function SessionRowActions({
       </button>
 
       {open && (
-        <div className="rise-in mt-2 space-y-3 rounded-md border border-line bg-canvas p-3">
+        <div className="rise-in mt-2 space-y-3 rounded-lg border border-line bg-canvas p-3">
           <form action={editAction} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="sessionId" value={session.id} />
             <label className="block text-xs text-muted-fg">
@@ -94,7 +94,7 @@ export function SessionRowActions({
             <button
               type="submit"
               disabled={editPending}
-              className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+              className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
             >
               {editPending ? "Saving…" : "Save changes"}
             </button>
@@ -111,7 +111,7 @@ export function SessionRowActions({
                 <button
                   type="submit"
                   disabled={voidPending}
-                  className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                  className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
                 >
                   {voidPending ? "Voiding…" : "Yes, void it"}
                 </button>
@@ -119,7 +119,7 @@ export function SessionRowActions({
                   type="button"
                   disabled={voidPending}
                   onClick={() => setConfirmingVoid(false)}
-                  className="rounded-md px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
+                  className="rounded-lg px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
                 >
                   Cancel
                 </button>
@@ -128,7 +128,7 @@ export function SessionRowActions({
               <button
                 type="button"
                 onClick={() => setConfirmingVoid(true)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
               >
                 Void session
               </button>

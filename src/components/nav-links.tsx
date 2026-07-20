@@ -29,15 +29,15 @@ export function NavLinks({
         const active = item === current;
         const className =
           variant === "menu"
-            ? `flex min-h-11 items-center rounded px-3 text-sm font-medium transition-colors ${
+            ? `flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-accent text-white"
-                  : "text-white/85 hover:bg-white/10 hover:text-white"
+                  ? "bg-brand-soft text-brand"
+                  : "text-muted-fg hover:bg-canvas hover:text-ink"
               }`
-            : `inline-flex min-h-11 items-center border-b-2 px-1 transition-colors ${
+            : `inline-flex min-h-11 items-center border-b-2 px-1 text-sm transition-colors ${
                 active
-                  ? "border-accent text-white"
-                  : "border-transparent text-white/80 hover:text-white"
+                  ? "border-brand font-semibold text-ink"
+                  : "border-transparent text-muted-fg hover:text-ink"
               }`;
         return (
           <Link

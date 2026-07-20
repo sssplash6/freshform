@@ -19,12 +19,12 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Notifications</h1>
+        <h1 className="text-2xl font-bold text-ink">Notifications</h1>
         {unread > 0 && (
           <form action={markAllNotificationsRead}>
             <button
               type="submit"
-              className="rounded-md border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+              className="rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
             >
               Mark all read ({unread})
             </button>
@@ -33,7 +33,7 @@ export default async function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           Nothing yet. You&apos;ll be notified here whenever your hours change.
         </p>
       ) : (
@@ -61,7 +61,7 @@ export default async function NotificationsPage() {
                     />
                     <button
                       type="submit"
-                      className="rounded-md border border-brand/40 px-2 py-0.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+                      className="rounded-lg border border-brand/40 px-2 py-0.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
                     >
                       Mark read
                     </button>

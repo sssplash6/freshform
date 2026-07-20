@@ -121,7 +121,7 @@ export default async function AdminProgramPage({
         {assignments.length === 0 ? (
           <EmptyState>No mentors assigned to {program.name} yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
+          <ul className="divide-y divide-line/60 rounded-xl border border-line bg-surface text-sm">
             {assignments.map((a) => (
               <li
                 key={a.id}
@@ -157,7 +157,7 @@ export default async function AdminProgramPage({
         {recentSessions.length === 0 ? (
           <EmptyState>No sessions logged in {program.name} yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
+          <ul className="divide-y divide-line/60 rounded-xl border border-line bg-surface text-sm">
             {recentSessions.map((s) => (
               <li key={s.id} className="flex flex-wrap gap-x-2 px-4 py-3">
                 <span className="tabular-nums text-muted-fg">

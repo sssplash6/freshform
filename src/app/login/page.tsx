@@ -20,24 +20,19 @@ export default async function LoginPage({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-canvas p-6">
-      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 shadow-sm sm:p-10">
-        <div>
-          <span className="text-2xl font-bold tracking-tight text-ink">
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 shadow-sm">
+        <div className="mb-8 text-center">
+          <div className="mb-3 text-sm font-semibold uppercase tracking-widest text-brand">
             Freshman Academy
-          </span>
-          {/* The same orange accent the header uses for the active state. */}
-          <div className="mt-2 h-0.5 w-10 rounded-full bg-accent" />
+          </div>
+          <h1 className="text-2xl font-bold text-ink">Welcome back</h1>
+          <p className="mt-2 text-sm text-muted-fg">
+            Sign in to see your mentoring hours and book your next session.
+          </p>
         </div>
 
-        <h1 className="mt-6 text-2xl font-bold tracking-tight text-ink">
-          Welcome back
-        </h1>
-        <p className="mt-1.5 text-[15px] text-muted-fg">
-          Sign in to see your mentoring hours and book your next session.
-        </p>
-
         {errorMessage && (
-          <Callout tone="danger" className="mt-5">
+          <Callout tone="danger" className="mb-4">
             {errorMessage}
           </Callout>
         )}
@@ -47,18 +42,17 @@ export default async function LoginPage({
             "use server";
             await signIn("google", { redirectTo: "/" });
           }}
-          className="mt-6"
         >
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-md border border-line bg-surface px-4 py-3 text-[15px] font-medium text-ink transition-colors hover:border-brand/40 hover:bg-canvas"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-[15px] font-medium text-ink transition-colors hover:border-brand/40 hover:bg-canvas"
           >
             <GoogleIcon />
             Continue with Google
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-muted-fg">
+        <p className="mt-4 text-center text-xs text-muted-fg">
           Students: use the email your program registered. Mentors: use your
           @freshman.academy account.
         </p>

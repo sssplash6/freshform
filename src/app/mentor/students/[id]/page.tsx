@@ -63,7 +63,7 @@ export default async function MentorStudentDetailPage({
           My students
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold text-ink">
             {profile.user.name ?? profile.user.email}
           </h1>
           {!approved && <Chip tone="amber">Pending approval</Chip>}
@@ -136,11 +136,11 @@ export default async function MentorStudentDetailPage({
           Your sessions with {profile.user.name?.split(" ")[0] ?? "them"}
         </h2>
         {sessions.length === 0 ? (
-          <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
             No sessions logged yet.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+          <div className="overflow-x-auto rounded-xl border border-line bg-surface">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
                 <tr>

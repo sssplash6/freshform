@@ -13,7 +13,7 @@ export function Card({
 }: ComponentProps<"div"> & { as?: "div" | "section" | "article" }) {
   return (
     <As
-      className={cn("rounded-lg border border-line bg-surface", className)}
+      className={cn("rounded-xl border border-line bg-surface", className)}
       {...props}
     />
   );

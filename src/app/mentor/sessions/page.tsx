@@ -79,7 +79,7 @@ export default async function MentorSessionsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">My sessions</h1>
+        <h1 className="text-2xl font-bold text-ink">My sessions</h1>
         <p className="mt-1.5 text-base text-muted-fg">
           {formatHours(totalActiveHours)} active hours logged across{" "}
           {filtered.filter((s) => s.status === SESSION_STATUS.ACTIVE).length}{" "}
@@ -88,12 +88,12 @@ export default async function MentorSessionsPage({
       </div>
 
       {sessions.length === 0 ? (
-        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No sessions logged yet.
         </p>
       ) : (
         <>
-          <form className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4">
+          <form className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-surface p-4">
             <label className="block text-sm">
               <span className="text-muted-fg">Student</span>
               <div className="mt-0.5 w-48">
@@ -126,7 +126,7 @@ export default async function MentorSessionsPage({
                 type="date"
                 name="from"
                 defaultValue={fromDate ? from : ""}
-                className="mt-0.5 block min-h-11 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
+                className="mt-0.5 block min-h-11 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
               />
             </label>
             <label className="block text-sm">
@@ -135,19 +135,19 @@ export default async function MentorSessionsPage({
                 type="date"
                 name="to"
                 defaultValue={toDate ? to : ""}
-                className="mt-0.5 block min-h-11 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
+                className="mt-0.5 block min-h-11 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
               />
             </label>
             <button
               type="submit"
-              className="min-h-11 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
+              className="min-h-11 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
             >
               Filter
             </button>
             {filtering && (
               <Link
                 href="/mentor/sessions"
-                className="min-h-11 rounded-md border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
+                className="min-h-11 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
               >
                 Clear
               </Link>
@@ -155,11 +155,11 @@ export default async function MentorSessionsPage({
           </form>
 
           {filtered.length === 0 ? (
-            <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+            <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
               No sessions match these filters.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+            <div className="overflow-x-auto rounded-xl border border-line bg-surface">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
                   <tr>

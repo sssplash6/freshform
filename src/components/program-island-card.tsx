@@ -25,7 +25,7 @@ export function ProgramIslandCard({
   return (
     <Link
       href={href}
-      className="group block rounded-lg border border-line bg-surface p-5 transition hover:border-accent/60 hover:shadow-sm"
+      className="group block rounded-xl border border-line bg-surface p-5 transition hover:border-accent/60 hover:shadow-sm"
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{name}</h3>

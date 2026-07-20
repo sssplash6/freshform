@@ -53,13 +53,13 @@ export default async function AdminHomePage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold text-ink">
           Cross-program dashboard
         </h1>
         {unassignedMentors > 0 && (
           <Link
             href="/admin/mentors"
-            className="group inline-flex items-center gap-1.5 rounded-md border border-accent/60 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
           >
             {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
             awaiting assignment

@@ -18,7 +18,7 @@ export function StatCard({
   return (
     <div>
       <div
-        className={`text-4xl font-bold tracking-tight tabular-nums ${valueClass}`}
+        className={`text-3xl font-bold leading-none tabular-nums ${valueClass}`}
       >
         {value}
       </div>

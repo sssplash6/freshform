@@ -38,7 +38,7 @@ function MentorRow({
   const checked = new Set(mentor.assignments.map((a) => a.checkedValue));
 
   return (
-    <li className="rounded-lg border border-line bg-surface p-4">
+    <li className="rounded-xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 font-medium text-ink">
@@ -80,7 +80,7 @@ function MentorRow({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-md border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+            className="rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
           >
             Edit
           </button>
@@ -141,7 +141,7 @@ function MentorRow({
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-md px-3 py-2 text-sm text-muted-fg transition-colors hover:bg-canvas"
+              className="rounded-lg px-3 py-2 text-sm text-muted-fg transition-colors hover:bg-canvas"
             >
               Cancel
             </button>
@@ -163,7 +163,7 @@ export function MentorList({
 }) {
   if (mentors.length === 0) {
     return (
-      <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+      <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
         No mentors registered yet.
       </p>
     );

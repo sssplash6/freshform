@@ -32,7 +32,7 @@ export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
   const targets = targetOptions(programs);
 
   return (
-    <form action={action} className="rounded-lg border border-line bg-surface p-4">
+    <form action={action} className="rounded-xl border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">Register a mentor</h2>
       <p className="mt-1 text-xs text-muted-fg">
         The mentor signs in with this email using Google and sets their own

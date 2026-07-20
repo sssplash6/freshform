@@ -38,7 +38,7 @@ export default async function StudentBookPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">Book a session</h1>
+        <h1 className="text-2xl font-bold text-ink">Book a session</h1>
         <p className="mt-1.5 text-base text-muted-fg">
           Mentors for {profile.program.name}
           {profile.cohort ? ` / ${profile.cohort.name}` : ""}. Booking happens
@@ -48,7 +48,7 @@ export default async function StudentBookPage() {
       </div>
 
       {assignments.length === 0 ? (
-        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No mentors are assigned to your program yet. Check back soon.
         </p>
       ) : (
@@ -59,7 +59,7 @@ export default async function StudentBookPage() {
             return (
               <li
                 key={a.id}
-                className="flex flex-col justify-between rounded-lg border border-line bg-surface p-5 transition hover:border-accent/50 hover:shadow-sm"
+                className="flex flex-col justify-between rounded-xl border border-line bg-surface p-5 transition hover:border-accent/50 hover:shadow-sm"
               >
                 <div>
                   <h2 className="text-lg font-semibold text-ink">
@@ -102,13 +102,13 @@ export default async function StudentBookPage() {
                     href={a.calendlyUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="group mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-accent-dark"
+                    className="group mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-accent-dark"
                   >
                     Book with {a.mentor.name?.split(" ")[0] ?? "this mentor"}
                     <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   </a>
                 ) : (
-                  <p className="mt-5 flex min-h-11 items-center justify-center rounded-md border border-dashed border-line px-4 py-2.5 text-center text-sm text-muted-fg">
+                  <p className="mt-5 flex min-h-11 items-center justify-center rounded-lg border border-dashed border-line px-4 py-2.5 text-center text-sm text-muted-fg">
                     No booking link yet — reach them on Telegram or check back
                     soon.
                   </p>

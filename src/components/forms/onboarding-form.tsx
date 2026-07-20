@@ -10,7 +10,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import type { ProgramOption } from "@/lib/queries";
 
 const inputClass =
-  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
+  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 function NameField({ defaultName }: { defaultName: string }) {
   return (
@@ -50,7 +50,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+      className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
     >
       {pending ? "Submitting…" : label}
     </button>

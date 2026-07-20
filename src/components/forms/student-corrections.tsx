@@ -7,7 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import type { ProgramOption } from "@/lib/queries";
 
 const selectClass =
-  "min-h-11 rounded-md border border-line bg-surface px-3.5 py-2 text-sm text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none";
+  "min-h-11 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none";
 
 /**
  * Admin corrections for a mis-enrolled student: move them to the right
@@ -34,7 +34,7 @@ export function StudentCorrections({
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-4">
+    <section className="rounded-xl border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">Corrections</h2>
       <p className="mt-1 text-xs text-muted-fg">
         Enrolled in the wrong place? Move them — hours and session history
@@ -77,7 +77,7 @@ export function StudentCorrections({
         <button
           type="submit"
           disabled={movePending}
-          className="min-h-11 rounded-md border border-brand px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50"
+          className="min-h-11 rounded-lg border border-brand px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50"
         >
           {movePending ? "Moving…" : "Move student"}
         </button>
@@ -101,7 +101,7 @@ export function StudentCorrections({
               <button
                 type="submit"
                 disabled={deletePending}
-                className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
               >
                 {deletePending ? "Removing…" : "Yes, remove them"}
               </button>
@@ -109,7 +109,7 @@ export function StudentCorrections({
                 type="button"
                 disabled={deletePending}
                 onClick={() => setConfirmingDelete(false)}
-                className="rounded-md px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
+                className="rounded-lg px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
               >
                 Cancel
               </button>
@@ -118,7 +118,7 @@ export function StudentCorrections({
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
             >
               Remove this student
             </button>

@@ -6,7 +6,7 @@ import { setBookingLink } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 
 const inputClass =
-  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
+  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 /** One row per assignment: the mentor sets the booking link students in
  * that program (or cohort) use to book them. */
@@ -35,7 +35,7 @@ function BookingLinkRow({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -59,7 +59,7 @@ export function BookingLinksForm({
   const missing = assignments.filter((a) => !a.calendlyUrl).length;
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-4">
+    <section className="rounded-xl border border-line bg-surface p-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

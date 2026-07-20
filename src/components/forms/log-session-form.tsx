@@ -7,7 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
 
 const inputClass =
-  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
+  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 export function LogSessionForm({
   students,
@@ -20,7 +20,7 @@ export function LogSessionForm({
   return (
     <form
       action={action}
-      className="rounded-lg border border-line bg-surface p-4"
+      className="rounded-xl border border-line bg-surface p-4"
     >
       <h2 className="text-base font-semibold text-ink">
         Log a completed session
@@ -85,7 +85,7 @@ export function LogSessionForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
         >
           {pending ? "Logging…" : "Log session"}
         </button>

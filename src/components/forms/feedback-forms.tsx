@@ -11,7 +11,7 @@ import { StarIcon } from "@/components/icons";
 import { Select } from "@/components/select";
 
 const inputClass =
-  "w-full rounded-md border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
+  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 /** Native radio inputs retain expected keyboard behavior while labels render
  * as a large, tap-friendly star picker. */
@@ -75,7 +75,7 @@ export function MentorFeedbackForm({
   const [state, action, pending] = useActionState(submitMentorFeedback, null);
 
   return (
-    <form action={action} className="rounded-lg border border-line bg-surface p-4">
+    <form action={action} className="rounded-xl border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">Rate a mentor</h2>
       <p className="mt-1 text-xs text-muted-fg">
         Your name isn&apos;t shown to the mentor.
@@ -105,7 +105,7 @@ export function MentorFeedbackForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-3 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+        className="mt-3 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Sending…" : "Submit mentor feedback"}
       </button>
@@ -118,7 +118,7 @@ export function WebsiteFeedbackForm() {
   const [state, action, pending] = useActionState(submitWebsiteFeedback, null);
 
   return (
-    <form action={action} className="rounded-lg border border-line bg-surface p-4">
+    <form action={action} className="rounded-xl border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">Rate this website</h2>
       <div className="mt-3 space-y-3">
         <StarRating name="rating" idPrefix="website-rating" />
@@ -135,7 +135,7 @@ export function WebsiteFeedbackForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-3 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+        className="mt-3 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
       >
         {pending ? "Sending…" : "Submit website feedback"}
       </button>

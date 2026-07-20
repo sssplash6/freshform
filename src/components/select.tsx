@@ -25,7 +25,7 @@ export function Select({
       defaultValue={defaultValue}
       required={required}
       aria-label={ariaLabel}
-      className="min-h-11 w-full rounded-md border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
+      className="min-h-11 w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
     >
       {/* When not required, the empty option stays selectable so it can
         * serve as an "All …" filter choice. */}

@@ -23,7 +23,7 @@ export default async function AdminFeedbackPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-ink">Feedback</h1>
+      <h1 className="text-2xl font-bold text-ink">Feedback</h1>
 
       <StatCardGrid>
         <StatCard
@@ -58,7 +58,7 @@ export default async function AdminFeedbackPage() {
           Website feedback
         </h2>
         {websiteFeedback.length === 0 ? (
-          <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
             No website feedback yet.
           </p>
         ) : (
@@ -66,7 +66,7 @@ export default async function AdminFeedbackPage() {
             {websiteFeedback.map((f) => (
               <li
                 key={f.id}
-                className="rounded-lg border border-line bg-surface p-3 text-sm"
+                className="rounded-xl border border-line bg-surface p-3 text-sm"
               >
                 <div className="flex items-center gap-2">
                   <Rating value={f.rating} />

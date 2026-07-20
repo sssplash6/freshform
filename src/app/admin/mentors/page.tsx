@@ -46,7 +46,7 @@ export default async function AdminMentorsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-ink">Mentors</h1>
+      <h1 className="text-2xl font-bold text-ink">Mentors</h1>
 
       {unassigned.length > 0 && (
         <div className="rounded-lg border border-accent/40 bg-accent-soft p-4">

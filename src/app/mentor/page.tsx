@@ -102,7 +102,7 @@ export default async function MentorHomePage({
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (
       <div className="rounded-lg border border-accent/40 bg-accent-soft p-6">
-        <h1 className="text-3xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold text-ink">
           Welcome, {user.name ?? user.email}
         </h1>
         <p className="mt-2 text-sm text-muted-fg">
@@ -188,7 +188,7 @@ export default async function MentorHomePage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">My students</h1>
+        <h1 className="text-2xl font-bold text-ink">My students</h1>
         <p className="mt-1.5 text-base text-muted-fg">
           Assigned to:{" "}
           {assignments
@@ -254,7 +254,7 @@ export default async function MentorHomePage({
       />
 
       {visible.length === 0 ? (
-        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           {selected
             ? "No students have hours allocated with you in this program yet."
             : "No students have hours allocated with you yet. An admin assigns those."}
@@ -263,7 +263,7 @@ export default async function MentorHomePage({
         [...byProgram.entries()].map(([programId, group]) => (
           <section
             key={programId}
-            className="rounded-lg border border-line bg-surface"
+            className="rounded-xl border border-line bg-surface"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
               <h2 className="text-base font-semibold text-ink">

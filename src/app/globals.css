@@ -40,14 +40,10 @@ body {
 }
 
 @layer base {
-  /* Keyboard focus: a visible brand ring on click targets. Inside the brand
-     header chrome, a brand ring is invisible, so it flips to white there. */
+  /* Keyboard focus: a visible brand ring on every click target. */
   :is(button, a, select, summary, input, textarea):focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
-  }
-  header :is(button, a, summary):focus-visible {
-    outline-color: #ffffff;
   }
 
   /* Press feedback: every enabled button acknowledges the click. Buttons with

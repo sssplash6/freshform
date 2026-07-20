@@ -28,9 +28,9 @@ export default async function AdminStudentsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-ink">Students</h1>
+      <h1 className="text-2xl font-bold text-ink">Students</h1>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4">
+      <form className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-surface p-4">
         <label className="block text-sm">
           <span className="text-muted-fg">Program</span>
           <div className="mt-0.5 w-56">
@@ -46,14 +46,14 @@ export default async function AdminStudentsPage({
         </label>
         <button
           type="submit"
-          className="min-h-11 rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
+          className="min-h-11 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
         >
           Filter
         </button>
         {program && (
           <Link
             href="/admin/students"
-            className="min-h-11 rounded-md border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
+            className="min-h-11 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
           >
             Clear
           </Link>
@@ -61,7 +61,7 @@ export default async function AdminStudentsPage({
       </form>
 
       {filtered.length === 0 && students.length > 0 ? (
-        <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No students in this program yet.
         </p>
       ) : (

@@ -29,7 +29,7 @@ export default async function StudentOnboardingPage() {
     return (
       <div className="mx-auto max-w-md space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold text-ink">
             Welcome to {profile.program.name}
           </h1>
           <p className="mt-1.5 text-base text-muted-fg">
@@ -38,7 +38,7 @@ export default async function StudentOnboardingPage() {
             name and Telegram username and you&apos;re all set.
           </p>
         </div>
-        <div className="rounded-lg border border-line bg-surface p-6">
+        <div className="rounded-xl border border-line bg-surface p-6">
           <CompleteProfileForm defaultName={user.name ?? ""} />
         </div>
       </div>
@@ -50,7 +50,7 @@ export default async function StudentOnboardingPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold text-ink">
           Complete your registration
         </h1>
         <p className="mt-1.5 text-base text-muted-fg">
@@ -58,7 +58,7 @@ export default async function StudentOnboardingPage() {
           review your registration and allocate your mentoring hours.
         </p>
       </div>
-      <div className="rounded-lg border border-line bg-surface p-6">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <OnboardingForm
           defaultName={user.name ?? ""}
           programs={toProgramOptions(programs)}

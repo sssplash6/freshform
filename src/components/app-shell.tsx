@@ -8,8 +8,9 @@ import type { Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
 
 /**
- * Shared chrome for every signed-in role: brand header, role-specific nav,
- * notification bell, user identity, sign-out. Pages render inside.
+ * Shared chrome for every signed-in role: a light nav bar with the brand
+ * wordmark, role-specific nav, notification bell, user identity, sign-out.
+ * Pages render inside.
  */
 export async function AppShell({
   user,
@@ -25,18 +26,18 @@ export async function AppShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-line bg-brand text-white">
-        <div className="mx-auto hidden min-h-16 max-w-6xl items-center gap-8 px-4 md:flex">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="text-xl font-bold tracking-tight">
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto hidden min-h-16 max-w-5xl items-center gap-8 px-4 md:flex">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-brand">
               Freshman Academy
             </span>
-            <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
               {ROLE_LABELS[role]}
             </span>
           </Link>
 
-          <nav className="flex flex-1 items-center gap-5 text-[15px]">
+          <nav className="flex flex-1 items-center gap-5">
             <NavLinks items={NAV_BY_ROLE[role]} />
           </nav>
 
@@ -44,7 +45,7 @@ export async function AppShell({
             <Link
               href="/notifications"
               aria-label={`Notifications (${unreadCount} unread)`}
-              className="relative flex h-11 w-11 items-center justify-center rounded text-white/80 transition-colors hover:text-white"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-muted-fg transition hover:text-ink hover:ring-2 hover:ring-brand-soft"
             >
               <svg
                 aria-hidden="true"
@@ -61,12 +62,12 @@ export async function AppShell({
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </Link>
-            <span className="hidden text-white/70 sm:inline">
+            <span className="hidden text-muted-fg sm:inline">
               {user.name ?? user.email}
             </span>
             <form
@@ -77,7 +78,7 @@ export async function AppShell({
             >
               <button
                 type="submit"
-                className="min-h-11 rounded border border-white/30 px-2.5 py-1 text-xs text-white/80 transition-colors hover:border-white/60 hover:text-white"
+                className="min-h-11 rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
               >
                 Sign out
               </button>
@@ -85,12 +86,12 @@ export async function AppShell({
           </div>
         </div>
 
-        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 md:hidden">
-          <Link href="/" className="flex min-w-0 items-baseline gap-2">
-            <span className="truncate text-lg font-bold tracking-tight">
+        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 md:hidden">
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-xs font-semibold uppercase tracking-widest text-brand">
               Freshman Academy
             </span>
-            <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
               {ROLE_LABELS[role]}
             </span>
           </Link>
@@ -99,7 +100,7 @@ export async function AppShell({
             <Link
               href="/notifications"
               aria-label={`Notifications (${unreadCount} unread)`}
-              className="relative flex h-11 w-11 items-center justify-center rounded text-white/80 transition-colors hover:text-white"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-muted-fg transition hover:text-ink hover:ring-2 hover:ring-brand-soft"
             >
               <svg
                 aria-hidden="true"
@@ -116,22 +117,22 @@ export async function AppShell({
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold">
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </Link>
 
             <details className="group relative">
-              <summary className="flex h-11 cursor-pointer list-none items-center rounded px-3 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
+              <summary className="flex h-11 cursor-pointer list-none items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink [&::-webkit-details-marker]:hidden">
                 Menu
               </summary>
-              <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-white/15 bg-brand p-2 shadow-lg">
+              <div className="pop-in absolute right-0 z-20 mt-1 w-56 rounded-xl border border-line bg-surface p-1 shadow-lg">
                 <nav aria-label="Primary navigation" className="grid gap-1">
                   <NavLinks items={NAV_BY_ROLE[role]} variant="menu" />
                 </nav>
-                <div className="mt-2 border-t border-white/15 pt-2">
-                  <p className="px-3 pb-2 text-xs text-white/65">
+                <div className="mt-1 border-t border-line pt-1">
+                  <p className="px-3 py-2 text-xs text-muted-fg">
                     {user.name ?? user.email}
                   </p>
                   <form
@@ -142,7 +143,7 @@ export async function AppShell({
                   >
                     <button
                       type="submit"
-                      className="flex min-h-11 w-full items-center rounded px-3 text-left text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+                      className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
                     >
                       Sign out
                     </button>
@@ -154,7 +155,7 @@ export async function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {children}
       </main>
     </div>

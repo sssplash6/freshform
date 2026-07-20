@@ -200,7 +200,7 @@ export default async function AdminStudentDetailPage({
         {profile.allotmentChanges.length === 0 ? (
           <EmptyState>No allocation changes yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-line/60 rounded-lg border border-line bg-surface text-sm">
+          <ul className="divide-y divide-line/60 rounded-xl border border-line bg-surface text-sm">
             {profile.allotmentChanges.map((c) => (
               <li key={c.id} className="flex flex-wrap gap-x-2 px-4 py-3">
                 <span className="tabular-nums text-muted-fg">

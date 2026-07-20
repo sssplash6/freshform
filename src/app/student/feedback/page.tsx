@@ -60,13 +60,13 @@ export default async function StudentFeedbackPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight text-ink">Feedback</h1>
+      <h1 className="text-2xl font-bold text-ink">Feedback</h1>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {mentors.length > 0 ? (
           <MentorFeedbackForm mentors={mentors} />
         ) : (
-          <p className="rounded-lg border border-line bg-surface p-8 text-[15px] text-muted-fg">
+          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
             You&apos;ll be able to rate mentors once one is assigned to your
             program.
           </p>
@@ -83,7 +83,7 @@ export default async function StudentFeedbackPage() {
             {myMentorFeedback.map((f) => (
               <li
                 key={f.id}
-                className="rounded-lg border border-line bg-surface p-3 text-sm"
+                className="rounded-xl border border-line bg-surface p-3 text-sm"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-ink">
@@ -102,7 +102,7 @@ export default async function StudentFeedbackPage() {
             {myWebsiteFeedback.map((f) => (
               <li
                 key={f.id}
-                className="rounded-lg border border-line bg-surface p-3 text-sm"
+                className="rounded-xl border border-line bg-surface p-3 text-sm"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-ink">
