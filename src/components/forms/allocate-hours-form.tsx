@@ -41,7 +41,28 @@ export function AllocateHoursForm({
         title="Deadline to use these hours by (optional)"
         className="min-h-11 rounded-md border border-mist px-2 py-1 text-sm focus:border-navy focus:outline-none"
       />
-      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
+      {/* Only the clicked button's mode reaches the action: Set replaces the
+        * allocation, Add tops it up by the entered amount. */}
+      <Button
+        type="submit"
+        name="mode"
+        value="add"
+        variant="secondary"
+        size="sm"
+        disabled={pending}
+        title="Add these hours on top of the current allocation"
+      >
+        {pending ? "…" : "Add"}
+      </Button>
+      <Button
+        type="submit"
+        name="mode"
+        value="set"
+        variant="secondary"
+        size="sm"
+        disabled={pending}
+        title="Replace the current allocation with this exact amount"
+      >
         {pending ? "…" : "Set"}
       </Button>
       {state && !state.ok && (

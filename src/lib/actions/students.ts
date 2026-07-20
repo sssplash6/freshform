@@ -460,12 +460,14 @@ export async function setMentorAllocation(
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const mentorId = String(formData.get("mentorId") ?? "");
+  // "set" replaces the allocation; "add" tops it up by the entered amount.
+  const mode = String(formData.get("mode") ?? "set");
   const parsed = parseHoursField(formData.get("hours"), {
     min: 0,
     label: "Allocated hours",
   });
   if ("error" in parsed) return { ok: false, error: parsed.error };
-  const newHours = parsed.value;
+  const enteredHours = parsed.value;
 
   const rawDeadline = String(formData.get("deadline") ?? "").trim();
   let deadline: Date | null = null;
@@ -505,6 +507,8 @@ export async function setMentorAllocation(
     where: { studentId_mentorId: { studentId: profile.id, mentorId } },
   });
   const oldHours = existing?.hours ?? 0;
+  const newHours =
+    mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
   const oldDeadline = existing?.deadline ?? null;
   const sameDeadline = (oldDeadline?.getTime() ?? null) === (deadline?.getTime() ?? null);
   if (newHours === oldHours && sameDeadline) {
