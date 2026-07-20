@@ -62,10 +62,27 @@ async function resolveAssignmentTarget(target: string) {
   return null;
 }
 
+/** Resolve every checked "p:"/"c:" target; null if any fails to resolve. */
+async function resolveAssignmentTargets(raw: FormDataEntryValue[]) {
+  const targets = await Promise.all(
+    raw.map((value) => resolveAssignmentTarget(String(value)))
+  );
+  if (targets.some((t) => !t)) return null;
+  // Deduplicate identical targets (same program + cohort pairing).
+  const seen = new Set<string>();
+  return (targets as NonNullable<(typeof targets)[number]>[]).filter((t) => {
+    const key = `${t.programId}:${t.cohortId ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Admin registers a mentor directly (the mentor pool is small): email, full
- * name, and the program — or cohort, where the program has them — they work
- * in. The mentor then signs in with Google and sets their own booking link.
+ * name, and every program — or cohort, where the program has them — they
+ * work in. The mentor then signs in with Google and sets their own booking
+ * links.
  */
 export async function createMentor(
   _prev: ActionState,
@@ -83,16 +100,17 @@ export async function createMentor(
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the mentor's full name." };
 
-  const target = await resolveAssignmentTarget(
-    String(formData.get("target") ?? "")
-  );
-  if (!target) return { ok: false, error: "Pick a program or cohort." };
+  const targets = await resolveAssignmentTargets(formData.getAll("targets"));
+  if (!targets || targets.length === 0) {
+    return { ok: false, error: "Pick at least one program or cohort." };
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return { ok: false, error: `${email} already has an account.` };
   }
 
+  const labels = targets.map((t) => t.label).join(", ");
   await prisma.$transaction(async (tx) => {
     const mentor = await tx.user.create({
       data: {
@@ -102,19 +120,19 @@ export async function createMentor(
         status: USER_STATUS.ACTIVE,
       },
     });
-    await tx.mentorAssignment.create({
-      data: {
+    await tx.mentorAssignment.createMany({
+      data: targets.map((t) => ({
         mentorId: mentor.id,
-        programId: target.programId,
-        cohortId: target.cohortId,
-      },
+        programId: t.programId,
+        cohortId: t.cohortId,
+      })),
     });
     // Greets them on first sign-in.
     await tx.notification.create({
       data: {
         userId: mentor.id,
         type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
-        message: `You were registered as a mentor in ${target.label}. Set your booking link on your mentor page so students there can book you.`,
+        message: `You were registered as a mentor in ${labels}. Set your booking link on your mentor page so students there can book you.`,
       },
     });
   });
@@ -122,7 +140,7 @@ export async function createMentor(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Mentor ${name} (${email}) registered in ${target.label}. They can sign in with Google right away and set their booking link.`,
+    message: `Mentor ${name} (${email}) registered in ${labels}. They can sign in with Google right away and set their booking links.`,
   };
 }
 
