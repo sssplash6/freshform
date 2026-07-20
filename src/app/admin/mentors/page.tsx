@@ -1,6 +1,5 @@
-import { AssignMentorForm } from "@/components/forms/assign-mentor-form";
 import { CreateMentorForm } from "@/components/forms/create-mentor-form";
-import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
+import { MentorList, type MentorListRow } from "@/components/forms/mentor-list";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
@@ -13,11 +12,7 @@ export default async function AdminMentorsPage() {
     }),
     programOptions(),
     prisma.mentorAssignment.findMany({
-      include: {
-        mentor: true,
-        program: true,
-        cohort: true,
-      },
+      include: { program: true, cohort: true },
       orderBy: { createdAt: "asc" },
     }),
   ]);
@@ -26,6 +21,28 @@ export default async function AdminMentorsPage() {
     (m) => m.status === USER_STATUS.UNASSIGNED
   );
   const programSelectOptions = toProgramOptions(programs);
+
+  const programsWithCohorts = new Set(
+    programs.filter((p) => p.cohorts.length > 0).map((p) => p.id)
+  );
+  const rows: MentorListRow[] = mentors.map((m) => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    status: m.status,
+    assignments: assignments
+      .filter((a) => a.mentorId === m.id)
+      .map((a) => ({
+        id: a.id,
+        checkedValue: a.cohortId ? `c:${a.cohortId}` : `p:${a.programId}`,
+        label: a.cohort
+          ? `${a.program.name} / ${a.cohort.name}`
+          : programsWithCohorts.has(a.programId)
+            ? `${a.program.name} (all cohorts)`
+            : a.program.name,
+        calendlyUrl: a.calendlyUrl,
+      })),
+  }));
 
   return (
     <div className="space-y-6">
@@ -37,8 +54,8 @@ export default async function AdminMentorsPage() {
             Awaiting assignment ({unassigned.length})
           </h2>
           <p className="mt-1 text-xs text-gray-600">
-            These mentors signed in before being registered. Assign them to a
-            program below to activate them.
+            These mentors signed in before being registered. Edit one below to
+            assign them to a program and activate them.
           </p>
           <ul className="mt-2 space-y-1 text-sm text-gray-700">
             {unassigned.map((m) => (
@@ -54,102 +71,9 @@ export default async function AdminMentorsPage() {
 
       <CreateMentorForm programs={programSelectOptions} />
 
-      {mentors.length > 0 && (
-        <AssignMentorForm
-          mentors={mentors.map((m) => ({
-            id: m.id,
-            label: `${m.name ?? m.email}${
-              m.status === USER_STATUS.UNASSIGNED ? " (unassigned)" : ""
-            }`,
-          }))}
-          programs={programSelectOptions}
-        />
-      )}
-
-      <div className="space-y-4">
-        <h2 className="text-base font-semibold text-navy">
-          Current assignments
-        </h2>
-        {assignments.length === 0 ? (
-          <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-            No assignments yet.
-          </p>
-        ) : (
-          programs.map((program) => {
-            const programAssignments = assignments.filter(
-              (a) => a.programId === program.id
-            );
-            if (programAssignments.length === 0) return null;
-            return (
-              <section
-                key={program.id}
-                className="rounded-lg border border-mist bg-white"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
-                  <h3 className="text-base font-semibold text-navy">
-                    {program.name}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {programAssignments.length} mentor
-                    {programAssignments.length === 1 ? "" : "s"} assigned
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-mist bg-mist/40 text-xs uppercase tracking-wide text-gray-500">
-                      <tr>
-                        <th className="px-4 py-3">Mentor</th>
-                        {program.cohorts.length > 0 && (
-                          <th className="px-4 py-3">Scope</th>
-                        )}
-                        <th className="px-4 py-3">Booking link</th>
-                        <th className="px-4 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-mist/60">
-                      {programAssignments.map((a) => (
-                        <tr key={a.id}>
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900">
-                              {a.mentor.name ?? "—"}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {a.mentor.email}
-                            </div>
-                          </td>
-                          {program.cohorts.length > 0 && (
-                            <td className="px-4 py-3">
-                              {a.cohort ? a.cohort.name : "All cohorts"}
-                            </td>
-                          )}
-                          <td className="max-w-64 truncate px-4 py-3">
-                            {a.calendlyUrl ? (
-                              <a
-                                href={a.calendlyUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-navy underline decoration-mist underline-offset-2 hover:decoration-navy"
-                              >
-                                {a.calendlyUrl}
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">
-                                Not set by the mentor yet
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <RemoveAssignmentButton assignmentId={a.id} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            );
-          })
-        )}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-navy">All mentors</h2>
+        <MentorList mentors={rows} programs={programSelectOptions} />
       </div>
     </div>
   );

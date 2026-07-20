@@ -145,69 +145,102 @@ export async function createMentor(
 }
 
 /**
- * Assign a mentor to a program — or to one cohort within it, for programs
- * that have cohorts. The target comes as "p:<programId>" or "c:<cohortId>".
- * The mentor sets the booking link for the pairing themselves afterwards
- * (spec §8: links live on the pairing). A first assignment activates an
- * UNASSIGNED mentor.
+ * Admin edits a mentor: name, sign-in email, and the full set of
+ * program/cohort assignments (checked = assigned). The booking links on
+ * pairings that survive the edit are kept; the mentor sets those themselves
+ * (spec §8). Unchecking every target parks the mentor as UNASSIGNED again;
+ * a first assignment activates them.
  */
-export async function assignMentor(
+export async function updateMentor(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
   if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can assign mentors." };
+    return { ok: false, error: "Only admins can edit mentors." };
   }
 
   const mentorId = String(formData.get("mentorId") ?? "");
-  const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+  const mentor = await prisma.user.findUnique({
+    where: { id: mentorId },
+    include: { mentorAssignments: true },
+  });
   if (!mentor || mentor.role !== ROLES.MENTOR) {
-    return { ok: false, error: "Pick a mentor." };
+    return { ok: false, error: "Mentor not found." };
   }
 
-  const target = await resolveAssignmentTarget(
-    String(formData.get("target") ?? "")
-  );
-  if (!target) return { ok: false, error: "Pick a program or cohort." };
-  const { programId, cohortId, label } = target;
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Enter the mentor's full name." };
+  const email = normalizeEmail(formData.get("email"));
+  if (!EMAIL_RE.test(email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+  const emailTaken = await prisma.user.findUnique({ where: { email } });
+  if (emailTaken && emailTaken.id !== mentorId) {
+    return { ok: false, error: `${email} already has an account.` };
+  }
 
-  // Not an upsert: SQLite unique indexes treat NULL cohortIds as distinct,
-  // so program-wide pairings are deduplicated here instead.
-  const existing = await prisma.mentorAssignment.findFirst({
-    where: { mentorId, programId, cohortId },
-  });
-  if (existing) {
-    return {
-      ok: true,
-      message: `${mentor.name ?? mentor.email} is already assigned to ${label}.`,
-    };
+  const targets = await resolveAssignmentTargets(formData.getAll("targets"));
+  if (!targets) return { ok: false, error: "Pick a program or cohort." };
+
+  const wanted = new Set(targets.map((t) => `${t.programId}:${t.cohortId ?? ""}`));
+  const toCreate = targets.filter(
+    (t) =>
+      !mentor.mentorAssignments.some(
+        (a) => a.programId === t.programId && a.cohortId === t.cohortId
+      )
+  );
+  const toDelete = mentor.mentorAssignments.filter(
+    (a) => !wanted.has(`${a.programId}:${a.cohortId ?? ""}`)
+  );
+  const remaining =
+    mentor.mentorAssignments.length - toDelete.length + toCreate.length;
+
+  const detailsChanged = name !== mentor.name || email !== mentor.email;
+  if (!detailsChanged && toCreate.length === 0 && toDelete.length === 0) {
+    return { ok: true, message: "No changes to save." };
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.mentorAssignment.create({
-      data: { mentorId, programId, cohortId },
-    });
-    if (mentor.status === USER_STATUS.UNASSIGNED) {
+    if (detailsChanged) {
+      await tx.user.update({ where: { id: mentorId }, data: { name, email } });
+    }
+    if (toDelete.length > 0) {
+      await tx.mentorAssignment.deleteMany({
+        where: { id: { in: toDelete.map((a) => a.id) } },
+      });
+    }
+    if (toCreate.length > 0) {
+      await tx.mentorAssignment.createMany({
+        data: toCreate.map((t) => ({
+          mentorId,
+          programId: t.programId,
+          cohortId: t.cohortId,
+        })),
+      });
+      await tx.notification.create({
+        data: {
+          userId: mentorId,
+          type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+          message: `You were assigned to ${toCreate.map((t) => t.label).join(", ")}. Set your booking link on your mentor page so students there can book you.`,
+        },
+      });
+    }
+    if (remaining === 0 && mentor.status === USER_STATUS.ACTIVE) {
+      await tx.user.update({
+        where: { id: mentorId },
+        data: { status: USER_STATUS.UNASSIGNED },
+      });
+    } else if (remaining > 0 && mentor.status === USER_STATUS.UNASSIGNED) {
       await tx.user.update({
         where: { id: mentorId },
         data: { status: USER_STATUS.ACTIVE },
       });
     }
-    await tx.notification.create({
-      data: {
-        userId: mentorId,
-        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
-        message: `You were assigned to ${label}. Set your booking link on your mentor page so students there can book you.`,
-      },
-    });
   });
 
   revalidatePath("/", "layout");
-  return {
-    ok: true,
-    message: `${mentor.name ?? mentor.email} assigned to ${label}. They set their booking link from their mentor page.`,
-  };
+  return { ok: true, message: `${name} updated.` };
 }
 
 /**
