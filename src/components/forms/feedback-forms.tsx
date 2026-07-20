@@ -17,13 +17,22 @@ const inputClass =
  * as a large, tap-friendly star picker. */
 function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
   const [value, setValue] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const shown = hovered || value;
 
   return (
     <fieldset className="block text-sm">
       <legend className="text-gray-600">Rating *</legend>
-      <div className="mt-1 flex items-center gap-0.5">
+      <div
+        className="mt-1 flex items-center gap-0.5"
+        onMouseLeave={() => setHovered(0)}
+      >
         {[1, 2, 3, 4, 5].map((n) => (
-          <span key={n} className="inline-flex">
+          <span
+            key={n}
+            className="inline-flex"
+            onMouseEnter={() => setHovered(n)}
+          >
             <input
               id={`${idPrefix}-${n}`}
               type="radio"
@@ -36,8 +45,8 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
             />
             <label
               htmlFor={`${idPrefix}-${n}`}
-              className={`inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded text-mist transition-colors hover:text-brand peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${
-                n <= value ? "text-brand" : ""
+              className={`inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${
+                n <= shown ? "text-brand" : "text-mist"
               }`}
             >
             <StarIcon
@@ -48,9 +57,9 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
             </label>
           </span>
         ))}
-        {value > 0 && (
+        {shown > 0 && (
           <span className="ml-2 text-sm font-medium tabular-nums text-gray-500">
-            {value}/5
+            {shown}/5
           </span>
         )}
       </div>
