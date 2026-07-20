@@ -13,9 +13,91 @@ import { formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments } from "@/lib/queries";
 
-export default async function MentorHomePage() {
+type MentorStudent = {
+  profile: {
+    id: string;
+    programId: string;
+    telegramUsername: string | null;
+    user: { name: string | null; email: string; status: string };
+    program: { name: string };
+    cohort: { name: string } | null;
+  };
+  allocated: number;
+  completed: number;
+  remaining: number;
+  deadline: Date | null;
+  approved: boolean;
+};
+
+/** Island that toggles the students view between all programs and one. */
+function ProgramToggleIsland({
+  href,
+  name,
+  active,
+  students,
+  remaining,
+  completed,
+}: {
+  href: string;
+  name: string;
+  active: boolean;
+  students: number;
+  remaining: number;
+  completed: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "true" : undefined}
+      className={`block rounded-lg border p-5 transition ${
+        active
+          ? "border-brand bg-brand/5 shadow-sm"
+          : "border-mist bg-white hover:border-brand/60 hover:shadow-sm"
+      }`}
+    >
+      <h3 className="text-lg font-semibold text-navy">{name}</h3>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+            Students
+          </dt>
+          <dd className="text-xl font-bold tabular-nums text-navy">
+            {students}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+            Hrs done
+          </dt>
+          <dd className="text-xl font-bold tabular-nums text-brand-deep">
+            {formatHours(completed)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11px] uppercase tracking-wide text-gray-500">
+            Hrs left
+          </dt>
+          <dd
+            className={`text-xl font-bold tabular-nums ${
+              remaining < 0 ? "text-red-700" : "text-navy"
+            }`}
+          >
+            {formatHours(remaining)}
+          </dd>
+        </div>
+      </dl>
+    </Link>
+  );
+}
+
+export default async function MentorHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ program?: string }>;
+}) {
   const user = await requireMentor();
   await ensureDeadlineReminders();
+  const { program = "" } = await searchParams;
 
   if (user.status === USER_STATUS.UNASSIGNED) {
     return (
@@ -61,7 +143,7 @@ export default async function MentorHomePage() {
   const completedByStudent = new Map(
     mySessionSums.map((s) => [s.studentId, s._sum.hours ?? 0])
   );
-  const students = allocations.map((a) => {
+  const students: MentorStudent[] = allocations.map((a) => {
     const completed = completedByStudent.get(a.studentId) ?? 0;
     return {
       profile: a.student,
@@ -73,15 +155,35 @@ export default async function MentorHomePage() {
     };
   });
 
-  // One island per program (item 6): mentors working across programs see
-  // each program's students in its own box.
-  const byProgram = new Map<string, typeof students>();
-  for (const s of students) {
-    const key = s.profile.program.name;
-    if (!byProgram.has(key)) byProgram.set(key, []);
-    byProgram.get(key)!.push(s);
+  // One toggle island per assigned program, plus "all programs".
+  const assignedPrograms = new Map<string, string>();
+  for (const a of assignments) {
+    if (!assignedPrograms.has(a.programId)) {
+      assignedPrograms.set(a.programId, a.program.name);
+    }
   }
-  const programCount = new Set(assignments.map((a) => a.programId)).size;
+  const selected = assignedPrograms.has(program) ? program : "";
+  const visible = selected
+    ? students.filter((s) => s.profile.programId === selected)
+    : students;
+
+  const islandStats = (pid: string) => {
+    const ss = students.filter((s) => s.profile.programId === pid);
+    return {
+      students: ss.length,
+      remaining: ss.reduce((sum, s) => sum + s.remaining, 0),
+      completed: ss.reduce((sum, s) => sum + s.completed, 0),
+    };
+  };
+
+  const byProgram = new Map<string, { name: string; students: MentorStudent[] }>();
+  for (const s of visible) {
+    const key = s.profile.programId;
+    if (!byProgram.has(key)) {
+      byProgram.set(key, { name: s.profile.program.name, students: [] });
+    }
+    byProgram.get(key)!.students.push(s);
+  }
 
   return (
     <div className="space-y-6">
@@ -105,8 +207,30 @@ export default async function MentorHomePage() {
           value={formatHours(delivered._sum.hours ?? 0)}
           tone="brand"
         />
-        <StatCard label="Programs" value={String(programCount)} />
+        <StatCard label="Programs" value={String(assignedPrograms.size)} />
       </StatCardGrid>
+
+      {assignedPrograms.size > 1 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ProgramToggleIsland
+            href="/mentor"
+            name="All programs"
+            active={!selected}
+            students={students.length}
+            remaining={students.reduce((sum, s) => sum + s.remaining, 0)}
+            completed={students.reduce((sum, s) => sum + s.completed, 0)}
+          />
+          {[...assignedPrograms.entries()].map(([id, name]) => (
+            <ProgramToggleIsland
+              key={id}
+              href={`/mentor?program=${id}`}
+              name={name}
+              active={selected === id}
+              {...islandStats(id)}
+            />
+          ))}
+        </div>
+      )}
 
       {assignments.length > 0 && (
         <BookingLinksForm
@@ -121,7 +245,7 @@ export default async function MentorHomePage() {
       )}
 
       <LogSessionForm
-        students={students
+        students={visible
           .filter((s) => s.approved)
           .map((s) => ({
             profileId: s.profile.id,
@@ -129,26 +253,27 @@ export default async function MentorHomePage() {
           }))}
       />
 
-      {students.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="rounded-lg border border-mist bg-white p-8 text-[15px] text-gray-500">
-          No students have hours allocated with you yet. An admin assigns
-          those.
+          {selected
+            ? "No students have hours allocated with you in this program yet."
+            : "No students have hours allocated with you yet. An admin assigns those."}
         </p>
       ) : (
-        [...byProgram.entries()].map(([programName, programStudents]) => (
+        [...byProgram.entries()].map(([programId, group]) => (
           <section
-            key={programName}
+            key={programId}
             className="rounded-lg border border-mist bg-white"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-mist px-4 py-3">
               <h2 className="text-base font-semibold text-navy">
-                {programName}
+                {group.name}
               </h2>
               <p className="text-xs text-gray-500">
-                {programStudents.length} student
-                {programStudents.length === 1 ? "" : "s"} ·{" "}
+                {group.students.length} student
+                {group.students.length === 1 ? "" : "s"} ·{" "}
                 {formatHours(
-                  programStudents.reduce((sum, s) => sum + s.remaining, 0)
+                  group.students.reduce((sum, s) => sum + s.remaining, 0)
                 )}{" "}
                 hours remaining with you
               </p>
@@ -167,7 +292,7 @@ export default async function MentorHomePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-mist/60">
-                  {programStudents.map((s) => (
+                  {group.students.map((s) => (
                     <tr
                       key={s.profile.id}
                       className="transition-colors hover:bg-mist/20"
