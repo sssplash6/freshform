@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { setBookingLink } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
@@ -47,29 +47,52 @@ function BookingLinkRow({
 
 /**
  * The mentor's booking links, one per program/cohort assignment. Students
- * only see a "Book" button once the link for their program is set.
+ * only see a "Book" button once the link for their program is set. Collapsed
+ * behind one button; the missing-link count stays visible on it.
  */
 export function BookingLinksForm({
   assignments,
 }: {
   assignments: { id: string; label: string; calendlyUrl: string | null }[];
 }) {
+  const [open, setOpen] = useState(false);
   const missing = assignments.filter((a) => !a.calendlyUrl).length;
 
   return (
     <section className="rounded-lg border border-mist bg-white p-4">
-      <h2 className="text-base font-semibold text-navy">Your booking links</h2>
-      <p className="mt-1 text-xs text-gray-500">
-        Students book sessions through these links (e.g. your Calendly), one
-        per program you&apos;re assigned to.
-        {missing > 0 &&
-          " Students can't book you until the link for their program is set."}
-      </p>
-      <div className="mt-3 space-y-3">
-        {assignments.map((a) => (
-          <BookingLinkRow key={a.id} assignment={a} />
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-base font-semibold text-navy">
+          Your booking links
+          {missing > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+              {missing} missing
+            </span>
+          )}
+        </span>
+        <span className="text-sm text-gray-500">
+          {open ? "Hide ▴" : "Show ▾"}
+        </span>
+      </button>
+      {open && (
+        <>
+          <p className="mt-1 text-xs text-gray-500">
+            Students book sessions through these links (e.g. your Calendly),
+            one per program you&apos;re assigned to.
+            {missing > 0 &&
+              " Students can't book you until the link for their program is set."}
+          </p>
+          <div className="mt-3 space-y-3">
+            {assignments.map((a) => (
+              <BookingLinkRow key={a.id} assignment={a} />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
