@@ -1,4 +1,7 @@
-import { markAllNotificationsRead } from "@/lib/actions/notifications";
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/actions/notifications";
 import { requireUser } from "@/lib/dal";
 import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -45,9 +48,26 @@ export default async function NotificationsPage() {
               }`}
             >
               <p>{n.message}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {formatDateTime(n.createdAt)}
-              </p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-500">
+                  {formatDateTime(n.createdAt)}
+                </p>
+                {!n.read && (
+                  <form action={markNotificationRead}>
+                    <input
+                      type="hidden"
+                      name="notificationId"
+                      value={n.id}
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-md border border-navy/40 px-2 py-0.5 text-xs font-medium text-navy transition-colors hover:bg-navy hover:text-white"
+                    >
+                      Mark read
+                    </button>
+                  </form>
+                )}
+              </div>
             </li>
           ))}
         </ul>
