@@ -27,7 +27,13 @@ export async function studentsWithHours(
   const [allocations, sessionSums] = await Promise.all([
     prisma.hourAllocation.findMany({
       where: { studentId: { in: ids } },
-      select: { studentId: true, mentorId: true, hours: true, deadline: true },
+      select: {
+        studentId: true,
+        mentorId: true,
+        hours: true,
+        deadline: true,
+        amountPaid: true,
+      },
     }),
     prisma.session.groupBy({
       by: ["studentId", "mentorId", "attended"],
@@ -57,8 +63,12 @@ export async function studentsWithHours(
   const now = Date.now();
   const allottedById = new Map<string, number>();
   const forfeitedById = new Map<string, number>();
+  const paidById = new Map<string, number>();
   for (const a of allocations) {
     allottedById.set(a.studentId, (allottedById.get(a.studentId) ?? 0) + a.hours);
+    if (a.amountPaid != null) {
+      paidById.set(a.studentId, (paidById.get(a.studentId) ?? 0) + a.amountPaid);
+    }
     if (a.deadline.getTime() < now) {
       const used = usedByPair.get(`${a.studentId}:${a.mentorId}`) ?? 0;
       const forfeited = Math.max(0, a.hours - used);
@@ -82,6 +92,7 @@ export async function studentsWithHours(
       completedHours: used - missed,
       missedHours: missed,
       forfeitedHours: forfeited,
+      amountPaid: paidById.get(profile.id) ?? 0,
       remainingHours: allotted - used - forfeited,
     };
   });

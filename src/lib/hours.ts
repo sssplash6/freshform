@@ -65,6 +65,7 @@ export async function allocationSummary(studentProfileId: string) {
       forfeited,
       expired,
       deadline: a.deadline,
+      amountPaid: a.amountPaid,
     };
   });
 
@@ -76,6 +77,7 @@ export async function allocationSummary(studentProfileId: string) {
     .filter((s) => !s.attended)
     .reduce((sum, s) => sum + (s._sum.hours ?? 0), 0);
   const forfeited = perMentor.reduce((sum, m) => sum + m.forfeited, 0);
+  const paid = allocations.reduce((sum, a) => sum + (a.amountPaid ?? 0), 0);
 
   return {
     perMentor,
@@ -84,6 +86,7 @@ export async function allocationSummary(studentProfileId: string) {
     missed,
     used,
     forfeited,
+    paid,
     remaining: allotted - used - forfeited,
   };
 }

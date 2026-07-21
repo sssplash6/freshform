@@ -11,7 +11,8 @@ import { Card, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SESSION_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
+import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, toProgramOptions } from "@/lib/queries";
 
@@ -58,6 +59,8 @@ export default async function AdminProgramPage({
   );
   const mentorCount = new Set(assignments.map((a) => a.mentorId)).size;
   const programOption = toProgramOptions([program])[0];
+  const isMasters = program.name === MASTERS_PROGRAM_NAME;
+  const totalPaid = students.reduce((sum, s) => sum + s.amountPaid, 0);
 
   return (
     <div className="space-y-8">
@@ -89,6 +92,9 @@ export default async function AdminProgramPage({
           value={formatHours(totals.remaining)}
           tone={totals.remaining < 0 ? "danger" : "default"}
         />
+        {isMasters && (
+          <StatCard label="Total paid" value={formatMoney(totalPaid)} />
+        )}
       </StatCardGrid>
 
       <Card as="section">

@@ -9,9 +9,10 @@ import { StudentCorrections } from "@/components/forms/student-corrections";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { Table, Td, Tr } from "@/components/ui/table";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
+import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import {
@@ -54,6 +55,7 @@ export default async function AdminStudentDetailPage({
     prisma.session.count({ where: { studentId: profile.id } }),
   ]);
   const byMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
+  const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
 
   return (
     <div className="space-y-8">
@@ -124,6 +126,9 @@ export default async function AdminStudentDetailPage({
           tone={hours.remaining < 0 ? "danger" : "default"}
         />
         <StatCard label="Mentors" value={String(hours.perMentor.length)} />
+        {isMasters && (
+          <StatCard label="Total paid" value={formatMoney(hours.paid)} />
+        )}
       </StatCardGrid>
 
       <section>
@@ -144,6 +149,9 @@ export default async function AdminStudentDetailPage({
               { label: "Missed", align: "right" },
               { label: "Remaining", align: "right" },
               { label: "Use by" },
+              ...(isMasters
+                ? [{ label: "Paid", align: "right" } as Column]
+                : []),
               { label: "Set allocation" },
             ]}
           >
@@ -182,6 +190,13 @@ export default async function AdminStudentDetailPage({
                   <Td>
                     <Deadline deadline={alloc?.deadline ?? null} />
                   </Td>
+                  {isMasters && (
+                    <Td align="right" className="tabular-nums">
+                      {alloc?.amountPaid != null
+                        ? formatMoney(alloc.amountPaid)
+                        : "—"}
+                    </Td>
+                  )}
                   <Td>
                     <AllocateHoursForm
                       studentProfileId={profile.id}
@@ -192,6 +207,8 @@ export default async function AdminStudentDetailPage({
                           ? alloc.deadline.toISOString().slice(0, 10)
                           : null
                       }
+                      showAmountPaid={isMasters}
+                      currentAmountPaid={alloc?.amountPaid ?? null}
                     />
                   </Td>
                 </Tr>

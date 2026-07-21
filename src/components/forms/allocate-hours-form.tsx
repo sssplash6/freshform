@@ -12,11 +12,15 @@ export function AllocateHoursForm({
   mentorId,
   currentHours,
   currentDeadline,
+  showAmountPaid = false,
+  currentAmountPaid = null,
 }: {
   studentProfileId: string;
   mentorId: string;
   currentHours: number;
   currentDeadline: string | null;
+  showAmountPaid?: boolean;
+  currentAmountPaid?: number | null;
 }) {
   const [state, action, pending] = useActionState(setMentorAllocation, null);
 
@@ -42,6 +46,23 @@ export function AllocateHoursForm({
         title="Deadline to use these hours by — once it passes, unused hours are forfeited"
         className="min-h-11 rounded-lg border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none"
       />
+      {showAmountPaid && (
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-fg">$</span>
+          <input
+            name="amountPaid"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            defaultValue={currentAmountPaid ?? ""}
+            placeholder="Amount paid"
+            aria-label="Amount paid for these hours (USD)"
+            title="Total amount the student paid for these hours (USD)"
+            className="min-h-11 w-28 rounded-lg border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none"
+          />
+        </div>
+      )}
       {/* Only the clicked button's mode reaches the action: Set replaces the
         * allocation, Add tops it up by the entered amount. */}
       <Button

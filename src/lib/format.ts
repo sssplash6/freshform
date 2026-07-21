@@ -5,6 +5,16 @@ export function formatHours(n: number): string {
   return Number(n.toFixed(2)).toString();
 }
 
+/** Money in US dollars: 1200 → "$1,200", 1200.5 → "$1,200.50". */
+export function formatMoney(n: number): string {
+  return n.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /** Session dates render as calendar dates (stored at UTC midnight). */
 export function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10);

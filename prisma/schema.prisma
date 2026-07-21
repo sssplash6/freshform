@@ -114,6 +114,7 @@ model HourAllocation {
   studentId String
   mentorId  String
   hours     Float
+  amountPaid Float? // total the student paid for these hours; collected only for Master's Program allocations (null elsewhere)
   deadline  DateTime // required date the hours must be used by; shown to student and mentor. Once it passes, unused hours are FORFEITED and no new sessions may be logged against the allocation.
   deadlineStage String? // reminder bookkeeping: null | UPCOMING_SENT | PASSED_SENT; reset when the deadline changes
   createdAt DateTime  @default(now())

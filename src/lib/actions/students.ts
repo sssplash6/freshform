@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { NOTIFICATION_TYPES, ROLES, USER_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
+import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import {
   EMAIL_RE,
   normalizeEmail,
@@ -478,9 +479,24 @@ export async function setMentorAllocation(
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
-    include: { user: true },
+    include: { user: true, program: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  // Master's Program allocations also record how much the student paid.
+  const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
+  let amountPaid: number | null = null;
+  if (isMasters) {
+    const raw = String(formData.get("amountPaid") ?? "").trim();
+    const n = Number.parseFloat(raw);
+    if (!Number.isFinite(n) || n < 0) {
+      return { ok: false, error: "Enter the amount paid (a number of 0 or more)." };
+    }
+    if (n > 10_000_000) {
+      return { ok: false, error: "Amount paid is implausibly large." };
+    }
+    amountPaid = Number(n.toFixed(2));
+  }
 
   const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
   if (!mentor || mentor.role !== ROLES.MENTOR) {
@@ -508,7 +524,11 @@ export async function setMentorAllocation(
     mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
   const oldDeadline = existing?.deadline ?? null;
   const sameDeadline = oldDeadline?.getTime() === deadline.getTime();
-  if (newHours === oldHours && sameDeadline) {
+  // amountPaid is an absolute total (not add/set): it's replaced with the
+  // entered value on either button. Non-Master's allocations never touch it.
+  const oldAmountPaid = existing?.amountPaid ?? null;
+  const sameAmount = !isMasters || oldAmountPaid === amountPaid;
+  if (newHours === oldHours && sameDeadline && sameAmount) {
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
@@ -522,8 +542,15 @@ export async function setMentorAllocation(
         deadline,
         // A new deadline restarts the reminder cycle.
         ...(sameDeadline ? {} : { deadlineStage: null }),
+        ...(isMasters ? { amountPaid } : {}),
       },
-      create: { studentId: profile.id, mentorId, hours: newHours, deadline },
+      create: {
+        studentId: profile.id,
+        mentorId,
+        hours: newHours,
+        deadline,
+        ...(isMasters ? { amountPaid } : {}),
+      },
     });
     if (newHours !== oldHours) {
       await tx.hourAllotmentChange.create({
@@ -552,8 +579,10 @@ export async function setMentorAllocation(
   });
 
   revalidatePath("/", "layout");
+  const paidNote =
+    isMasters && amountPaid !== null ? ` · ${formatMoney(amountPaid)} paid` : "";
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}.`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.`,
   };
 }

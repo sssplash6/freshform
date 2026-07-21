@@ -9,6 +9,12 @@
 export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 
 /**
+ * The Master's Program is billed per student: when an admin allocates hours to
+ * a Master's student they also record the amount paid. Matched by program name.
+ */
+export const MASTERS_PROGRAM_NAME = "Master's Program";
+
+/**
  * Starter programs. All are flat single programs — no seeded cohorts;
  * students belong to the program directly. Admins can add cohorts (and whole
  * programs) from the dashboard when a program grows into them.
@@ -16,7 +22,7 @@ export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 export const PROGRAMS: { name: string; cohorts: string[] }[] = [
   { name: "Global Admissions Program", cohorts: [] },
   { name: "Flexible Program", cohorts: [] },
-  { name: "Master's Program", cohorts: [] },
+  { name: MASTERS_PROGRAM_NAME, cohorts: [] },
 ];
 
 /**
