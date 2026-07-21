@@ -20,7 +20,7 @@ export async function ensureDeadlineReminders() {
 
   const due = await prisma.hourAllocation.findMany({
     where: {
-      deadline: { not: null, lte: soon },
+      deadline: { lte: soon },
       OR: [
         { deadlineStage: null },
         { deadlineStage: "UPCOMING_SENT", deadline: { lt: now } },
@@ -47,7 +47,7 @@ export async function ensureDeadlineReminders() {
   );
 
   for (const a of due) {
-    const deadline = a.deadline!;
+    const deadline = a.deadline;
     const passed = deadline.getTime() < now.getTime();
     const remaining = a.hours - (usedBy.get(`${a.studentId}:${a.mentorId}`) ?? 0);
     const mentorLabel = a.mentor.name ?? a.mentor.email;
@@ -77,15 +77,15 @@ export async function ensureDeadlineReminders() {
             userId: a.student.userId,
             type: NOTIFICATION_TYPES.HOURS_DEADLINE,
             message: passed
-              ? `The ${date} deadline for your hours with ${mentorLabel} has passed — ${formatHours(remaining)} hours are still unused. Talk to your mentor or the team about what happens next.`
-              : `Reminder: use your ${formatHours(remaining)} remaining hours with ${mentorLabel} by ${date}.`,
+              ? `Your ${date} deadline for hours with ${mentorLabel} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
+              : `Reminder: use your ${formatHours(remaining)} remaining hours with ${mentorLabel} by ${date}, or they expire.`,
           },
           {
             userId: a.mentorId,
             type: NOTIFICATION_TYPES.HOURS_DEADLINE,
             message: passed
-              ? `${studentLabel} still has ${formatHours(remaining)} unused hours with you past their ${date} deadline.`
-              : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} — help them book in time.`,
+              ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
+              : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
           },
         ],
       });

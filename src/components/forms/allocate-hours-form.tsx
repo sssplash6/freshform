@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { setMentorAllocation } from "@/lib/actions/students";
 
 /** Inline per-mentor allocation editor for one student (admin only): the
- * hours plus the optional deadline they should be used by. */
+ * hours plus the required deadline they must be used by. */
 export function AllocateHoursForm({
   studentProfileId,
   mentorId,
@@ -36,9 +36,10 @@ export function AllocateHoursForm({
       <input
         name="deadline"
         type="date"
+        required
         defaultValue={currentDeadline ?? ""}
-        aria-label="Deadline to use these hours by (optional)"
-        title="Deadline to use these hours by (optional)"
+        aria-label="Deadline to use these hours by (required)"
+        title="Deadline to use these hours by — once it passes, unused hours are forfeited"
         className="min-h-11 rounded-lg border border-line px-2 py-1 text-sm focus:border-brand focus:outline-none"
       />
       {/* Only the clicked button's mode reaches the action: Set replaces the

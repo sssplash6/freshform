@@ -469,15 +469,12 @@ export async function setMentorAllocation(
   if ("error" in parsed) return { ok: false, error: parsed.error };
   const enteredHours = parsed.value;
 
-  const rawDeadline = String(formData.get("deadline") ?? "").trim();
-  let deadline: Date | null = null;
-  if (rawDeadline) {
-    const parsedDeadline = parseDateField(rawDeadline);
-    if ("error" in parsedDeadline) {
-      return { ok: false, error: "Pick a valid deadline date." };
-    }
-    deadline = parsedDeadline.value;
+  // Deadlines are required: once one passes, unused hours are forfeited.
+  const parsedDeadline = parseDateField(formData.get("deadline"));
+  if ("error" in parsedDeadline) {
+    return { ok: false, error: "Pick a deadline for these hours." };
   }
+  const deadline = parsedDeadline.value;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
@@ -510,13 +507,13 @@ export async function setMentorAllocation(
   const newHours =
     mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
   const oldDeadline = existing?.deadline ?? null;
-  const sameDeadline = (oldDeadline?.getTime() ?? null) === (deadline?.getTime() ?? null);
+  const sameDeadline = oldDeadline?.getTime() === deadline.getTime();
   if (newHours === oldHours && sameDeadline) {
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
   const mentorLabel = mentor.name ?? mentor.email;
-  const deadlineNote = deadline ? ` They should be used by ${formatDate(deadline)}.` : "";
+  const deadlineNote = ` They must be used by ${formatDate(deadline)}.`;
   await prisma.$transaction(async (tx) => {
     await tx.hourAllocation.upsert({
       where: { studentId_mentorId: { studentId: profile.id, mentorId } },
@@ -549,7 +546,7 @@ export async function setMentorAllocation(
             ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).${deadlineNote}`
             : delta < 0
               ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
-              : `The deadline for your hours with ${mentorLabel} was ${deadline ? `set to ${formatDate(deadline)}` : "removed"}.`,
+              : `The deadline for your hours with ${mentorLabel} was updated to ${formatDate(deadline)}.`,
       },
     });
   });
@@ -557,6 +554,6 @@ export async function setMentorAllocation(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}${deadline ? `, to use by ${formatDate(deadline)}` : ""}.`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}.`,
   };
 }

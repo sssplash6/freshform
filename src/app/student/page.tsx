@@ -73,6 +73,13 @@ export default async function StudentHomePage() {
         {hours.missed > 0 && (
           <StatCard label="Hours missed" value={formatHours(hours.missed)} />
         )}
+        {hours.forfeited > 0 && (
+          <StatCard
+            label="Hours expired"
+            value={formatHours(hours.forfeited)}
+            tone="danger"
+          />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(hours.remaining)}
@@ -85,6 +92,14 @@ export default async function StudentHomePage() {
         <Callout tone="danger">
           You&apos;ve used {formatHours(-hours.remaining)} hours more than your
           allotment. Talk to your program contact about topping up.
+        </Callout>
+      )}
+
+      {hours.forfeited > 0 && (
+        <Callout tone="danger">
+          {formatHours(hours.forfeited)} of your hours expired unused past their
+          deadline and can no longer be used. Talk to your program contact if
+          you need them reinstated.
         </Callout>
       )}
 

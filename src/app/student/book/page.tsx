@@ -89,11 +89,7 @@ export default async function StudentBookPage() {
                   </p>
                   {withMentor?.deadline && (
                     <p className="mt-1 text-xs text-muted-fg">
-                      Use them by{" "}
-                      <Deadline
-                        deadline={withMentor.deadline}
-                        remaining={withMentor.remaining}
-                      />
+                      Use them by <Deadline deadline={withMentor.deadline} />
                     </p>
                   )}
                 </div>

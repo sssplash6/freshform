@@ -9,7 +9,10 @@ type MentorHours = {
   mentor: { id: string; name: string | null; email: string };
   allocated: number;
   completed: number;
+  missed: number;
   remaining: number;
+  forfeited: number;
+  expired: boolean;
   deadline: Date | null;
 };
 
@@ -35,9 +38,12 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
       <ul className="divide-y divide-line/60">
         {items.map((m) => {
           const overdrawn = m.remaining < 0;
+          const used = m.completed + m.missed;
+          // "Gone" = hours consumed plus any forfeited past the deadline.
+          const gone = used + m.forfeited;
           const pct =
             m.allocated > 0
-              ? Math.min(100, Math.round((m.completed / m.allocated) * 100))
+              ? Math.min(100, Math.round((gone / m.allocated) * 100))
               : 0;
           return (
             <li key={m.mentor.id} className="px-4 py-4 sm:px-5">
@@ -60,17 +66,25 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
               <Meter
                 className="mt-2.5"
                 pct={overdrawn ? 100 : pct}
-                tone={overdrawn ? "danger" : "accent"}
-                ariaValueNow={m.completed}
+                tone={overdrawn || m.expired ? "danger" : "accent"}
+                ariaValueNow={used}
                 ariaValueMax={m.allocated}
                 ariaLabel={`Hours used with ${m.mentor.name ?? m.mentor.email}`}
               />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
                 <span className="tabular-nums">
-                  {formatHours(m.completed)} of {formatHours(m.allocated)} hours
-                  used
+                  {formatHours(used)} of {formatHours(m.allocated)} hours used
+                  {m.missed > 0 ? ` · ${formatHours(m.missed)} missed` : ""}
+                  {m.forfeited > 0 ? (
+                    <span className="text-red-700">
+                      {" "}
+                      · {formatHours(m.forfeited)} expired unused
+                    </span>
+                  ) : (
+                    ""
+                  )}
                 </span>
-                <Deadline deadline={m.deadline} remaining={m.remaining} />
+                <Deadline deadline={m.deadline} />
               </div>
             </li>
           );

@@ -95,6 +95,15 @@ export async function logSession(
     };
   }
 
+  // Deadlines are hard: once passed, the unused hours are forfeited and no
+  // further sessions can be logged against this allocation.
+  if (allocation.deadline.getTime() < Date.now()) {
+    return {
+      ok: false,
+      error: `These hours expired on ${formatDate(allocation.deadline)} and can no longer be logged against. Ask an admin to extend the deadline or allocate new hours.`,
+    };
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.session.create({
       data: {

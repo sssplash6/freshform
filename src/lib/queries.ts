@@ -24,29 +24,50 @@ export async function studentsWithHours(
   });
   const ids = profiles.map((p) => p.id);
 
-  const [allocationSums, sessionSums] = await Promise.all([
-    prisma.hourAllocation.groupBy({
-      by: ["studentId"],
+  const [allocations, sessionSums] = await Promise.all([
+    prisma.hourAllocation.findMany({
       where: { studentId: { in: ids } },
-      _sum: { hours: true },
+      select: { studentId: true, mentorId: true, hours: true, deadline: true },
     }),
     prisma.session.groupBy({
-      by: ["studentId", "attended"],
+      by: ["studentId", "mentorId", "attended"],
       where: { status: SESSION_STATUS.ACTIVE, studentId: { in: ids } },
       _sum: { hours: true },
     }),
   ]);
-  const allottedById = new Map(
-    allocationSums.map((s) => [s.studentId, s._sum.hours ?? 0])
-  );
-  // Used = every active session (present + no-show); missed = the no-show subset.
+
+  // Used = every active session (present + no-show); missed = the no-show
+  // subset. usedByPair drives per-allocation forfeiture on expired deadlines.
   const usedById = new Map<string, number>();
   const missedById = new Map<string, number>();
+  const usedByPair = new Map<string, number>();
   for (const s of sessionSums) {
     const hrs = s._sum.hours ?? 0;
     usedById.set(s.studentId, (usedById.get(s.studentId) ?? 0) + hrs);
+    usedByPair.set(
+      `${s.studentId}:${s.mentorId}`,
+      (usedByPair.get(`${s.studentId}:${s.mentorId}`) ?? 0) + hrs
+    );
     if (!s.attended) {
       missedById.set(s.studentId, (missedById.get(s.studentId) ?? 0) + hrs);
+    }
+  }
+
+  // allotted per student, plus forfeited hours from allocations past deadline.
+  const now = Date.now();
+  const allottedById = new Map<string, number>();
+  const forfeitedById = new Map<string, number>();
+  for (const a of allocations) {
+    allottedById.set(a.studentId, (allottedById.get(a.studentId) ?? 0) + a.hours);
+    if (a.deadline.getTime() < now) {
+      const used = usedByPair.get(`${a.studentId}:${a.mentorId}`) ?? 0;
+      const forfeited = Math.max(0, a.hours - used);
+      if (forfeited > 0) {
+        forfeitedById.set(
+          a.studentId,
+          (forfeitedById.get(a.studentId) ?? 0) + forfeited
+        );
+      }
     }
   }
 
@@ -54,12 +75,14 @@ export async function studentsWithHours(
     const allotted = allottedById.get(profile.id) ?? 0;
     const used = usedById.get(profile.id) ?? 0;
     const missed = missedById.get(profile.id) ?? 0;
+    const forfeited = forfeitedById.get(profile.id) ?? 0;
     return {
       ...profile,
       allottedHours: allotted,
       completedHours: used - missed,
       missedHours: missed,
-      remainingHours: allotted - used,
+      forfeitedHours: forfeited,
+      remainingHours: allotted - used - forfeited,
     };
   });
 }

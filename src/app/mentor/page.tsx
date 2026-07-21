@@ -7,6 +7,7 @@ import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatHours } from "@/lib/format";
@@ -27,6 +28,7 @@ type MentorStudent = {
   missed: number;
   remaining: number;
   deadline: Date | null;
+  expired: boolean;
   approved: boolean;
 };
 
@@ -157,13 +159,16 @@ export default async function MentorHomePage({
   const students: MentorStudent[] = allocations.map((a) => {
     const used = usedByStudent.get(a.studentId) ?? 0;
     const missed = missedByStudent.get(a.studentId) ?? 0;
+    const expired = deadlinePassed(a.deadline);
     return {
       profile: a.student,
       allocated: a.hours,
       completed: used - missed,
       missed,
-      remaining: a.hours - used,
+      // Unused hours on an expired allocation are forfeited.
+      remaining: expired ? Math.min(0, a.hours - used) : a.hours - used,
       deadline: a.deadline,
+      expired,
       approved: a.student.user.status === USER_STATUS.ACTIVE,
     };
   });
@@ -271,7 +276,7 @@ export default async function MentorHomePage({
 
       <LogSessionForm
         students={visible
-          .filter((s) => s.approved)
+          .filter((s) => s.approved && !s.expired)
           .map((s) => ({
             profileId: s.profile.id,
             label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
@@ -365,7 +370,7 @@ export default async function MentorHomePage({
                         {formatHours(s.remaining)}
                       </td>
                       <td className="px-4 py-3">
-                        <Deadline deadline={s.deadline} remaining={s.remaining} />
+                        <Deadline deadline={s.deadline} />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <ArrowLink

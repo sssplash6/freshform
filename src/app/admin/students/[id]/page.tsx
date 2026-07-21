@@ -111,6 +111,13 @@ export default async function AdminStudentDetailPage({
         {hours.missed > 0 && (
           <StatCard label="Hours missed" value={formatHours(hours.missed)} />
         )}
+        {hours.forfeited > 0 && (
+          <StatCard
+            label="Hours expired"
+            value={formatHours(hours.forfeited)}
+            tone="danger"
+          />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(hours.remaining)}
@@ -173,10 +180,7 @@ export default async function AdminStudentDetailPage({
                     {formatHours(alloc?.remaining ?? 0)}
                   </Td>
                   <Td>
-                    <Deadline
-                      deadline={alloc?.deadline ?? null}
-                      remaining={alloc?.remaining ?? 0}
-                    />
+                    <Deadline deadline={alloc?.deadline ?? null} />
                   </Td>
                   <Td>
                     <AllocateHoursForm

@@ -8,6 +8,7 @@ import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
+import { deadlinePassed } from "@/lib/deadlines";
 import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
@@ -54,7 +55,10 @@ export default async function MentorStudentDetailPage({
     .filter((s) => !s.attended)
     .reduce((sum, s) => sum + s.hours, 0);
   const completed = used - missed;
-  const remaining = allocated - used;
+  // Once the deadline passes, unused hours are forfeited and no more sessions
+  // can be logged against the allocation.
+  const expired = allocation ? deadlinePassed(allocation.deadline) : false;
+  const remaining = expired ? Math.min(0, allocated - used) : allocated - used;
   const approved = profile.user.status === USER_STATUS.ACTIVE;
 
   return (
@@ -95,7 +99,7 @@ export default async function MentorStudentDetailPage({
         {allocation?.deadline && (
           <p className="mt-1 text-sm text-muted-fg">
             Hours to be used by{" "}
-            <Deadline deadline={allocation.deadline} remaining={remaining} />
+            <Deadline deadline={allocation.deadline} />
           </p>
         )}
       </div>
@@ -121,7 +125,19 @@ export default async function MentorStudentDetailPage({
         />
       </StatCardGrid>
 
-      {approved ? (
+      {!approved ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          This student is still awaiting admin approval — sessions can be
+          logged once they&apos;re approved.
+        </p>
+      ) : expired ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          These hours expired on{" "}
+          {allocation ? formatDate(allocation.deadline) : ""} and can no longer
+          be logged against. Ask an admin to extend the deadline or allocate new
+          hours.
+        </p>
+      ) : (
         <LogSessionForm
           students={[
             {
@@ -130,11 +146,6 @@ export default async function MentorStudentDetailPage({
             },
           ]}
         />
-      ) : (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
-          This student is still awaiting admin approval — sessions can be
-          logged once they&apos;re approved.
-        </p>
       )}
 
       <section>

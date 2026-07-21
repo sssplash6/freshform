@@ -47,15 +47,23 @@ export async function allocationSummary(studentProfileId: string) {
     }
   }
 
+  // Once a deadline passes, the allocation's unused hours are forfeited: they
+  // stop counting toward "remaining" and surface as "expired".
+  const now = Date.now();
   const perMentor = allocations.map((a) => {
     const used = usedByMentor.get(a.mentorId) ?? 0;
     const missed = missedByMentor.get(a.mentorId) ?? 0;
+    const expired = a.deadline.getTime() < now;
+    const forfeited = expired ? Math.max(0, a.hours - used) : 0;
     return {
       mentor: a.mentor,
       allocated: a.hours,
       completed: used - missed,
       missed,
-      remaining: a.hours - used,
+      // Unused hours on an expired allocation are gone; only overdraw remains.
+      remaining: expired ? Math.min(0, a.hours - used) : a.hours - used,
+      forfeited,
+      expired,
       deadline: a.deadline,
     };
   });
@@ -67,6 +75,7 @@ export async function allocationSummary(studentProfileId: string) {
   const missed = sessionSums
     .filter((s) => !s.attended)
     .reduce((sum, s) => sum + (s._sum.hours ?? 0), 0);
+  const forfeited = perMentor.reduce((sum, m) => sum + m.forfeited, 0);
 
   return {
     perMentor,
@@ -74,7 +83,8 @@ export async function allocationSummary(studentProfileId: string) {
     completed: used - missed,
     missed,
     used,
-    remaining: allotted - used,
+    forfeited,
+    remaining: allotted - used - forfeited,
   };
 }
 
