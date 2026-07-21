@@ -103,14 +103,6 @@ export default async function StudentHomePage() {
         }
       />
 
-      {hours.completed > 0 && (
-        <Callout
-          row
-          title="How was your last session?"
-          action={<ArrowLink href="/student/feedback">Rate your mentor</ArrowLink>}
-        />
-      )}
-
       <section>
         <h2 className="mb-2 text-base font-semibold text-ink">
           Session history
