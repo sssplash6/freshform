@@ -65,6 +65,8 @@ export async function logSession(
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
   const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+  // Unchecked "Student was present" box → no-show (still charged, tallied missed).
+  const attended = formData.get("attended") != null;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: studentProfileId },
@@ -100,6 +102,7 @@ export async function logSession(
         mentorId: mentor.id,
         hours: hoursParsed.value,
         date: dateParsed.value,
+        attended,
         task,
         note,
       },
@@ -108,7 +111,9 @@ export async function logSession(
       data: {
         userId: profile.userId,
         type: NOTIFICATION_TYPES.SESSION_LOGGED,
-        message: `${mentor.name ?? mentor.email} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}.`,
+        message: attended
+          ? `${mentor.name ?? mentor.email} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}.`
+          : `${mentor.name ?? mentor.email} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}. Those hours were still deducted.`,
       },
     });
   });
@@ -116,16 +121,14 @@ export async function logSession(
   revalidatePath("/", "layout");
 
   const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
-  const deadlinePassed =
-    allocation.deadline && allocation.deadline.getTime() < Date.now()
-      ? ` Heads up: these hours had a ${formatDate(allocation.deadline)} deadline, which has passed.`
-      : "";
+  const studentLabel = profile.user.name ?? profile.user.email;
+  const noShowNote = attended ? "" : " Recorded as a no-show.";
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged. Heads up: ${profile.user.name ?? profile.user.email} is now overdrawn by ${formatHours(-remaining)} hours with you.${deadlinePassed}`
-        : `Session logged. ${profile.user.name ?? profile.user.email} has ${formatHours(remaining)} hours left with you.${deadlinePassed}`,
+        ? `Session logged.${noShowNote} Heads up: ${studentLabel} is now overdrawn by ${formatHours(-remaining)} hours with you.`
+        : `Session logged.${noShowNote} ${studentLabel} has ${formatHours(remaining)} hours left with you.`,
   };
 }
 
@@ -171,13 +174,21 @@ export async function editSession(
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
   const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+  const attended = formData.get("attended") != null;
 
+  const attendanceChanged = attended !== session.attended;
+  const attendanceNote = attendanceChanged
+    ? attended
+      ? " Now marked as attended."
+      : " Now marked as a no-show."
+    : "";
   await prisma.$transaction(async (tx) => {
     await tx.session.update({
       where: { id: session.id },
       data: {
         hours: hoursParsed.value,
         date: dateParsed.value,
+        attended,
         task,
         note,
       },
@@ -186,7 +197,7 @@ export async function editSession(
       data: {
         userId: session.student.userId,
         type: NOTIFICATION_TYPES.SESSION_EDITED,
-        message: `${mentor.name ?? mentor.email} corrected a session: now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)}).`,
+        message: `${mentor.name ?? mentor.email} corrected a session: now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)}).${attendanceNote}`,
       },
     });
   });

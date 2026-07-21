@@ -70,6 +70,9 @@ export default async function StudentHomePage() {
           value={formatHours(hours.completed)}
           tone="brand"
         />
+        {hours.missed > 0 && (
+          <StatCard label="Hours missed" value={formatHours(hours.missed)} />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(hours.remaining)}
@@ -140,8 +143,10 @@ export default async function StudentHomePage() {
                   <Td>
                     {voided ? (
                       <Chip tone="gray">Voided, hours returned</Chip>
-                    ) : (
+                    ) : s.attended ? (
                       <Chip tone="green">Completed</Chip>
+                    ) : (
+                      <Chip tone="amber">Missed (no-show)</Chip>
                     )}
                   </Td>
                 </Tr>

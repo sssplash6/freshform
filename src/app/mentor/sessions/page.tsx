@@ -72,8 +72,12 @@ export default async function MentorSessionsPage({
     return true;
   });
 
-  const totalActiveHours = filtered
-    .filter((s) => s.status === SESSION_STATUS.ACTIVE)
+  const activeFiltered = filtered.filter(
+    (s) => s.status === SESSION_STATUS.ACTIVE
+  );
+  const totalActiveHours = activeFiltered.reduce((sum, s) => sum + s.hours, 0);
+  const totalMissedHours = activeFiltered
+    .filter((s) => !s.attended)
     .reduce((sum, s) => sum + s.hours, 0);
 
   return (
@@ -82,8 +86,11 @@ export default async function MentorSessionsPage({
         <h1 className="text-2xl font-bold text-ink">My sessions</h1>
         <p className="mt-1.5 text-base text-muted-fg">
           {formatHours(totalActiveHours)} active hours logged across{" "}
-          {filtered.filter((s) => s.status === SESSION_STATUS.ACTIVE).length}{" "}
-          sessions.
+          {activeFiltered.length} sessions
+          {totalMissedHours > 0
+            ? `, including ${formatHours(totalMissedHours)} missed to no-shows`
+            : ""}
+          .
         </p>
       </div>
 
@@ -201,8 +208,10 @@ export default async function MentorSessionsPage({
                         <td className="px-4 py-3">
                           {voided ? (
                             <Chip tone="gray">Voided</Chip>
-                          ) : (
+                          ) : s.attended ? (
                             <Chip tone="green">Active</Chip>
+                          ) : (
+                            <Chip tone="amber">No-show</Chip>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -212,6 +221,7 @@ export default async function MentorSessionsPage({
                                 id: s.id,
                                 hours: s.hours,
                                 date: formatDate(s.date),
+                                attended: s.attended,
                                 task: s.task,
                                 note: s.note,
                               }}

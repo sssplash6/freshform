@@ -36,9 +36,10 @@ export async function ProgramDashboard({
     (acc, s) => ({
       allotted: acc.allotted + s.allottedHours,
       completed: acc.completed + s.completedHours,
+      missed: acc.missed + s.missedHours,
       remaining: acc.remaining + s.remainingHours,
     }),
-    { allotted: 0, completed: 0, remaining: 0 }
+    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
 
   // Programs without cohorts (all but Global Admissions) get one flat table.
@@ -63,6 +64,9 @@ export async function ProgramDashboard({
           value={formatHours(overall.completed)}
           tone="brand"
         />
+        {overall.missed > 0 && (
+          <StatCard label="Hours missed" value={formatHours(overall.missed)} />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(overall.remaining)}

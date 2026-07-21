@@ -4,10 +4,13 @@ import { SESSION_STATUS } from "@/lib/constants";
 /**
  * Derived hour values (spec §5): never stored as mutable counters.
  *  - allottedHours  = sum of the student's per-mentor HourAllocation rows
- *  - completedHours = sum of hours over the student's ACTIVE sessions
- *  - remainingHours = allottedHours − completedHours
- * The same three values also exist per mentor: an allocation is drawn down
- * only by ACTIVE sessions logged by that mentor.
+ *  - usedHours      = sum of hours over the student's ACTIVE sessions
+ *                     (present AND no-show — a no-show still draws the hours down)
+ *  - missedHours    = subset of used hours logged as a no-show (attended = false)
+ *  - completedHours = usedHours − missedHours (hours actually delivered)
+ *  - remainingHours = allottedHours − usedHours
+ * The same values also exist per mentor: an allocation is drawn down only by
+ * ACTIVE sessions logged by that mentor.
  */
 
 export async function completedHours(studentProfileId: string): Promise<number> {
@@ -27,23 +30,32 @@ export async function allocationSummary(studentProfileId: string) {
       orderBy: { createdAt: "asc" },
     }),
     prisma.session.groupBy({
-      by: ["mentorId"],
+      by: ["mentorId", "attended"],
       where: { studentId: studentProfileId, status: SESSION_STATUS.ACTIVE },
       _sum: { hours: true },
     }),
   ]);
 
-  const completedByMentor = new Map(
-    sessionSums.map((s) => [s.mentorId, s._sum.hours ?? 0])
-  );
+  // Hours drawn down per mentor (present + no-show), and the no-show subset.
+  const usedByMentor = new Map<string, number>();
+  const missedByMentor = new Map<string, number>();
+  for (const s of sessionSums) {
+    const hrs = s._sum.hours ?? 0;
+    usedByMentor.set(s.mentorId, (usedByMentor.get(s.mentorId) ?? 0) + hrs);
+    if (!s.attended) {
+      missedByMentor.set(s.mentorId, (missedByMentor.get(s.mentorId) ?? 0) + hrs);
+    }
+  }
 
   const perMentor = allocations.map((a) => {
-    const completed = completedByMentor.get(a.mentorId) ?? 0;
+    const used = usedByMentor.get(a.mentorId) ?? 0;
+    const missed = missedByMentor.get(a.mentorId) ?? 0;
     return {
       mentor: a.mentor,
       allocated: a.hours,
-      completed,
-      remaining: a.hours - completed,
+      completed: used - missed,
+      missed,
+      remaining: a.hours - used,
       deadline: a.deadline,
     };
   });
@@ -51,13 +63,18 @@ export async function allocationSummary(studentProfileId: string) {
   const allotted = allocations.reduce((sum, a) => sum + a.hours, 0);
   // Count every active session, including any logged by a mentor whose
   // allocation was later removed — the student still used those hours.
-  const completed = sessionSums.reduce((sum, s) => sum + (s._sum.hours ?? 0), 0);
+  const used = sessionSums.reduce((sum, s) => sum + (s._sum.hours ?? 0), 0);
+  const missed = sessionSums
+    .filter((s) => !s.attended)
+    .reduce((sum, s) => sum + (s._sum.hours ?? 0), 0);
 
   return {
     perMentor,
     allotted,
-    completed,
-    remaining: allotted - completed,
+    completed: used - missed,
+    missed,
+    used,
+    remaining: allotted - used,
   };
 }
 

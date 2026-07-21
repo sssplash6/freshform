@@ -18,9 +18,10 @@ function totals(students: StudentWithHours[]) {
     (acc, s) => ({
       allotted: acc.allotted + s.allottedHours,
       completed: acc.completed + s.completedHours,
+      missed: acc.missed + s.missedHours,
       remaining: acc.remaining + s.remainingHours,
     }),
-    { allotted: 0, completed: 0, remaining: 0 }
+    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
 }
 
@@ -115,6 +116,9 @@ export default async function AdminHomePage() {
           value={formatHours(overall.completed)}
           tone="brand"
         />
+        {overall.missed > 0 && (
+          <StatCard label="Hours missed" value={formatHours(overall.missed)} />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(overall.remaining)}

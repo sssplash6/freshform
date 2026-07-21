@@ -39,6 +39,7 @@ export function StudentsTable({
     { label: "Telegram" },
     { label: "Allotted", align: "right" },
     { label: "Completed", align: "right" },
+    { label: "Missed", align: "right" },
     { label: "Remaining", align: "right" },
     ...(manageBase ? [{ label: "" } as Column] : []),
   ];
@@ -67,6 +68,14 @@ export function StudentsTable({
           </Td>
           <Td align="right" className="tabular-nums">
             {formatHours(s.completedHours)}
+          </Td>
+          <Td
+            align="right"
+            className={`tabular-nums ${
+              s.missedHours > 0 ? "text-amber-700" : "text-muted-fg"
+            }`}
+          >
+            {s.missedHours > 0 ? formatHours(s.missedHours) : "—"}
           </Td>
           <Td
             align="right"

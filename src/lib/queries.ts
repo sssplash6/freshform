@@ -31,7 +31,7 @@ export async function studentsWithHours(
       _sum: { hours: true },
     }),
     prisma.session.groupBy({
-      by: ["studentId"],
+      by: ["studentId", "attended"],
       where: { status: SESSION_STATUS.ACTIVE, studentId: { in: ids } },
       _sum: { hours: true },
     }),
@@ -39,18 +39,27 @@ export async function studentsWithHours(
   const allottedById = new Map(
     allocationSums.map((s) => [s.studentId, s._sum.hours ?? 0])
   );
-  const completedById = new Map(
-    sessionSums.map((s) => [s.studentId, s._sum.hours ?? 0])
-  );
+  // Used = every active session (present + no-show); missed = the no-show subset.
+  const usedById = new Map<string, number>();
+  const missedById = new Map<string, number>();
+  for (const s of sessionSums) {
+    const hrs = s._sum.hours ?? 0;
+    usedById.set(s.studentId, (usedById.get(s.studentId) ?? 0) + hrs);
+    if (!s.attended) {
+      missedById.set(s.studentId, (missedById.get(s.studentId) ?? 0) + hrs);
+    }
+  }
 
   return profiles.map((profile) => {
     const allotted = allottedById.get(profile.id) ?? 0;
-    const completed = completedById.get(profile.id) ?? 0;
+    const used = usedById.get(profile.id) ?? 0;
+    const missed = missedById.get(profile.id) ?? 0;
     return {
       ...profile,
       allottedHours: allotted,
-      completedHours: completed,
-      remainingHours: allotted - completed,
+      completedHours: used - missed,
+      missedHours: missed,
+      remainingHours: allotted - used,
     };
   });
 }

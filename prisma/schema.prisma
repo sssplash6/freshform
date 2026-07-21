@@ -133,6 +133,7 @@ model Session {
   mentorId  String
   hours     Float
   date      DateTime
+  attended  Boolean  @default(true) // was the student present? false = no-show; the hours are still charged but tallied as "missed"
   task      String? // what the session focused on (optional, mentor-entered)
   note      String?
   status    String   @default("ACTIVE") // ACTIVE | VOIDED

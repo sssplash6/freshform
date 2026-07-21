@@ -81,6 +81,22 @@ export function LogSessionForm({
           />
         </label>
       </div>
+      <label className="mt-3 flex items-start gap-2.5 text-sm">
+        <input
+          name="attended"
+          type="checkbox"
+          defaultChecked
+          value="yes"
+          className="mt-0.5 h-4 w-4 rounded border-line text-brand focus:ring-brand"
+        />
+        <span>
+          <span className="font-medium text-ink">Student was present</span>
+          <span className="block text-xs text-muted-fg">
+            Uncheck for a no-show. The hours are still deducted, but recorded as
+            missed.
+          </span>
+        </span>
+      </label>
       <div className="mt-3">
         <button
           type="submit"

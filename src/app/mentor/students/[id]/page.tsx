@@ -46,10 +46,15 @@ export default async function MentorStudentDetailPage({
   if (!allocation && sessions.length === 0) notFound();
 
   const allocated = allocation?.hours ?? 0;
-  const completed = sessions
-    .filter((s) => s.status === SESSION_STATUS.ACTIVE)
+  const activeSessions = sessions.filter(
+    (s) => s.status === SESSION_STATUS.ACTIVE
+  );
+  const used = activeSessions.reduce((sum, s) => sum + s.hours, 0);
+  const missed = activeSessions
+    .filter((s) => !s.attended)
     .reduce((sum, s) => sum + s.hours, 0);
-  const remaining = allocated - completed;
+  const completed = used - missed;
+  const remaining = allocated - used;
   const approved = profile.user.status === USER_STATUS.ACTIVE;
 
   return (
@@ -102,6 +107,9 @@ export default async function MentorStudentDetailPage({
           value={formatHours(completed)}
           tone="brand"
         />
+        {missed > 0 && (
+          <StatCard label="Missed (no-show)" value={formatHours(missed)} />
+        )}
         <StatCard
           label="Remaining with you"
           value={formatHours(remaining)}
@@ -109,9 +117,7 @@ export default async function MentorStudentDetailPage({
         />
         <StatCard
           label="Sessions together"
-          value={String(
-            sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE).length
-          )}
+          value={String(activeSessions.length)}
         />
       </StatCardGrid>
 
@@ -171,8 +177,10 @@ export default async function MentorStudentDetailPage({
                       <td className="px-4 py-3">
                         {voided ? (
                           <Chip tone="gray">Voided</Chip>
-                        ) : (
+                        ) : s.attended ? (
                           <Chip tone="green">Active</Chip>
+                        ) : (
+                          <Chip tone="amber">No-show</Chip>
                         )}
                       </td>
                     </tr>

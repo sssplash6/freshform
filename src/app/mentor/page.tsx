@@ -24,6 +24,7 @@ type MentorStudent = {
   };
   allocated: number;
   completed: number;
+  missed: number;
   remaining: number;
   deadline: Date | null;
   approved: boolean;
@@ -129,31 +130,52 @@ export default async function MentorHomePage({
         orderBy: { createdAt: "asc" },
       }),
       prisma.session.groupBy({
-        by: ["studentId"],
+        by: ["studentId", "attended"],
         where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
         _sum: { hours: true },
       }),
-      prisma.session.aggregate({
+      prisma.session.groupBy({
+        by: ["attended"],
         where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
         _sum: { hours: true },
         _count: true,
       }),
     ]);
 
-  const completedByStudent = new Map(
-    mySessionSums.map((s) => [s.studentId, s._sum.hours ?? 0])
-  );
+  const usedByStudent = new Map<string, number>();
+  const missedByStudent = new Map<string, number>();
+  for (const s of mySessionSums) {
+    const hrs = s._sum.hours ?? 0;
+    usedByStudent.set(s.studentId, (usedByStudent.get(s.studentId) ?? 0) + hrs);
+    if (!s.attended) {
+      missedByStudent.set(
+        s.studentId,
+        (missedByStudent.get(s.studentId) ?? 0) + hrs
+      );
+    }
+  }
   const students: MentorStudent[] = allocations.map((a) => {
-    const completed = completedByStudent.get(a.studentId) ?? 0;
+    const used = usedByStudent.get(a.studentId) ?? 0;
+    const missed = missedByStudent.get(a.studentId) ?? 0;
     return {
       profile: a.student,
       allocated: a.hours,
-      completed,
-      remaining: a.hours - completed,
+      completed: used - missed,
+      missed,
+      remaining: a.hours - used,
       deadline: a.deadline,
       approved: a.student.user.status === USER_STATUS.ACTIVE,
     };
   });
+
+  // Mentor-wide delivered vs. missed hours and total session count.
+  const deliveredHours = delivered
+    .filter((d) => d.attended)
+    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
+  const missedHours = delivered
+    .filter((d) => !d.attended)
+    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
+  const sessionsLogged = delivered.reduce((sum, d) => sum + d._count, 0);
 
   // One toggle island per assigned program, plus "all programs".
   const assignedPrograms = new Map<string, string>();
@@ -201,12 +223,15 @@ export default async function MentorHomePage({
 
       <StatCardGrid>
         <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Sessions logged" value={String(delivered._count)} />
+        <StatCard label="Sessions logged" value={String(sessionsLogged)} />
         <StatCard
           label="Hours delivered"
-          value={formatHours(delivered._sum.hours ?? 0)}
+          value={formatHours(deliveredHours)}
           tone="brand"
         />
+        {missedHours > 0 && (
+          <StatCard label="Hours missed" value={formatHours(missedHours)} />
+        )}
         <StatCard label="Programs" value={String(assignedPrograms.size)} />
       </StatCardGrid>
 
@@ -286,6 +311,7 @@ export default async function MentorHomePage({
                     <th className="px-4 py-3">Telegram</th>
                     <th className="px-4 py-3 text-right">Allocated to you</th>
                     <th className="px-4 py-3 text-right">Completed</th>
+                    <th className="px-4 py-3 text-right">Missed</th>
                     <th className="px-4 py-3 text-right">Remaining</th>
                     <th className="px-4 py-3">Use by</th>
                     <th className="px-4 py-3" />
@@ -323,6 +349,13 @@ export default async function MentorHomePage({
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.completed)}
+                      </td>
+                      <td
+                        className={`px-4 py-3 text-right tabular-nums ${
+                          s.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                        }`}
+                      >
+                        {s.missed > 0 ? formatHours(s.missed) : "—"}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-medium tabular-nums ${

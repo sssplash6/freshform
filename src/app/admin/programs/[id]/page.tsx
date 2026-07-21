@@ -51,9 +51,10 @@ export default async function AdminProgramPage({
     (acc, s) => ({
       allotted: acc.allotted + s.allottedHours,
       completed: acc.completed + s.completedHours,
+      missed: acc.missed + s.missedHours,
       remaining: acc.remaining + s.remainingHours,
     }),
-    { allotted: 0, completed: 0, remaining: 0 }
+    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
   const mentorCount = new Set(assignments.map((a) => a.mentorId)).size;
   const programOption = toProgramOptions([program])[0];
@@ -80,6 +81,9 @@ export default async function AdminProgramPage({
           value={formatHours(totals.completed)}
           tone="brand"
         />
+        {totals.missed > 0 && (
+          <StatCard label="Hours missed" value={formatHours(totals.missed)} />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(totals.remaining)}
@@ -174,6 +178,11 @@ export default async function AdminProgramPage({
                   {s.student.user.name ?? s.student.user.email} ·{" "}
                   <span className="tabular-nums">{formatHours(s.hours)}h</span>
                   {s.task ? ` · ${s.task}` : ""}
+                  {s.status !== SESSION_STATUS.VOIDED && !s.attended && (
+                    <span className="ml-1 font-medium text-amber-700">
+                      · no-show
+                    </span>
+                  )}
                 </span>
               </li>
             ))}

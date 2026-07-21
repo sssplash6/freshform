@@ -18,6 +18,7 @@ export function SessionRowActions({
     id: string;
     hours: number;
     date: string;
+    attended: boolean;
     task: string | null;
     note: string | null;
   };
@@ -90,6 +91,16 @@ export function SessionRowActions({
                 defaultValue={session.note ?? ""}
                 className={`${inputClass} block w-full`}
               />
+            </label>
+            <label className="flex w-full items-center gap-2 text-xs text-ink">
+              <input
+                name="attended"
+                type="checkbox"
+                value="yes"
+                defaultChecked={session.attended}
+                className="h-4 w-4 rounded border-line text-brand focus:ring-brand"
+              />
+              Student was present (uncheck for a no-show)
             </label>
             <button
               type="submit"

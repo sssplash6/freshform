@@ -108,6 +108,9 @@ export default async function AdminStudentDetailPage({
           value={formatHours(hours.completed)}
           tone="brand"
         />
+        {hours.missed > 0 && (
+          <StatCard label="Hours missed" value={formatHours(hours.missed)} />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(hours.remaining)}
@@ -131,6 +134,7 @@ export default async function AdminStudentDetailPage({
               { label: "Mentor" },
               { label: "Allocated", align: "right" },
               { label: "Completed", align: "right" },
+              { label: "Missed", align: "right" },
               { label: "Remaining", align: "right" },
               { label: "Use by" },
               { label: "Set allocation" },
@@ -151,6 +155,14 @@ export default async function AdminStudentDetailPage({
                   </Td>
                   <Td align="right" className="tabular-nums">
                     {formatHours(alloc?.completed ?? 0)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className={`tabular-nums ${
+                      (alloc?.missed ?? 0) > 0 ? "text-amber-700" : "text-muted-fg"
+                    }`}
+                  >
+                    {(alloc?.missed ?? 0) > 0 ? formatHours(alloc!.missed) : "—"}
                   </Td>
                   <Td
                     align="right"
