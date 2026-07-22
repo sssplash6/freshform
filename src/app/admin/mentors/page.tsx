@@ -7,7 +7,8 @@ import { programOptions, toProgramOptions } from "@/lib/queries";
 export default async function AdminMentorsPage() {
   const [mentors, programs, assignments] = await Promise.all([
     prisma.user.findMany({
-      where: { role: ROLES.MENTOR },
+      // Plain mentors plus dual-role admins who also mentor.
+      where: { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] },
       orderBy: { createdAt: "asc" },
     }),
     programOptions(),
@@ -30,6 +31,7 @@ export default async function AdminMentorsPage() {
     name: m.name,
     email: m.email,
     status: m.status,
+    isAdmin: m.role === ROLES.ADMIN,
     assignments: assignments
       .filter((a) => a.mentorId === m.id)
       .map((a) => ({

@@ -28,22 +28,54 @@ export const PROGRAMS: { name: string; cohorts: string[] }[] = [
 /**
  * Staff preset list, seeded on every deploy (managing staff via the UI is
  * post-MVP). `program` must match a PROGRAMS entry name and is required for
- * DEPT_LEADER and SALES; it must be null for ADMIN.
+ * DEPT_LEADER and SALES; it must be null for ADMIN. `isMentor: true` marks a
+ * dual-role admin who can also act as a mentor (toggle into the mentor
+ * dashboard, be assigned to programs).
  *
- * Only the real admin ships here. Add DEPT_LEADER / SALES entries with real
- * emails (each tied to one PROGRAMS name) when those people are known, then
- * re-run the seed — the seed only upserts, so it never removes anyone.
+ * This is the exclusive list of admins — all five are also mentors. Add
+ * DEPT_LEADER / SALES entries with real emails when those people are known,
+ * then re-run the seed (the seed only upserts, so it never removes anyone).
  */
 export const STAFF_SEED: {
   email: string;
   name: string;
   role: "ADMIN" | "DEPT_LEADER" | "SALES";
   program: string | null;
+  isMentor?: boolean;
 }[] = [
   {
     email: "tech@freshman.academy",
     name: "Freshman Academy Admin",
     role: "ADMIN",
     program: null,
+    isMentor: true,
+  },
+  {
+    email: "sharofiddin@freshman.academy",
+    name: "Sharofiddin",
+    role: "ADMIN",
+    program: null,
+    isMentor: true,
+  },
+  {
+    email: "sega@freshman.academy",
+    name: "Sega",
+    role: "ADMIN",
+    program: null,
+    isMentor: true,
+  },
+  {
+    email: "sanjar@freshman.academy",
+    name: "Sanjar",
+    role: "ADMIN",
+    program: null,
+    isMentor: true,
+  },
+  {
+    email: "valera@freshman.academy",
+    name: "Valera",
+    role: "ADMIN",
+    program: null,
+    isMentor: true,
   },
 ];

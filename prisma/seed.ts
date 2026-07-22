@@ -47,6 +47,7 @@ async function main() {
       update: {
         role: staff.role,
         programId: program?.id ?? null,
+        isMentor: staff.isMentor ?? false,
       },
       create: {
         email,
@@ -54,9 +55,12 @@ async function main() {
         role: staff.role,
         status: "ACTIVE",
         programId: program?.id ?? null,
+        isMentor: staff.isMentor ?? false,
       },
     });
-    console.log(`Staff ${email} → ${staff.role}${staff.program ? ` (${staff.program})` : ""}`);
+    console.log(
+      `Staff ${email} → ${staff.role}${staff.isMentor ? " + mentor" : ""}${staff.program ? ` (${staff.program})` : ""}`
+    );
   }
 }
 

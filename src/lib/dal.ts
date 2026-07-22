@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLE_HOME, ROLES, type Role } from "@/lib/constants";
+import { canActAsMentor, ROLE_HOME, type Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -41,12 +41,24 @@ export async function requireRole(...roles: Role[]): Promise<User> {
 }
 
 /**
+ * Gate mentor-area access to users who may act as a mentor — a plain MENTOR
+ * or a dual-role ADMIN flagged as a mentor. No onboarding redirect, so it's
+ * safe to use in the mentor layout (which also wraps /mentor/onboarding).
+ */
+export async function requireMentorAccess(): Promise<User> {
+  const user = await requireUser();
+  if (!canActAsMentor(user)) redirect(homeFor(user));
+  return user;
+}
+
+/**
  * Require a mentor who has finished registration. Mentors self-sign-up via
  * Google, which may not supply a name; until they've entered a full name we
- * send them to the onboarding step so the app never labels them by email.
+ * send them to the onboarding step so the app never labels them by email
+ * (admins always have a name, so they skip it).
  */
 export async function requireMentor(): Promise<User> {
-  const user = await requireRole(ROLES.MENTOR);
+  const user = await requireMentorAccess();
   if (!user.name?.trim()) redirect("/mentor/onboarding");
   return user;
 }

@@ -41,6 +41,18 @@ export const NOTIFICATION_TYPES = {
 export type NotificationType =
   (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
 
+/**
+ * Whether a user may operate as a mentor: either a plain MENTOR, or an ADMIN
+ * who was also flagged as a mentor (dual-role admins). Used by the mentor-side
+ * gates and the mentor-pool queries so admin-mentors are first-class mentors.
+ */
+export function canActAsMentor(user: {
+  role: string;
+  isMentor?: boolean | null;
+}): boolean {
+  return user.role === ROLES.MENTOR || (user.role === ROLES.ADMIN && !!user.isMentor);
+}
+
 // Home route for each role after sign-in.
 export const ROLE_HOME: Record<Role, string> = {
   ADMIN: "/admin",

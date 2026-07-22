@@ -16,6 +16,7 @@ export type MentorListRow = {
   name: string | null;
   email: string;
   status: string;
+  isAdmin: boolean;
   assignments: {
     id: string;
     /** "p:<programId>" / "c:<cohortId>" — the checkbox value this pairing maps to. */
@@ -43,6 +44,7 @@ function MentorRow({
         <div>
           <div className="flex items-center gap-2 font-medium text-ink">
             {mentor.name ?? "—"}
+            {mentor.isAdmin && <Chip tone="green">Admin · also mentor</Chip>}
             {mentor.status === USER_STATUS.UNASSIGNED && (
               <Chip tone="amber">Unassigned</Chip>
             )}

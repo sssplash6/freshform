@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { requireMentorAccess } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
 // Never prerender them at build time — on Render the SQLite disk only exists
@@ -12,6 +12,10 @@ export default async function MentorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireRole(ROLES.MENTOR);
-  return <AppShell user={user}>{children}</AppShell>;
+  const user = await requireMentorAccess();
+  return (
+    <AppShell user={user} mode={ROLES.MENTOR}>
+      {children}
+    </AppShell>
+  );
 }

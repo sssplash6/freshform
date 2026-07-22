@@ -13,5 +13,9 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const user = await requireRole(ROLES.ADMIN);
-  return <AppShell user={user}>{children}</AppShell>;
+  return (
+    <AppShell user={user} mode={ROLES.ADMIN}>
+      {children}
+    </AppShell>
+  );
 }

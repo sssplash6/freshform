@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import {
+  canActAsMentor,
   NOTIFICATION_TYPES,
-  ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -19,7 +19,7 @@ import {
 
 async function requireActiveMentor() {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.MENTOR) return null;
+  if (!actor || !canActAsMentor(actor)) return null;
   if (actor.status !== USER_STATUS.ACTIVE) return null;
   return actor;
 }

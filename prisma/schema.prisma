@@ -23,6 +23,7 @@ model User {
   email     String   @unique
   name      String?
   role      String // ADMIN | DEPT_LEADER | SALES | MENTOR | STUDENT
+  isMentor  Boolean  @default(false) // ADMINs with this flag can also act as a mentor and toggle into the mentor dashboard
   status    String   @default("ACTIVE") // ACTIVE | UNASSIGNED (freshly signed-up mentors) | PENDING (self-signed-up students awaiting admin approval)
   programId String? // set for DEPT_LEADER and SALES (their scope)
   createdAt DateTime @default(now())

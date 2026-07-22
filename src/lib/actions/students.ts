@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { NOTIFICATION_TYPES, ROLES, USER_STATUS } from "@/lib/constants";
+import {
+  canActAsMentor,
+  NOTIFICATION_TYPES,
+  ROLES,
+  USER_STATUS,
+} from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
 import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import {
@@ -499,7 +504,7 @@ export async function setMentorAllocation(
   }
 
   const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
-  if (!mentor || mentor.role !== ROLES.MENTOR) {
+  if (!mentor || !canActAsMentor(mentor)) {
     return { ok: false, error: "Pick a mentor." };
   }
 

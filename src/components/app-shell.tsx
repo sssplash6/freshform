@@ -4,22 +4,65 @@ import { NavLinks } from "@/components/nav-links";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
-import type { Role } from "@/lib/constants";
+import { ROLES, type Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
+
+/**
+ * Header switch for dual-role admins (admin + mentor): highlights the active
+ * profile and links to the other one. Route-based — /admin* is admin view,
+ * /mentor* is mentor view — so the layout passes which is active.
+ */
+function ProfileSwitch({ active }: { active: Role }) {
+  const items = [
+    { role: ROLES.ADMIN, label: "Admin", href: "/admin" },
+    { role: ROLES.MENTOR, label: "Mentor", href: "/mentor" },
+  ] as const;
+  return (
+    <div
+      role="group"
+      aria-label="Switch profile"
+      className="flex items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
+    >
+      {items.map((it) =>
+        it.role === active ? (
+          <span
+            key={it.role}
+            aria-current="true"
+            className="rounded-md bg-accent px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
+          >
+            {it.label}
+          </span>
+        ) : (
+          <Link
+            key={it.role}
+            href={it.href}
+            className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg transition-colors hover:text-ink"
+          >
+            {it.label}
+          </Link>
+        )
+      )}
+    </div>
+  );
+}
 
 /**
  * Shared chrome for every signed-in role: a light nav bar with the brand
  * wordmark, role-specific nav, notification bell, user identity, sign-out.
- * Pages render inside.
+ * `mode` overrides which role's nav shows (dual-role admins pass it); it
+ * defaults to the user's own role. Pages render inside.
  */
 export async function AppShell({
   user,
+  mode,
   children,
 }: {
   user: User;
+  mode?: Role;
   children: React.ReactNode;
 }) {
-  const role = user.role as Role;
+  const activeRole = (mode ?? (user.role as Role)) as Role;
+  const isDual = user.role === ROLES.ADMIN && user.isMentor;
   const unreadCount = await prisma.notification.count({
     where: { userId: user.id, read: false },
   });
@@ -28,17 +71,23 @@ export async function AppShell({
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto hidden min-h-16 max-w-5xl items-center gap-8 px-4 md:flex">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-brand">
-              Freshman Academy
-            </span>
-            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-              {ROLE_LABELS[role]}
-            </span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-brand">
+                Freshman Academy
+              </span>
+            </Link>
+            {isDual ? (
+              <ProfileSwitch active={activeRole} />
+            ) : (
+              <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                {ROLE_LABELS[activeRole]}
+              </span>
+            )}
+          </div>
 
           <nav className="flex flex-1 items-center gap-5">
-            <NavLinks items={NAV_BY_ROLE[role]} />
+            <NavLinks items={NAV_BY_ROLE[activeRole]} />
           </nav>
 
           <div className="flex items-center gap-3 text-sm">
@@ -87,14 +136,20 @@ export async function AppShell({
         </div>
 
         <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 md:hidden">
-          <Link href="/" className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-xs font-semibold uppercase tracking-widest text-brand">
-              Freshman Academy
-            </span>
-            <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-              {ROLE_LABELS[role]}
-            </span>
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link href="/" className="flex min-w-0 items-center">
+              <span className="truncate text-xs font-semibold uppercase tracking-widest text-brand">
+                Freshman Academy
+              </span>
+            </Link>
+            {isDual ? (
+              <ProfileSwitch active={activeRole} />
+            ) : (
+              <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                {ROLE_LABELS[activeRole]}
+              </span>
+            )}
+          </div>
 
           <div className="flex shrink-0 items-center gap-1">
             <Link
@@ -129,7 +184,7 @@ export async function AppShell({
               </summary>
               <div className="pop-in absolute right-0 z-20 mt-1 w-56 rounded-xl border border-line bg-surface p-1 shadow-lg [--pop-origin:top_right]">
                 <nav aria-label="Primary navigation" className="grid gap-1">
-                  <NavLinks items={NAV_BY_ROLE[role]} variant="menu" />
+                  <NavLinks items={NAV_BY_ROLE[activeRole]} variant="menu" />
                 </nav>
                 <div className="mt-1 border-t border-line pt-1">
                   <p className="px-3 py-2 text-xs text-muted-fg">

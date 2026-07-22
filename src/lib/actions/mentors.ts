@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { NOTIFICATION_TYPES, ROLES, USER_STATUS } from "@/lib/constants";
+import {
+  canActAsMentor,
+  NOTIFICATION_TYPES,
+  ROLES,
+  USER_STATUS,
+} from "@/lib/constants";
 import {
   EMAIL_RE,
   normalizeEmail,
@@ -21,7 +26,7 @@ export async function completeMentorProfile(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.MENTOR) {
+  if (!actor || !canActAsMentor(actor)) {
     return { ok: false, error: "Only mentors can complete this step." };
   }
 
@@ -165,9 +170,11 @@ export async function updateMentor(
     where: { id: mentorId },
     include: { mentorAssignments: true },
   });
-  if (!mentor || mentor.role !== ROLES.MENTOR) {
+  if (!mentor || !canActAsMentor(mentor)) {
     return { ok: false, error: "Mentor not found." };
   }
+  // A dual-role admin stays ADMIN/ACTIVE — assignments don't gate their status.
+  const isPureMentor = mentor.role === ROLES.MENTOR;
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the mentor's full name." };
@@ -226,12 +233,16 @@ export async function updateMentor(
         },
       });
     }
-    if (remaining === 0 && mentor.status === USER_STATUS.ACTIVE) {
+    if (isPureMentor && remaining === 0 && mentor.status === USER_STATUS.ACTIVE) {
       await tx.user.update({
         where: { id: mentorId },
         data: { status: USER_STATUS.UNASSIGNED },
       });
-    } else if (remaining > 0 && mentor.status === USER_STATUS.UNASSIGNED) {
+    } else if (
+      isPureMentor &&
+      remaining > 0 &&
+      mentor.status === USER_STATUS.UNASSIGNED
+    ) {
       await tx.user.update({
         where: { id: mentorId },
         data: { status: USER_STATUS.ACTIVE },
@@ -252,7 +263,7 @@ export async function setBookingLink(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.MENTOR) {
+  if (!actor || !canActAsMentor(actor)) {
     return { ok: false, error: "Only mentors can set their booking link." };
   }
 
