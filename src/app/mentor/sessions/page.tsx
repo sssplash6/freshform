@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { Select } from "@/components/select";
+import { Button, LinkButton } from "@/components/ui/button";
 import { SESSION_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { formatDate, formatHours } from "@/lib/format";
@@ -145,19 +144,11 @@ export default async function MentorSessionsPage({
                 className="mt-0.5 block min-h-11 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none"
               />
             </label>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
-            >
-              Filter
-            </button>
+            <Button type="submit">Filter</Button>
             {filtering && (
-              <Link
-                href="/mentor/sessions"
-                className="min-h-11 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-muted-fg transition-colors hover:border-brand/40 hover:text-ink"
-              >
+              <LinkButton href="/mentor/sessions" variant="secondary">
                 Clear
-              </Link>
+              </LinkButton>
             )}
           </form>
 
