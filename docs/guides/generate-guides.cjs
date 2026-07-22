@@ -97,13 +97,18 @@ function build({ file, title, subtitle, sections }) {
   }
 
   // ---- Footers on every page ----
+  // Zero the bottom margin while drawing so pdfkit doesn't treat footer text
+  // (below the content area) as an overflow and append blank pages.
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    const savedBottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
     doc.moveTo(MARGIN, pageH - 54).lineTo(pageW - MARGIN, pageH - 54).strokeColor(LINE).lineWidth(1).stroke();
     doc.fillColor(MUTED).font("Helvetica").fontSize(8);
     doc.text(`freshlog — ${title}`, MARGIN, pageH - 46, { width: contentW / 2, lineBreak: false });
     doc.text(`Page ${i + 1} of ${range.count}`, MARGIN + contentW / 2, pageH - 46, { width: contentW / 2, align: "right", lineBreak: false });
+    doc.page.margins.bottom = savedBottom;
   }
 
   doc.end();
