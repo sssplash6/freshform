@@ -55,28 +55,28 @@ export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
         <legend className="text-sm font-medium text-ink">
           Programs / cohorts <span className="text-accent-ink">*</span>
         </legend>
-        <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-2">
-          {targets.map((t) => (
-            <label
-              key={t.value}
-              className="flex items-center gap-2 text-sm text-ink"
-            >
-              <input
-                type="checkbox"
-                name="targets"
-                value={t.value}
-                className="h-4 w-4 accent-brand"
-              />
-              {t.label}
-            </label>
-          ))}
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {targets.map((t) => (
+              <label
+                key={t.value}
+                className="flex items-center gap-2 text-sm text-ink"
+              >
+                <input
+                  type="checkbox"
+                  name="targets"
+                  value={t.value}
+                  className="h-4 w-4 accent-brand"
+                />
+                {t.label}
+              </label>
+            ))}
+          </div>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Registering…" : "Register mentor"}
+          </Button>
         </div>
       </fieldset>
-      <div className="mt-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Registering…" : "Register mentor"}
-        </Button>
-      </div>
       <ActionFeedback state={state} />
     </form>
   );

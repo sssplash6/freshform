@@ -53,26 +53,28 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
         />
       </Field>
 
-      {(valid.length > 0 || invalid.length > 0) && (
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-fg" aria-live="polite">
-          <span className="font-medium tabular-nums text-ink">
-            {valid.length}
-          </span>{" "}
-          ready to add
-          {invalid.length > 0 && (
+          {(valid.length > 0 || invalid.length > 0) && (
             <>
-              {" · "}
-              <span className="font-medium tabular-nums text-red-700">
-                {invalid.length}
+              <span className="font-medium tabular-nums text-ink">
+                {valid.length}
               </span>{" "}
-              need a valid address
+              ready to add
+              {invalid.length > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-medium tabular-nums text-red-700">
+                    {invalid.length}
+                  </span>{" "}
+                  need a valid address
+                </>
+              )}
             </>
           )}
         </p>
-      )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        {program.cohorts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          {program.cohorts.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-muted-fg">
             Cohort
             <select
@@ -94,13 +96,14 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
             </select>
           </label>
         )}
-        <Button type="submit" disabled={pending || valid.length === 0}>
-          {pending
-            ? "Adding…"
-            : valid.length > 0
-              ? `Add ${valid.length} student${valid.length === 1 ? "" : "s"}`
-              : `Add to ${program.name}`}
-        </Button>
+          <Button type="submit" disabled={pending || valid.length === 0}>
+            {pending
+              ? "Adding…"
+              : valid.length > 0
+                ? `Add ${valid.length} student${valid.length === 1 ? "" : "s"}`
+                : `Add to ${program.name}`}
+          </Button>
+        </div>
       </div>
       <ActionFeedback state={state} />
     </form>
