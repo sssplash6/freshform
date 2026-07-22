@@ -66,6 +66,16 @@ export function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+/** Paper-plane / send glyph — used for the Telegram handle button. */
+export function SendIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M22 2 11 13" />
+      <path d="m22 2-7 20-4-9-9-4Z" />
+    </Svg>
+  );
+}
+
 /** Filled star (rating control), unlike the stroke icons above. */
 export function StarIcon({ className }: { className?: string }) {
   return (

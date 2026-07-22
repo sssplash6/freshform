@@ -6,6 +6,7 @@ import { Deadline } from "@/components/deadline";
 import { ArrowLeftIcon } from "@/components/icons";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { TelegramHandle } from "@/components/telegram-handle";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { deadlinePassed } from "@/lib/deadlines";
@@ -82,15 +83,11 @@ export default async function MentorStudentDetailPage({
           {profile.cohort ? ` / ${profile.cohort.name}` : ""}
           {profile.telegramUsername ? (
             <>
-              {" · Telegram "}
-              <a
-                href={`https://t.me/${profile.telegramUsername}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
-              >
-                @{profile.telegramUsername}
-              </a>
+              {" · "}
+              <TelegramHandle
+                username={profile.telegramUsername}
+                className="align-middle"
+              />
             </>
           ) : (
             " · Telegram not set yet"

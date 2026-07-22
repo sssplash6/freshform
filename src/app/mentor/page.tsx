@@ -6,6 +6,7 @@ import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { TelegramHandle } from "@/components/telegram-handle";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
@@ -345,9 +346,13 @@ export default async function MentorHomePage({
                         </Link>
                       </td>
                       <td className="px-4 py-3">
-                        {s.profile.telegramUsername
-                          ? `@${s.profile.telegramUsername}`
-                          : "—"}
+                        {s.profile.telegramUsername ? (
+                          <TelegramHandle
+                            username={s.profile.telegramUsername}
+                          />
+                        ) : (
+                          <span className="text-muted-fg">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatHours(s.allocated)}

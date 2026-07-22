@@ -1,5 +1,6 @@
 import { ArrowLink } from "@/components/arrow-link";
 import { Chip } from "@/components/chip";
+import { TelegramHandle } from "@/components/telegram-handle";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
@@ -62,7 +63,13 @@ export function StudentsTable({
           </Td>
           {showProgram && <Td>{s.program.name}</Td>}
           {showCohort && <Td>{s.cohort?.name ?? "—"}</Td>}
-          <Td>{s.telegramUsername ? `@${s.telegramUsername}` : "—"}</Td>
+          <Td>
+            {s.telegramUsername ? (
+              <TelegramHandle username={s.telegramUsername} />
+            ) : (
+              <span className="text-muted-fg">—</span>
+            )}
+          </Td>
           <Td align="right" className="tabular-nums">
             {formatHours(s.allottedHours)}
           </Td>

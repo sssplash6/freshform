@@ -6,6 +6,7 @@ import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
+import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -74,15 +75,11 @@ export default async function AdminStudentDetailPage({
             {profile.cohort ? ` / ${profile.cohort.name}` : ""}
             {profile.telegramUsername ? (
               <>
-                {" · Telegram "}
-                <a
-                  href={`https://t.me/${profile.telegramUsername}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
-                >
-                  @{profile.telegramUsername}
-                </a>
+                {" · "}
+                <TelegramHandle
+                  username={profile.telegramUsername}
+                  className="align-middle"
+                />
               </>
             ) : (
               " · Telegram not set yet"
