@@ -51,12 +51,11 @@ body {
   }
 
   /* Press feedback: every enabled button acknowledges the click. Buttons with
-     a transition utility keep it (Tailwind's `transition` covers transform). */
+     a transition utility keep it (Tailwind's `transition` covers transform).
+     Button HEIGHT is set per size (see ui/button.tsx) — never forced globally,
+     so small inline actions stay small. */
   button:not(:disabled) {
     transition: transform 160ms var(--ease-out-strong);
-  }
-  button {
-    min-height: 2.75rem;
   }
   button:not(:disabled):active {
     transform: scale(0.98);

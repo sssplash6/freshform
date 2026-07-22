@@ -79,13 +79,9 @@ function MentorRow({
           </div>
         </div>
         {!editing && (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             Edit
-          </button>
+          </Button>
         )}
       </div>
 

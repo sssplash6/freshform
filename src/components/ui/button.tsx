@@ -15,11 +15,12 @@ const VARIANTS: Record<ButtonVariant, string> = {
   danger: "border border-red-300 text-red-700 hover:bg-red-50",
 };
 
-/** Every button clears the 44px touch target (globals.css enforces it too);
- * sizes differ only in padding + label size. */
+/** Fixed, proportionate heights — sm for inline/table actions, md for the
+ * primary actions on a view. Height is set here, not forced globally, so a
+ * small label never sits in an oversized box. */
 const SIZES: Record<ButtonSize, string> = {
-  sm: "min-h-11 gap-1.5 px-3 text-[13px]",
-  md: "min-h-11 gap-2 px-4 text-sm",
+  sm: "h-8 gap-1.5 px-3 text-[13px]",
+  md: "h-10 gap-2 px-4 text-sm",
 };
 
 export function buttonClasses(
