@@ -26,12 +26,13 @@ export const PROGRAMS: { name: string; cohorts: string[] }[] = [
 ];
 
 /**
- * Staff preset list (managing staff via the UI is post-MVP).
- * `program` must match a PROGRAMS entry name and is required for
+ * Staff preset list, seeded on every deploy (managing staff via the UI is
+ * post-MVP). `program` must match a PROGRAMS entry name and is required for
  * DEPT_LEADER and SALES; it must be null for ADMIN.
  *
- * TODO: replace the placeholder entries below with real staff emails
- * before deploying.
+ * Only the real admin ships here. Add DEPT_LEADER / SALES entries with real
+ * emails (each tied to one PROGRAMS name) when those people are known, then
+ * re-run the seed — the seed only upserts, so it never removes anyone.
  */
 export const STAFF_SEED: {
   email: string;
@@ -44,42 +45,5 @@ export const STAFF_SEED: {
     name: "Freshman Academy Admin",
     role: "ADMIN",
     program: null,
-  },
-  // ── Placeholders — replace with real people ──────────────────────────
-  {
-    email: "leader.admissions@freshman.academy",
-    name: "Global Admissions Dept Leader (placeholder)",
-    role: "DEPT_LEADER",
-    program: "Global Admissions Program",
-  },
-  {
-    email: "leader.flexible@freshman.academy",
-    name: "Flexible Dept Leader (placeholder)",
-    role: "DEPT_LEADER",
-    program: "Flexible Program",
-  },
-  {
-    email: "leader.masters@freshman.academy",
-    name: "Master's Dept Leader (placeholder)",
-    role: "DEPT_LEADER",
-    program: "Master's Program",
-  },
-  {
-    email: "sales.admissions@freshman.academy",
-    name: "Global Admissions Sales (placeholder)",
-    role: "SALES",
-    program: "Global Admissions Program",
-  },
-  {
-    email: "sales.flexible@freshman.academy",
-    name: "Flexible Sales (placeholder)",
-    role: "SALES",
-    program: "Flexible Program",
-  },
-  {
-    email: "sales.masters@freshman.academy",
-    name: "Master's Sales (placeholder)",
-    role: "SALES",
-    program: "Master's Program",
   },
 ];
