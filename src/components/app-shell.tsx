@@ -172,7 +172,7 @@ export async function AppShell({
             {isDual ? <ProfileSwitch active={activeRole} /> : <RoleBadge role={activeRole} />}
           </div>
 
-          <nav className="flex flex-1 items-center gap-1">
+          <nav className="flex flex-1 items-center gap-7">
             <NavLinks items={NAV_BY_ROLE[activeRole]} />
           </nav>
 
