@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
+import { AddMentorForm } from "@/components/forms/add-mentor-form";
+import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { Deadline } from "@/components/deadline";
 import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
@@ -11,16 +12,12 @@ import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { USER_STATUS } from "@/lib/constants";
+import { ROLES, USER_STATUS } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
-import {
-  mentorsInProgram,
-  programOptions,
-  toProgramOptions,
-} from "@/lib/queries";
+import { programOptions, toProgramOptions } from "@/lib/queries";
 
 /**
  * Admin detail page for one student: approve a pending self-signup and
@@ -49,14 +46,22 @@ export default async function AdminStudentDetailPage({
   if (!profile) notFound();
 
   const isPending = profile.user.status === USER_STATUS.PENDING;
-  const [mentors, hours, programs, sessionCount] = await Promise.all([
-    mentorsInProgram(profile.programId),
+  const [allMentors, hours, programs, sessionCount] = await Promise.all([
+    prisma.user.findMany({
+      where: { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] },
+      orderBy: [{ name: "asc" }],
+    }),
     allocationSummary(profile.id),
     programOptions(),
     prisma.session.count({ where: { studentId: profile.id } }),
   ]);
-  const byMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
+  // The student's mentors are those with an allocation; any other mentor can
+  // be added below (and pulled into this program if needed).
+  const allocatedIds = new Set(hours.perMentor.map((m) => m.mentor.id));
+  const eligibleMentors = allMentors
+    .filter((m) => !allocatedIds.has(m.id))
+    .map((m) => ({ value: m.id, label: m.name ?? m.email }));
 
   return (
     <div className="space-y-8">
@@ -128,14 +133,13 @@ export default async function AdminStudentDetailPage({
         )}
       </StatCardGrid>
 
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-ink">
           Hour allocations by mentor
         </h2>
-        {mentors.length === 0 ? (
-          <EmptyState title="No mentors assigned yet">
-            Assign mentors to {profile.program.name} first, then allocate hours
-            here.
+        {hours.perMentor.length === 0 ? (
+          <EmptyState title="No mentors yet">
+            Add a mentor below to allocate this student&apos;s hours.
           </EmptyState>
         ) : (
           <Table
@@ -149,69 +153,68 @@ export default async function AdminStudentDetailPage({
               ...(isMasters
                 ? [{ label: "Paid", align: "right" } as Column]
                 : []),
-              { label: "Set allocation" },
+              { label: "", align: "right" },
             ]}
           >
-            {mentors.map((mentor) => {
-              const alloc = byMentor.get(mentor.id);
-              return (
-                <Tr key={mentor.id}>
-                  <Td>
-                    <div className="font-medium text-ink">
-                      {mentor.name ?? "—"}
-                    </div>
-                    <div className="text-xs text-muted-fg">{mentor.email}</div>
-                  </Td>
+            {hours.perMentor.map((m) => (
+              <Tr key={m.mentor.id}>
+                <Td>
+                  <div className="font-medium text-ink">
+                    {m.mentor.name ?? "—"}
+                  </div>
+                  <div className="text-xs text-muted-fg">{m.mentor.email}</div>
+                </Td>
+                <Td align="right" className="tabular-nums">
+                  {formatHours(m.allocated)}
+                </Td>
+                <Td align="right" className="tabular-nums">
+                  {formatHours(m.completed)}
+                </Td>
+                <Td
+                  align="right"
+                  className={`tabular-nums ${
+                    m.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                  }`}
+                >
+                  {m.missed > 0 ? formatHours(m.missed) : "—"}
+                </Td>
+                <Td
+                  align="right"
+                  className={`font-medium tabular-nums ${
+                    m.remaining < 0 ? "text-red-700" : "text-ink"
+                  }`}
+                >
+                  {formatHours(m.remaining)}
+                </Td>
+                <Td>
+                  <Deadline deadline={m.deadline} />
+                </Td>
+                {isMasters && (
                   <Td align="right" className="tabular-nums">
-                    {formatHours(alloc?.allocated ?? 0)}
+                    {m.amountPaid != null ? formatMoney(m.amountPaid) : "—"}
                   </Td>
-                  <Td align="right" className="tabular-nums">
-                    {formatHours(alloc?.completed ?? 0)}
-                  </Td>
-                  <Td
-                    align="right"
-                    className={`tabular-nums ${
-                      (alloc?.missed ?? 0) > 0 ? "text-amber-700" : "text-muted-fg"
-                    }`}
-                  >
-                    {(alloc?.missed ?? 0) > 0 ? formatHours(alloc!.missed) : "—"}
-                  </Td>
-                  <Td
-                    align="right"
-                    className={`font-medium tabular-nums ${
-                      (alloc?.remaining ?? 0) < 0 ? "text-red-700" : "text-ink"
-                    }`}
-                  >
-                    {formatHours(alloc?.remaining ?? 0)}
-                  </Td>
-                  <Td>
-                    <Deadline deadline={alloc?.deadline ?? null} />
-                  </Td>
-                  {isMasters && (
-                    <Td align="right" className="tabular-nums">
-                      {alloc?.amountPaid != null
-                        ? formatMoney(alloc.amountPaid)
-                        : "—"}
-                    </Td>
-                  )}
-                  <Td>
-                    <AllocateHoursForm
-                      studentProfileId={profile.id}
-                      mentorId={mentor.id}
-                      currentHours={alloc?.allocated ?? 0}
-                      currentDeadline={
-                        alloc?.deadline
-                          ? alloc.deadline.toISOString().slice(0, 10)
-                          : null
-                      }
-                      showAmountPaid={isMasters}
-                      currentAmountPaid={alloc?.amountPaid ?? null}
-                    />
-                  </Td>
-                </Tr>
-              );
-            })}
+                )}
+                <Td align="right">
+                  <AllocationRowActions
+                    studentProfileId={profile.id}
+                    mentorId={m.mentor.id}
+                    mentorLabel={m.mentor.name ?? m.mentor.email}
+                    currentHours={m.allocated}
+                    currentDeadline={m.deadline.toISOString().slice(0, 10)}
+                    showAmountPaid={isMasters}
+                    currentAmountPaid={m.amountPaid}
+                  />
+                </Td>
+              </Tr>
+            ))}
           </Table>
+        )}
+        {eligibleMentors.length > 0 && (
+          <AddMentorForm
+            studentProfileId={profile.id}
+            mentors={eligibleMentors}
+            showAmountPaid={isMasters}
+          />
         )}
       </section>
 

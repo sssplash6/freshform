@@ -93,19 +93,20 @@ export async function createStudents(
     return { ok: false, error: "You aren't allowed to create students." };
   }
 
-  const raw = String(formData.get("emails") ?? "");
-  const entries = [...new Set(
-    raw
-      .split(/[\s,;]+/)
-      .map((e) => normalizeEmail(e))
-      .filter(Boolean)
-  )];
-  if (entries.length === 0) {
-    return { ok: false, error: "Paste at least one email address." };
+  // One (email, name) pair per row; names are index-aligned with emails and
+  // optional (a blank name is filled in by the student on first sign-in).
+  const emails = formData.getAll("email").map((e) => normalizeEmail(e));
+  const names = formData.getAll("name").map((n) => String(n ?? "").trim());
+  const seen = new Set<string>();
+  const rows = emails
+    .map((email, i) => ({ email, name: names[i] ?? "" }))
+    .filter((r) => r.email && !seen.has(r.email) && (seen.add(r.email), true));
+  if (rows.length === 0) {
+    return { ok: false, error: "Enter at least one student email." };
   }
 
-  const invalid = entries.filter((e) => !EMAIL_RE.test(e));
-  const valid = entries.filter((e) => EMAIL_RE.test(e));
+  const invalid = rows.filter((r) => !EMAIL_RE.test(r.email)).map((r) => r.email);
+  const valid = rows.filter((r) => EMAIL_RE.test(r.email));
 
   const enrollment = await resolveEnrollment(formData);
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
@@ -119,16 +120,21 @@ export async function createStudents(
   }
 
   const existing = await prisma.user.findMany({
-    where: { email: { in: valid } },
+    where: { email: { in: valid.map((r) => r.email) } },
     select: { email: true },
   });
   const taken = new Set(existing.map((u) => u.email));
-  const fresh = valid.filter((e) => !taken.has(e));
+  const fresh = valid.filter((r) => !taken.has(r.email));
 
   await prisma.$transaction(async (tx) => {
-    for (const email of fresh) {
+    for (const { email, name } of fresh) {
       const studentUser = await tx.user.create({
-        data: { email, role: ROLES.STUDENT, status: USER_STATUS.ACTIVE },
+        data: {
+          email,
+          name: name || null,
+          role: ROLES.STUDENT,
+          status: USER_STATUS.ACTIVE,
+        },
       });
       await tx.studentProfile.create({
         data: {
@@ -508,18 +514,12 @@ export async function setMentorAllocation(
     return { ok: false, error: "Pick a mentor." };
   }
 
-  // The mentor must work in the student's program (assigned program-wide or
-  // to any of its cohorts) — hours can only be granted from mentors within
-  // the program.
+  // Hours are granted from mentors within the student's program. If the
+  // mentor isn't in the program yet (admin adding a fresh mentor to the
+  // student), assign them program-wide as part of this action.
   const inProgram = await prisma.mentorAssignment.findFirst({
     where: { mentorId, programId: profile.programId },
   });
-  if (!inProgram) {
-    return {
-      ok: false,
-      error: "That mentor isn't assigned to the student's program.",
-    };
-  }
 
   const existing = await prisma.hourAllocation.findUnique({
     where: { studentId_mentorId: { studentId: profile.id, mentorId } },
@@ -540,6 +540,19 @@ export async function setMentorAllocation(
   const mentorLabel = mentor.name ?? mentor.email;
   const deadlineNote = ` They must be used by ${formatDate(deadline)}.`;
   await prisma.$transaction(async (tx) => {
+    // Bring the mentor into the program if they weren't already.
+    if (!inProgram) {
+      await tx.mentorAssignment.create({
+        data: { mentorId, programId: profile.programId, cohortId: null },
+      });
+      await tx.notification.create({
+        data: {
+          userId: mentorId,
+          type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+          message: `You were assigned to ${profile.program.name}. Set your booking link on your mentor page so students there can book you.`,
+        },
+      });
+    }
     await tx.hourAllocation.upsert({
       where: { studentId_mentorId: { studentId: profile.id, mentorId } },
       update: {
@@ -590,4 +603,62 @@ export async function setMentorAllocation(
     ok: true,
     message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.`,
   };
+}
+
+/**
+ * Remove a mentor from a student — deletes that per-mentor allocation and its
+ * audit rows (admin only, student notified). Blocked once a session has been
+ * logged with the mentor: those hours were delivered and are history, not a
+ * mistake to erase. The mentor keeps their program assignment.
+ */
+export async function removeMentorAllocation(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return { ok: false, error: "Only admins can remove a mentor's hours." };
+  }
+
+  const profileId = String(formData.get("studentProfileId") ?? "");
+  const mentorId = String(formData.get("mentorId") ?? "");
+
+  const allocation = await prisma.hourAllocation.findUnique({
+    where: { studentId_mentorId: { studentId: profileId, mentorId } },
+    include: { student: { include: { user: true } }, mentor: true },
+  });
+  if (!allocation) {
+    return { ok: false, error: "That mentor isn't allocated to this student." };
+  }
+
+  const sessionCount = await prisma.session.count({
+    where: { studentId: profileId, mentorId },
+  });
+  if (sessionCount > 0) {
+    return {
+      ok: false,
+      error:
+        "This mentor has logged sessions with the student, so their hours can't be removed. Void the sessions first if it must go.",
+    };
+  }
+
+  const mentorLabel = allocation.mentor.name ?? allocation.mentor.email;
+  await prisma.$transaction(async (tx) => {
+    await tx.hourAllotmentChange.deleteMany({
+      where: { studentId: profileId, mentorId },
+    });
+    await tx.hourAllocation.delete({
+      where: { studentId_mentorId: { studentId: profileId, mentorId } },
+    });
+    await tx.notification.create({
+      data: {
+        userId: allocation.student.userId,
+        type: NOTIFICATION_TYPES.HOURS_GRANTED,
+        message: `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`,
+      },
+    });
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: `${mentorLabel} removed from this student.` };
 }
