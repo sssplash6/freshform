@@ -13,11 +13,10 @@
   --color-accent: #f18d05; /* orange — hours / progress */
   --color-accent-dark: #ed7a2d; /* hover */
   --color-accent-soft: #fdebcf; /* tint background */
-  /* The bright accent sits at ~2.5:1 on white — fine for bars and dots, too
-     light for text. accent-ink is the same hue darkened to pass AA (~5:1 on
-     white) for orange text and stat readouts. */
-  --color-accent-ink: #b45309;
-  --color-accent-ink-dark: #8f4208; /* hover for accent-ink buttons */
+  /* Orange text/readouts use the same vivid brand orange, not a darkened
+     brown — brand fidelity is preferred over the AA text-contrast bump. */
+  --color-accent-ink: #f18d05;
+  --color-accent-ink-dark: #f18d05;
 
   --color-ink: #1a2733; /* primary text */
   --color-muted-fg: #6b7480; /* secondary text */
