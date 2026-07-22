@@ -1,12 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 import { ArrowRightIcon } from "@/components/icons";
 import { Meter } from "@/components/ui/meter";
 
 /**
  * A compact program "island": a few headline numbers on a card that expands
- * into the program's full page when clicked. Shared by the dashboard and
- * the students page (each picks its own three stats).
+ * into the program's full page when clicked. On hover it tilts subtly in 3D
+ * toward the cursor and lifts, so the grid feels tactile. Shared by the
+ * dashboard and the students page (each picks its own three stats).
  */
 export function ProgramIslandCard({
   name,
@@ -23,10 +27,28 @@ export function ProgramIslandCard({
   caption: string;
   completion?: { completed: number; allotted: number };
 }) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const [tilt, setTilt] = useState<CSSProperties>({});
+
+  const onMove = (e: MouseEvent<HTMLAnchorElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const rx = ((e.clientY - r.top) / r.height - 0.5) * -5;
+    const ry = ((e.clientX - r.left) / r.width - 0.5) * 5;
+    setTilt({
+      transform: `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-3px)`,
+    });
+  };
+
   return (
     <Link
+      ref={ref}
       href={href}
-      className="group block rounded-xl border border-line bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-soft"
+      onMouseMove={onMove}
+      onMouseLeave={() => setTilt({})}
+      style={tilt}
+      className="group block rounded-xl border border-line bg-surface p-5 transition-[transform,box-shadow,border-color] duration-150 ease-out [transform-style:preserve-3d] hover:border-accent/60 hover:shadow-soft"
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{name}</h3>
