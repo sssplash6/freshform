@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { MoreVerticalIcon } from "@/components/icons";
@@ -39,23 +46,72 @@ export function AllocationRowActions({
     removeMentorAllocation,
     null,
   );
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Fixed viewport coordinates; null until measured (menu stays hidden so it
+  // never flashes at a stale position). `up` flips the pop-in origin.
+  const [pos, setPos] = useState<{
+    right: number;
+    top?: number;
+    bottom?: number;
+    up: boolean;
+  } | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setConfirmDelete(false);
+  };
+
+  // The menu is portaled to <body> and positioned with `fixed` so it escapes
+  // the table's `overflow-x-auto` frame, which would otherwise clip it (and
+  // force a scrollbar) instead of letting it float above the page.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const menuH = menuRef.current?.offsetHeight ?? 0;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const up = menuH > 0 && spaceBelow < menuH + 12 && rect.top > spaceBelow;
+      setPos({
+        right: Math.max(8, window.innerWidth - rect.right),
+        top: up ? undefined : rect.bottom + 6,
+        bottom: up ? window.innerHeight - rect.top + 6 : undefined,
+        up,
+      });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setConfirmDelete(false);
-      }
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   return (
-    <div ref={ref} className="relative flex justify-end">
+    <div className="flex justify-end">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={`Manage hours with ${mentorLabel}`}
         aria-expanded={open}
@@ -65,8 +121,21 @@ export function AllocationRowActions({
         <MoreVerticalIcon className="h-4 w-4" />
       </button>
 
-      {open && (
-        <div className="pop-in absolute right-0 top-9 z-20 w-64 rounded-xl border border-line bg-surface p-3 text-left shadow-soft [--pop-origin:top_right]">
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: pos?.top,
+              bottom: pos?.bottom,
+              right: pos?.right ?? 8,
+              visibility: pos ? "visible" : "hidden",
+            }}
+            className={`pop-in z-50 w-64 rounded-xl border border-line bg-surface p-3 text-left shadow-soft ${
+              pos?.up ? "[--pop-origin:bottom_right]" : "[--pop-origin:top_right]"
+            }`}
+          >
           <form action={setAction} className="space-y-2.5">
             <input type="hidden" name="studentProfileId" value={studentProfileId} />
             <input type="hidden" name="mentorId" value={mentorId} />
@@ -157,8 +226,9 @@ export function AllocationRowActions({
             </form>
             <ActionFeedback state={delState} />
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
