@@ -65,12 +65,9 @@ services:
       # NOTE: do NOT use `property: host` here — it returns the service's INTERNAL
       # private-network hostname (e.g. "freshform-srma"), which has no public TLS
       # listener, so curl to https://<that>:443 fails with "couldn't connect".
-      # Pull the real public URL from NEXTAUTH_URL instead (already includes https://).
+      # Use the public custom domain directly.
       - key: APP_URL
-        fromService:
-          type: web
-          name: freshform
-          envVarKey: NEXTAUTH_URL
+        value: "https://freshlog.net"
       - key: CRON_SECRET
         fromService:
           type: web
