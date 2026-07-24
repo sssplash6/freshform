@@ -60,13 +60,17 @@ services:
     startCommand: >-
       curl -fsS --retry 3 --retry-delay 10
       -H "Authorization: Bearer $CRON_SECRET"
-      "https://$APP_HOST/api/cron/deadline-reminders"
+      "$APP_URL/api/cron/deadline-reminders"
     envVars:
-      - key: APP_HOST
+      # NOTE: do NOT use `property: host` here — it returns the service's INTERNAL
+      # private-network hostname (e.g. "freshform-srma"), which has no public TLS
+      # listener, so curl to https://<that>:443 fails with "couldn't connect".
+      # Pull the real public URL from NEXTAUTH_URL instead (already includes https://).
+      - key: APP_URL
         fromService:
           type: web
           name: freshform
-          property: host
+          envVarKey: NEXTAUTH_URL
       - key: CRON_SECRET
         fromService:
           type: web
