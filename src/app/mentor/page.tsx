@@ -6,6 +6,7 @@ import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { StudentFileLink } from "@/components/student-file-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
@@ -20,6 +21,7 @@ type MentorStudent = {
     id: string;
     programId: string;
     telegramUsername: string | null;
+    fileUrl: string | null;
     user: { name: string | null; email: string; status: string };
     program: { name: string };
     cohort: { name: string } | null;
@@ -315,6 +317,7 @@ export default async function MentorHomePage({
                   <tr>
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3">Telegram</th>
+                    <th className="px-4 py-3">File</th>
                     <th className="px-4 py-3 text-right">Allocated to you</th>
                     <th className="px-4 py-3 text-right">Completed</th>
                     <th className="px-4 py-3 text-right">Missed</th>
@@ -350,6 +353,13 @@ export default async function MentorHomePage({
                           <TelegramHandle
                             username={s.profile.telegramUsername}
                           />
+                        ) : (
+                          <span className="text-muted-fg">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {s.profile.fileUrl ? (
+                          <StudentFileLink url={s.profile.fileUrl} />
                         ) : (
                           <span className="text-muted-fg">—</span>
                         )}

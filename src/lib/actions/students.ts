@@ -18,6 +18,7 @@ import {
   normalizeEmail,
   parseDateField,
   parseHoursField,
+  parseLinkField,
   type ActionState,
 } from "@/lib/actions/shared";
 import type { Cohort, Program } from "@/generated/prisma/client";
@@ -81,7 +82,7 @@ async function resolveEnrollment(
  * create anywhere; Dept Leader / Sales only inside their own program. Each
  * student confirms their full name and Telegram username on first sign-in;
  * hours are NOT granted here — an admin allocates them per mentor afterwards.
- * Emails may be separated by newlines, commas, semicolons, or spaces.
+ * An optional student-file link per row is stored for their mentors to open.
  * Already-registered and malformed entries are skipped and reported.
  */
 export async function createStudents(
@@ -93,20 +94,33 @@ export async function createStudents(
     return { ok: false, error: "You aren't allowed to create students." };
   }
 
-  // One (email, name) pair per row; names are index-aligned with emails and
-  // optional (a blank name is filled in by the student on first sign-in).
+  // One (email, name, file link) triple per row, index-aligned with the
+  // emails. Name and file link are both optional — a blank name is filled in
+  // by the student on first sign-in, and a file can be attached later.
   const emails = formData.getAll("email").map((e) => normalizeEmail(e));
   const names = formData.getAll("name").map((n) => String(n ?? "").trim());
+  const fileUrls = formData.getAll("fileUrl");
   const seen = new Set<string>();
   const rows = emails
-    .map((email, i) => ({ email, name: names[i] ?? "" }))
+    .map((email, i) => ({ email, name: names[i] ?? "", rawFile: fileUrls[i] ?? null }))
     .filter((r) => r.email && !seen.has(r.email) && (seen.add(r.email), true));
   if (rows.length === 0) {
     return { ok: false, error: "Enter at least one student email." };
   }
 
-  const invalid = rows.filter((r) => !EMAIL_RE.test(r.email)).map((r) => r.email);
-  const valid = rows.filter((r) => EMAIL_RE.test(r.email));
+  // A malformed link fails the whole submission rather than being dropped
+  // silently — losing a file link without saying so is worse than a retry.
+  const withFiles: { email: string; name: string; fileUrl: string | null }[] = [];
+  for (const r of rows) {
+    const link = parseLinkField(r.rawFile, `The file link for ${r.email}`);
+    if ("error" in link) return { ok: false, error: link.error };
+    withFiles.push({ email: r.email, name: r.name, fileUrl: link.value });
+  }
+
+  const invalid = withFiles
+    .filter((r) => !EMAIL_RE.test(r.email))
+    .map((r) => r.email);
+  const valid = withFiles.filter((r) => EMAIL_RE.test(r.email));
 
   const enrollment = await resolveEnrollment(formData);
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
@@ -127,7 +141,7 @@ export async function createStudents(
   const fresh = valid.filter((r) => !taken.has(r.email));
 
   await prisma.$transaction(async (tx) => {
-    for (const { email, name } of fresh) {
+    for (const { email, name, fileUrl } of fresh) {
       const studentUser = await tx.user.create({
         data: {
           email,
@@ -141,6 +155,7 @@ export async function createStudents(
           userId: studentUser.id,
           programId: program.id,
           cohortId: cohort?.id ?? null,
+          fileUrl,
           createdById: actor.id,
         },
       });
@@ -165,6 +180,56 @@ export async function createStudents(
       `${fresh.length} student${fresh.length === 1 ? "" : "s"} added to ${enrollmentLabel(program.name, cohort?.name)}. ` +
       `They'll confirm their name and Telegram username when they first sign in.` +
       (skipped.length > 0 ? ` Skipped: ${skipped.join(", ")}.` : ""),
+  };
+}
+
+/**
+ * Attach, replace, or clear a student's file link after registration — for
+ * students added before a file existed, or when the document moves. Same
+ * permissions as creating the student: admin anywhere, Dept Leader / Sales
+ * only within their own program. Submitting an empty field removes the link.
+ */
+export async function setStudentFile(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || !STAFF_ROLES.includes(actor.role)) {
+    return { ok: false, error: "You aren't allowed to edit student files." };
+  }
+
+  const profileId = String(formData.get("studentProfileId") ?? "");
+  const profile = await prisma.studentProfile.findUnique({
+    where: { id: profileId },
+    include: { user: true },
+  });
+  if (!profile) return { ok: false, error: "Student not found." };
+
+  if (actor.role !== ROLES.ADMIN && profile.programId !== actor.programId) {
+    return {
+      ok: false,
+      error: "You can only edit students in your own program.",
+    };
+  }
+
+  const link = parseLinkField(formData.get("fileUrl"), "The file link");
+  if ("error" in link) return { ok: false, error: link.error };
+  if (link.value === profile.fileUrl) {
+    return { ok: true, message: "No change: that's already the file link." };
+  }
+
+  await prisma.studentProfile.update({
+    where: { id: profile.id },
+    data: { fileUrl: link.value },
+  });
+
+  revalidatePath("/", "layout");
+  const who = profile.user.name ?? profile.user.email;
+  return {
+    ok: true,
+    message: link.value
+      ? `File link saved for ${who} — their mentors can open it now.`
+      : `File link removed for ${who}.`,
   };
 }
 

@@ -7,6 +7,8 @@ import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
+import { StudentFileForm } from "@/components/forms/student-file-form";
+import { StudentFileLink } from "@/components/student-file-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -88,6 +90,15 @@ export default async function AdminStudentDetailPage({
               </>
             ) : (
               " · Telegram not set yet"
+            )}
+            {profile.fileUrl && (
+              <>
+                {" · "}
+                <StudentFileLink
+                  url={profile.fileUrl}
+                  className="align-middle"
+                />
+              </>
             )}{" "}
             · registered {formatDate(profile.createdAt)}
           </>
@@ -217,6 +228,11 @@ export default async function AdminStudentDetailPage({
           />
         )}
       </section>
+
+      <StudentFileForm
+        studentProfileId={profile.id}
+        currentFileUrl={profile.fileUrl}
+      />
 
       <StudentCorrections
         studentProfileId={profile.id}

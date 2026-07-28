@@ -6,6 +6,7 @@ import { Deadline } from "@/components/deadline";
 import { ArrowLeftIcon } from "@/components/icons";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { StudentFileLink } from "@/components/student-file-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
@@ -91,6 +92,12 @@ export default async function MentorStudentDetailPage({
             </>
           ) : (
             " · Telegram not set yet"
+          )}
+          {profile.fileUrl && (
+            <>
+              {" · "}
+              <StudentFileLink url={profile.fileUrl} className="align-middle" />
+            </>
           )}
         </p>
         {allocation?.deadline && (

@@ -10,22 +10,28 @@ import { EMAIL_RE, normalizeEmail } from "@/lib/actions/shared";
 import { cn } from "@/lib/cn";
 import type { ProgramOption } from "@/lib/queries";
 
-type Row = { id: number; email: string; name: string };
+type Row = { id: number; email: string; name: string; fileUrl: string };
 
 /**
  * Staff registers students into ONE program by entering an email + full name
- * per student (a cohort is only asked for in programs that have them). Extra
- * rows are added on demand; each student still confirms their name and
- * Telegram username on first sign-in, so the name here is a helpful default.
+ * + optional student-file link per student (a cohort is only asked for in
+ * programs that have them). Extra rows are added on demand; each student still
+ * confirms their name and Telegram username on first sign-in, so the name here
+ * is a helpful default.
  */
 export function AddStudentsForm({ program }: { program: ProgramOption }) {
   const [state, action, pending] = useActionState(createStudents, null);
   // Ids only advance in handlers/effects, never during render.
   const nextId = useRef(2);
-  const blank = (): Row => ({ id: nextId.current++, email: "", name: "" });
+  const blank = (): Row => ({
+    id: nextId.current++,
+    email: "",
+    name: "",
+    fileUrl: "",
+  });
   const [rows, setRows] = useState<Row[]>([
-    { id: 0, email: "", name: "" },
-    { id: 1, email: "", name: "" },
+    { id: 0, email: "", name: "", fileUrl: "" },
+    { id: 1, email: "", name: "", fileUrl: "" },
   ]);
 
   const validCount = rows.filter((r) =>
@@ -37,7 +43,11 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
     if (state?.ok) setRows([blank(), blank()]);
   }, [state]);
 
-  const update = (id: number, field: "email" | "name", value: string) =>
+  const update = (
+    id: number,
+    field: "email" | "name" | "fileUrl",
+    value: string,
+  ) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
 
   return (
@@ -47,43 +57,60 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
       <div className="space-y-2">
         <div className="text-sm font-medium text-ink">Add students</div>
         {rows.map((r, i) => (
-          <div key={r.id} className="flex items-center gap-2">
-            <Input
-              name="email"
-              type="email"
-              value={r.email}
-              onChange={(e) => update(r.id, "email", e.target.value)}
-              placeholder="student@example.com"
-              aria-label={`Student ${i + 1} email`}
-              className="flex-1"
-            />
-            <Input
-              name="name"
-              type="text"
-              value={r.name}
-              onChange={(e) => update(r.id, "name", e.target.value)}
-              placeholder="Full name"
-              aria-label={`Student ${i + 1} name`}
-              className="flex-1"
-            />
+          <div key={r.id} className="flex items-start gap-2">
+            <div className="grid flex-1 gap-2 sm:grid-cols-3">
+              <Input
+                name="email"
+                type="email"
+                value={r.email}
+                onChange={(e) => update(r.id, "email", e.target.value)}
+                placeholder="student@example.com"
+                aria-label={`Student ${i + 1} email`}
+              />
+              <Input
+                name="name"
+                type="text"
+                value={r.name}
+                onChange={(e) => update(r.id, "name", e.target.value)}
+                placeholder="Full name"
+                aria-label={`Student ${i + 1} name`}
+              />
+              {/* Not type="url": native validation would reject a pasted
+                  `drive.google.com/…`, which the action accepts and https-fixes. */}
+              <Input
+                name="fileUrl"
+                type="text"
+                inputMode="url"
+                value={r.fileUrl}
+                onChange={(e) => update(r.id, "fileUrl", e.target.value)}
+                placeholder="Student file (link)"
+                aria-label={`Student ${i + 1} file link`}
+              />
+            </div>
             <button
               type="button"
               onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
               disabled={rows.length === 1}
               aria-label={`Remove student ${i + 1}`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-canvas hover:text-red-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-fg"
+              className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-canvas hover:text-red-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-fg"
             >
               ✕
             </button>
           </div>
         ))}
-        <button
-          type="button"
-          onClick={() => setRows((rs) => [...rs, blank()])}
-          className="text-sm font-medium text-brand transition-colors hover:text-brand-dark"
-        >
-          + Add another student
-        </button>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <button
+            type="button"
+            onClick={() => setRows((rs) => [...rs, blank()])}
+            className="text-sm font-medium text-brand transition-colors hover:text-brand-dark"
+          >
+            + Add another student
+          </button>
+          <p className="text-xs text-muted-fg">
+            The file link is optional — paste the student&apos;s Drive or Docs
+            URL and their mentors can open it from their page.
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

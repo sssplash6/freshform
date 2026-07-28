@@ -31,6 +31,33 @@ export function parseDateField(
   return { value: d };
 }
 
+/**
+ * Parse an OPTIONAL link field (e.g. a student's file on Google Drive). Blank
+ * means "no link" and yields null. A bare host like `drive.google.com/…` is
+ * accepted and https-prefixed, since that's how links get pasted; anything
+ * that isn't http(s) is rejected so only openable links are ever stored.
+ */
+export function parseLinkField(
+  raw: FormDataEntryValue | null,
+  label: string
+): { value: string | null } | { error: string } {
+  const s = String(raw ?? "").trim();
+  if (!s) return { value: null };
+  // Only prefix when no scheme is present at all — never rewrite `ftp:`/`javascript:`
+  // into something that would sneak past the protocol check below.
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`;
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return { error: `${label} must be a valid link.` };
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return { error: `${label} must be an http or https link.` };
+  }
+  return { value: url.toString() };
+}
+
 export function normalizeEmail(raw: FormDataEntryValue | null): string {
   return String(raw ?? "")
     .trim()
