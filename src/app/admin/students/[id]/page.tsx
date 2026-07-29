@@ -7,8 +7,8 @@ import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
-import { StudentFileForm } from "@/components/forms/student-file-form";
-import { StudentFileLink } from "@/components/student-file-link";
+import { StudentFolderForm } from "@/components/forms/student-folder-form";
+import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
-import { formatDate, formatHours, formatMoney } from "@/lib/format";
+import { formatDate, formatHours, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
@@ -91,11 +91,11 @@ export default async function AdminStudentDetailPage({
             ) : (
               " · Telegram not set yet"
             )}
-            {profile.fileUrl && (
+            {profile.folderUrl && (
               <>
                 {" · "}
-                <StudentFileLink
-                  url={profile.fileUrl}
+                <StudentFolderLink
+                  url={profile.folderUrl}
                   className="align-middle"
                 />
               </>
@@ -211,7 +211,7 @@ export default async function AdminStudentDetailPage({
                     mentorId={m.mentor.id}
                     mentorLabel={m.mentor.name ?? m.mentor.email}
                     currentHours={m.allocated}
-                    currentDeadline={m.deadline.toISOString().slice(0, 10)}
+                    currentDeadline={toDateInputValue(m.deadline)}
                     showAmountPaid={isMasters}
                     currentAmountPaid={m.amountPaid}
                   />
@@ -229,9 +229,9 @@ export default async function AdminStudentDetailPage({
         )}
       </section>
 
-      <StudentFileForm
+      <StudentFolderForm
         studentProfileId={profile.id}
-        currentFileUrl={profile.fileUrl}
+        currentFolderUrl={profile.folderUrl}
       />
 
       <StudentCorrections

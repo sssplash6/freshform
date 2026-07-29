@@ -1,6 +1,6 @@
 import { ArrowLink } from "@/components/arrow-link";
 import { Chip } from "@/components/chip";
-import { StudentFileLink } from "@/components/student-file-link";
+import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
@@ -39,7 +39,7 @@ export function StudentsTable({
     ...(showProgram ? [{ label: "Program" } as Column] : []),
     ...(showCohort ? [{ label: "Cohort" } as Column] : []),
     { label: "Telegram" },
-    { label: "File" },
+    { label: "Folder" },
     { label: "Allotted", align: "right" },
     { label: "Completed", align: "right" },
     { label: "Missed", align: "right" },
@@ -73,8 +73,8 @@ export function StudentsTable({
             )}
           </Td>
           <Td>
-            {s.fileUrl ? (
-              <StudentFileLink url={s.fileUrl} />
+            {s.folderUrl ? (
+              <StudentFolderLink url={s.folderUrl} />
             ) : (
               <span className="text-muted-fg">—</span>
             )}

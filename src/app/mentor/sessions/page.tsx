@@ -4,7 +4,7 @@ import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
 import { SESSION_STATUS } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -211,7 +211,7 @@ export default async function MentorSessionsPage({
                               session={{
                                 id: s.id,
                                 hours: s.hours,
-                                date: formatDate(s.date),
+                                date: toDateInputValue(s.date),
                                 attended: s.attended,
                                 task: s.task,
                                 note: s.note,

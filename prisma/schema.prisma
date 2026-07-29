@@ -91,7 +91,7 @@ model StudentProfile {
   programId        String
   cohortId         String? // only set in programs that have cohorts (Global Admissions)
   telegramUsername String? // collected during the student's first sign-in
-  fileUrl          String? // link to the student's file (Drive/Docs/…), for mentors
+  folderUrl        String? // link to the student's folder (Drive/Docs/…), for mentors
   createdById      String // staff user who created the student, or the student themself (self-signup)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

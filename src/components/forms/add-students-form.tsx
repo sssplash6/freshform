@@ -10,11 +10,11 @@ import { EMAIL_RE, normalizeEmail } from "@/lib/actions/shared";
 import { cn } from "@/lib/cn";
 import type { ProgramOption } from "@/lib/queries";
 
-type Row = { id: number; email: string; name: string; fileUrl: string };
+type Row = { id: number; email: string; name: string; folderUrl: string };
 
 /**
  * Staff registers students into ONE program by entering an email + full name
- * + optional student-file link per student (a cohort is only asked for in
+ * + optional student-folder link per student (a cohort is only asked for in
  * programs that have them). Extra rows are added on demand; each student still
  * confirms their name and Telegram username on first sign-in, so the name here
  * is a helpful default.
@@ -27,11 +27,11 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
     id: nextId.current++,
     email: "",
     name: "",
-    fileUrl: "",
+    folderUrl: "",
   });
   const [rows, setRows] = useState<Row[]>([
-    { id: 0, email: "", name: "", fileUrl: "" },
-    { id: 1, email: "", name: "", fileUrl: "" },
+    { id: 0, email: "", name: "", folderUrl: "" },
+    { id: 1, email: "", name: "", folderUrl: "" },
   ]);
 
   const validCount = rows.filter((r) =>
@@ -45,7 +45,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
 
   const update = (
     id: number,
-    field: "email" | "name" | "fileUrl",
+    field: "email" | "name" | "folderUrl",
     value: string,
   ) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
@@ -78,13 +78,13 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
               {/* Not type="url": native validation would reject a pasted
                   `drive.google.com/…`, which the action accepts and https-fixes. */}
               <Input
-                name="fileUrl"
+                name="folderUrl"
                 type="text"
                 inputMode="url"
-                value={r.fileUrl}
-                onChange={(e) => update(r.id, "fileUrl", e.target.value)}
-                placeholder="Student file (link)"
-                aria-label={`Student ${i + 1} file link`}
+                value={r.folderUrl}
+                onChange={(e) => update(r.id, "folderUrl", e.target.value)}
+                placeholder="Student folder (link)"
+                aria-label={`Student ${i + 1} folder link`}
               />
             </div>
             <button
@@ -107,7 +107,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
             + Add another student
           </button>
           <p className="text-xs text-muted-fg">
-            The file link is optional — paste the student&apos;s Drive or Docs
+            The folder link is optional — paste the student&apos;s Drive or Docs
             URL and their mentors can open it from their page.
           </p>
         </div>
