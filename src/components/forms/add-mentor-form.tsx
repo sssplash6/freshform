@@ -27,7 +27,7 @@ export function AddMentorForm({
   const [state, action, pending] = useActionState(setMentorAllocation, null);
 
   return (
-    <form action={action} className="rounded-xl border border-line bg-surface p-4">
+    <form action={action}>
       <h3 className="text-sm font-semibold text-ink">Add a mentor</h3>
       <p className="mt-1 text-xs text-muted-fg">
         Grants the student hours from another mentor — and adds that mentor to

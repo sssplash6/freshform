@@ -103,6 +103,37 @@ export type StudentWithHours = Awaited<
 >[number];
 
 /**
+ * The two halves of one student's ledger: the meetings log (every mentor's
+ * sessions, newest first) and the assignment plan (in its own order). Everyone
+ * who can see the student sees the whole log, not just their own slice — the
+ * spreadsheet this replaces was shared, and a mentor picking up an essay needs
+ * to know what the last three meetings covered.
+ */
+export async function studentLedger(studentProfileId: string) {
+  const [sessions, assignments] = await Promise.all([
+    prisma.session.findMany({
+      where: { studentId: studentProfileId },
+      include: { mentor: true },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    }),
+    prisma.assignment.findMany({
+      where: { studentId: studentProfileId },
+      include: { mentor: true },
+      orderBy: { position: "asc" },
+    }),
+  ]);
+  return { sessions, assignments };
+}
+
+export type LedgerSession = Awaited<
+  ReturnType<typeof studentLedger>
+>["sessions"][number];
+
+export type LedgerAssignment = Awaited<
+  ReturnType<typeof studentLedger>
+>["assignments"][number];
+
+/**
  * The programs (and, for Global Admissions, cohorts) a mentor is assigned
  * to, with booking links. cohort is null for program-wide assignments.
  */

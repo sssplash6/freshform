@@ -1,19 +1,20 @@
 import { redirect } from "next/navigation";
 
 import { ArrowLink } from "@/components/arrow-link";
-import { Chip } from "@/components/chip";
+import { AssignmentsPanel } from "@/components/assignments-panel";
+import { MeetingsLog } from "@/components/meetings-log";
 import { MentorHoursList } from "@/components/mentor-hours-list";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Callout } from "@/components/ui/callout";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { Table, Td, Tr } from "@/components/ui/table";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatHours } from "@/lib/format";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { allocationSummary } from "@/lib/hours";
+import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
+import { studentLedger } from "@/lib/queries";
 
 export default async function StudentHomePage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -21,14 +22,7 @@ export default async function StudentHomePage() {
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
-    include: {
-      program: true,
-      cohort: true,
-      sessions: {
-        include: { mentor: true },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      },
-    },
+    include: { program: true, cohort: true },
   });
 
   // Self-signed-up student who hasn't registered yet, or a staff-registered
@@ -54,14 +48,23 @@ export default async function StudentHomePage() {
     );
   }
 
-  const hours = await allocationSummary(profile.id);
-  const activeSessions = profile.sessions.filter(
+  const [hours, ledger] = await Promise.all([
+    allocationSummary(profile.id),
+    studentLedger(profile.id),
+  ]);
+  const activeSessions = ledger.sessions.filter(
     (s) => s.status === SESSION_STATUS.ACTIVE
   );
 
   return (
     <div className="space-y-8">
-      <PageHeader title="My hours" subtitle={enrollmentLabel} />
+      <PageHeader
+        eyebrow={enrollmentLabel}
+        title={`Hi, ${user.name?.split(" ")[0] ?? "there"}`}
+        subtitle={`${formatHours(hours.remaining)} of your ${formatHours(hours.allotted)} mentoring hours are still yours to use.`}
+        monogram={initials(user.name, user.email)}
+        tone="warm"
+      />
 
       <StatCardGrid>
         <StatCard label="Hours allotted" value={formatHours(hours.allotted)} />
@@ -83,9 +86,15 @@ export default async function StudentHomePage() {
         <StatCard
           label="Hours remaining"
           value={formatHours(hours.remaining)}
+          suffix="h"
           tone={hours.remaining < 0 ? "danger" : "default"}
+          lead
         />
-        <StatCard label="Sessions" value={String(activeSessions.length)} />
+        <StatCard
+          label="Sessions"
+          value={String(activeSessions.length)}
+          tone="muted"
+        />
       </StatCardGrid>
 
       {hours.remaining < 0 && (
@@ -102,6 +111,14 @@ export default async function StudentHomePage() {
           you need them reinstated.
         </Callout>
       )}
+
+      <MeetingsLog sessions={ledger.sessions} />
+
+      <AssignmentsPanel
+        assignments={ledger.assignments}
+        studentProfileId={profile.id}
+        hoursAllotted={hours.allotted}
+      />
 
       <section>
         <h2 className="mb-2 text-base font-semibold text-ink">
@@ -120,56 +137,6 @@ export default async function StudentHomePage() {
           </ArrowLink>
         }
       />
-
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
-          Session history
-        </h2>
-        {profile.sessions.length === 0 ? (
-          <EmptyState title="No sessions yet">
-            Book your first session with a mentor to get started.
-          </EmptyState>
-        ) : (
-          <Table
-            columns={[
-              { label: "Date" },
-              { label: "Mentor" },
-              { label: "Hours", align: "right" },
-              { label: "Task" },
-              { label: "Note" },
-              { label: "Status" },
-            ]}
-          >
-            {profile.sessions.map((s) => {
-              const voided = s.status === SESSION_STATUS.VOIDED;
-              return (
-                <Tr key={s.id} className={voided ? "opacity-50" : ""}>
-                  <Td className="tabular-nums">{formatDate(s.date)}</Td>
-                  <Td>{s.mentor.name ?? s.mentor.email}</Td>
-                  <Td align="right" className="tabular-nums">
-                    {formatHours(s.hours)}
-                  </Td>
-                  <Td className="max-w-56 truncate text-muted-fg">
-                    {s.task ?? "—"}
-                  </Td>
-                  <Td className="max-w-56 truncate text-muted-fg">
-                    {s.note ?? "—"}
-                  </Td>
-                  <Td>
-                    {voided ? (
-                      <Chip tone="gray">Voided, hours returned</Chip>
-                    ) : s.attended ? (
-                      <Chip tone="green">Completed</Chip>
-                    ) : (
-                      <Chip tone="amber">Missed (no-show)</Chip>
-                    )}
-                  </Td>
-                </Tr>
-              );
-            })}
-          </Table>
-        )}
-      </section>
     </div>
   );
 }
