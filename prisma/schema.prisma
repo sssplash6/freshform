@@ -35,6 +35,8 @@ model User {
   mentorAssignments MentorAssignment[]    @relation("MentorUser")
   mentorSessions    Session[]             @relation("SessionMentor")
   hourAllocations   HourAllocation[]      @relation("AllocationMentor")
+  assignments       Assignment[]          @relation("AssignmentMentor")
+  createdAssignments Assignment[]         @relation("AssignmentCreatedBy")
   allotmentChanges  HourAllotmentChange[] @relation("ChangedBy")
   allotmentMentions HourAllotmentChange[] @relation("ChangeMentor")
   notifications     Notification[]
@@ -102,9 +104,43 @@ model StudentProfile {
   createdBy        User                  @relation("CreatedBy", fields: [createdById], references: [id])
   sessions         Session[]
   hourAllocations  HourAllocation[]
+  assignments      Assignment[]
   allotmentChanges HourAllotmentChange[]
   mentorFeedback   MentorFeedback[]
   websiteFeedback  WebsiteFeedback[]
+}
+
+// One planned piece of work for a student: what it is for, which mentor is
+// doing it, how many hours it may take, by when, and how far along it is. This
+// is the right-hand half of the tracking spreadsheet, and only an admin fills
+// it in; the left-hand half is Session rows that mentors log.
+//
+// Deliberately NOT part of HourAllocation, which is unique per (student,
+// mentor): one consultant routinely has several assignments for the same
+// student (an essay, a recommendation letter, a general review), each with its
+// own hour limit and status. HourAllocation stays the hours ledger that
+// sessions draw down and deadlines forfeit; an Assignment is the plan on top,
+// so `hourLimit` is a budget for that piece of work, not a grant of hours.
+model Assignment {
+  id        String  @id @default(cuid())
+  studentId String
+  mentorId  String
+  purpose   String // what this work is: "Main essay", "Recommendation letters"
+  hourLimit Float? // hours this piece of work should take; null = not budgeted
+  timeline  String? // free text on purpose: the sheet holds both "Aug 7" and "Mar-May"
+  progress  String  @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | DONE
+  // Ties a row to its place in the list, so reordering never depends on
+  // createdAt and two rows added in the same second keep a stable order.
+  position    Int
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+  mentor    User           @relation("AssignmentMentor", fields: [mentorId], references: [id])
+  createdBy User           @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([studentId, position])
 }
 
 // Hours an admin granted a student FROM a specific mentor (only admins may

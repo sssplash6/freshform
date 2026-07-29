@@ -26,6 +26,22 @@ export const SESSION_STATUS = {
 
 export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
 
+/** How far along one planned piece of work is. Admin-set, never derived. */
+export const ASSIGNMENT_PROGRESS = {
+  NOT_STARTED: "NOT_STARTED",
+  IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
+} as const;
+
+export type AssignmentProgress =
+  (typeof ASSIGNMENT_PROGRESS)[keyof typeof ASSIGNMENT_PROGRESS];
+
+export const ASSIGNMENT_PROGRESS_LABELS: Record<string, string> = {
+  NOT_STARTED: "Not started",
+  IN_PROGRESS: "In progress",
+  DONE: "Done",
+};
+
 export const NOTIFICATION_TYPES = {
   HOURS_GRANTED: "HOURS_GRANTED",
   SESSION_LOGGED: "SESSION_LOGGED",
