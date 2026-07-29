@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
+
 import { Callout } from "@/components/ui/callout";
 import { signIn } from "@/lib/auth";
+import { getCurrentUser, homeFor } from "@/lib/dal";
 
 const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied:
@@ -13,6 +16,13 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // Send genuinely signed-in people to their own home. This is a VERIFIED
+  // check, not the cookie-presence one the proxy used to do: a user whose
+  // cookie no longer decrypts must be able to reach this form and sign in
+  // again, which overwrites the bad cookie.
+  const user = await getCurrentUser();
+  if (user) redirect(homeFor(user));
+
   const { error } = await searchParams;
   const errorMessage = error
     ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default)

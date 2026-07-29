@@ -19,10 +19,13 @@ export default function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
-  if (hasSessionCookie && isPublic) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
-  }
-
+  // Deliberately NOT the mirror image of the rule above: a PRESENT cookie is
+  // not a VALID session. Bouncing /login → / on mere presence locks anyone out
+  // whose cookie can no longer be decrypted (a rotated NEXTAUTH_SECRET, a
+  // truncated cookie): / verifies for real, finds nobody, and sends them back
+  // to /login, which bounces to / again — an unbreakable loop with no way to
+  // sign in. Sending signed-in users away from /login is a convenience, so it
+  // belongs where the session is actually verified: app/login/page.tsx.
   return NextResponse.next();
 }
 
