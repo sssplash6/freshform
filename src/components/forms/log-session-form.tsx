@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select } from "@/components/select";
+import { Button } from "@/components/ui/button";
 
 const inputClass =
   "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
@@ -80,6 +81,13 @@ export function LogSessionForm({
             className={inputClass}
           />
         </label>
+        {/* Five fields over a 2- or 3-column grid always leave the last cell
+            empty, so the submit sits in it rather than under the form. `self-end`
+            keeps it on the same baseline as the inputs beside it; h-11 matches
+            their 44px height, which the default md button (40px) would not. */}
+        <Button type="submit" disabled={pending} className="h-11 w-full self-end">
+          {pending ? "Logging…" : "Log session"}
+        </Button>
       </div>
       <label className="mt-3 flex items-start gap-2.5 text-sm">
         <input
@@ -97,15 +105,6 @@ export function LogSessionForm({
           </span>
         </span>
       </label>
-      <div className="mt-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-        >
-          {pending ? "Logging…" : "Log session"}
-        </button>
-      </div>
       <ActionFeedback state={state} />
     </form>
   );
