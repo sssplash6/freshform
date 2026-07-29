@@ -32,8 +32,9 @@ export const PROGRAMS: { name: string; cohorts: string[] }[] = [
  * dual-role admin who can also act as a mentor (toggle into the mentor
  * dashboard, be assigned to programs).
  *
- * This is the exclusive list of admins. All are mentors too EXCEPT tech@
- * (the developer account). Add DEPT_LEADER / SALES entries with real emails
+ * This is the exclusive list of admins. Most are mentors too — the exceptions
+ * are tech@ (the developer account) and admins who simply don't mentor, who
+ * are left without the flag. Add DEPT_LEADER / SALES entries with real emails
  * when those people are known, then re-run the seed (the seed only upserts,
  * so it never removes anyone).
  */
@@ -84,6 +85,6 @@ export const STAFF_SEED: {
     name: "Shahrizoda",
     role: "ADMIN",
     program: null,
-    isMentor: true,
+    // Admin only — does not mentor students.
   },
 ];
