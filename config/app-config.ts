@@ -79,4 +79,11 @@ export const STAFF_SEED: {
     program: null,
     isMentor: true,
   },
+  {
+    email: "shahrizoda@freshman.academy",
+    name: "Shahrizoda",
+    role: "ADMIN",
+    program: null,
+    isMentor: true,
+  },
 ];
