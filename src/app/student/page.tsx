@@ -120,12 +120,7 @@ export default async function StudentHomePage() {
         hoursAllotted={hours.allotted}
       />
 
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
-          Hours with each mentor
-        </h2>
-        <MentorHoursList items={hours.perMentor} />
-      </section>
+      <MentorHoursList items={hours.perMentor} />
 
       <Callout
         tone="brand"

@@ -129,6 +129,33 @@ export type LedgerSession = Awaited<
   ReturnType<typeof studentLedger>
 >["sessions"][number];
 
+/**
+ * The most recent meetings across students, for the log that leads a dashboard.
+ * Scoped to one mentor when given, otherwise every program's sessions.
+ */
+export async function recentMeetings({
+  mentorId,
+  programId,
+  take = 8,
+}: {
+  mentorId?: string;
+  programId?: string;
+  take?: number;
+} = {}) {
+  return prisma.session.findMany({
+    where: {
+      ...(mentorId ? { mentorId } : {}),
+      ...(programId ? { student: { programId } } : {}),
+    },
+    include: {
+      mentor: true,
+      student: { include: { user: true } },
+    },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take,
+  });
+}
+
 export type LedgerAssignment = Awaited<
   ReturnType<typeof studentLedger>
 >["assignments"][number];

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { deleteStudent, moveStudent } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import type { ProgramOption } from "@/lib/queries";
 
 const selectClass =
@@ -34,9 +35,10 @@ export function StudentCorrections({
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
   return (
-    <section className="rounded-xl border border-line bg-surface p-4">
-      <h2 className="text-base font-semibold text-ink">Corrections</h2>
-      <p className="mt-1 text-xs text-muted-fg">
+    <Panel>
+      <PanelHeader eyebrow="Admin only" title="Corrections" />
+      <div className="px-4 py-4 sm:px-5">
+      <p className="text-xs text-muted-fg">
         Enrolled in the wrong place? Move them — hours and session history
         follow. The student is notified.
       </p>
@@ -126,6 +128,7 @@ export function StudentCorrections({
         </form>
         <ActionFeedback state={deleteState} />
       </div>
-    </section>
+      </div>
+    </Panel>
   );
 }

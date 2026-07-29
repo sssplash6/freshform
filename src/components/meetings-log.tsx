@@ -1,53 +1,102 @@
+import Link from "next/link";
+
 import { Chip } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { Table, Td, Tr } from "@/components/ui/table";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { SESSION_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
-import type { LedgerSession } from "@/lib/queries";
 
 /**
- * The left half of the tracking spreadsheet: every meeting a mentor logged for
- * this student, in the sheet's own column order (who, how long, when, what was
- * covered). Mentors own this data by logging sessions, which is what the amber
- * panel tone says.
+ * Structural, not Prisma-derived: the same table serves one student's ledger
+ * and the cross-student log on a dashboard, which are different queries.
+ */
+export type LoggedMeeting = {
+  id: string;
+  hours: number;
+  date: Date;
+  attended: boolean;
+  task: string | null;
+  note: string | null;
+  status: string;
+  mentor: { id: string; name: string | null; email: string };
+  /** Present only on cross-student logs, where a Student column is needed. */
+  student?: { id: string; user: { name: string | null; email: string } } | null;
+};
+
+/**
+ * The left half of the tracking spreadsheet: meetings mentors logged, in the
+ * sheet's own column order (who, how long, when, what was covered). Mentors own
+ * this data by logging sessions, which is what the amber panel tone says.
  *
  * Voided sessions stay listed but greyed with a struck-through duration: they
  * are part of the history even though their hours went back.
  */
-export function MeetingsLog({ sessions }: { sessions: LedgerSession[] }) {
+export function MeetingsLog({
+  sessions,
+  title = "Meetings log",
+  eyebrow = "Logged by mentors",
+  emptyBody = "Every session a mentor logs shows up here, newest first.",
+  moreHref,
+  moreLabel = "All sessions",
+}: {
+  sessions: LoggedMeeting[];
+  title?: string;
+  eyebrow?: React.ReactNode;
+  emptyBody?: React.ReactNode;
+  /** Shown in the header when the log is a truncated slice of a longer one. */
+  moreHref?: string;
+  moreLabel?: string;
+}) {
   const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
   const loggedHours = active.reduce((sum, s) => sum + s.hours, 0);
+  const withStudent = sessions.some((s) => s.student);
+  // On a mentor's own log every row is them, so the Team column would just
+  // repeat one name down the page. Drop it unless the log spans people.
+  const withTeam = new Set(sessions.map((s) => s.mentor.id)).size > 1;
+
+  const columns: Column[] = [
+    ...(withTeam ? [{ label: "Team" } as Column] : []),
+    ...(withStudent ? [{ label: "Student" } as Column] : []),
+    { label: "Duration", align: "right" },
+    { label: "Date" },
+    { label: "Notes" },
+  ];
+
+  const caption =
+    active.length === 0
+      ? "Nothing logged yet"
+      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours`;
 
   return (
     <Panel tone="log">
       <PanelHeader
         tone="log"
-        eyebrow="Logged by mentors"
-        title="Meetings log"
-        caption={
-          active.length === 0
-            ? "Nothing logged yet"
-            : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours`
+        eyebrow={eyebrow}
+        title={title}
+        action={
+          moreHref ? (
+            <span className="flex items-center gap-3 text-xs text-muted-fg">
+              {caption}
+              <Link
+                href={moreHref}
+                className="font-medium text-brand hover:underline"
+              >
+                {moreLabel} →
+              </Link>
+            </span>
+          ) : undefined
         }
+        caption={caption}
       />
 
       {sessions.length === 0 ? (
         <EmptyState framed={false} title="No meetings logged yet">
-          Every session a mentor logs for this student shows up here, newest
-          first.
+          {emptyBody}
         </EmptyState>
       ) : (
-        <Table
-          framed={false}
-          columns={[
-            { label: "Team" },
-            { label: "Duration", align: "right" },
-            { label: "Date" },
-            { label: "Notes" },
-          ]}
-        >
+        <Table framed={false} columns={columns}>
           {sessions.map((s, i) => {
             const voided = s.status === SESSION_STATUS.VOIDED;
             return (
@@ -56,9 +105,25 @@ export function MeetingsLog({ sessions }: { sessions: LedgerSession[] }) {
                 className="deal-in"
                 style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
               >
-                <Td className={voided ? "opacity-45" : undefined}>
-                  <PersonChip person={s.mentor} size="sm" />
-                </Td>
+                {withTeam && (
+                  <Td className={voided ? "opacity-45" : undefined}>
+                    <PersonChip person={s.mentor} size="sm" />
+                  </Td>
+                )}
+                {withStudent && (
+                  <Td className={voided ? "opacity-55" : undefined}>
+                    {s.student ? (
+                      <Link
+                        href={`/admin/students/${s.student.id}`}
+                        className="font-medium text-ink hover:text-brand"
+                      >
+                        {s.student.user.name ?? s.student.user.email}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-fg">—</span>
+                    )}
+                  </Td>
+                )}
                 <Td align="right">
                   <span
                     className={

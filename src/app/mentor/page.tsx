@@ -5,16 +5,20 @@ import { ArrowLink } from "@/components/arrow-link";
 import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
+import { MeetingsLog } from "@/components/meetings-log";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
+import { PageHeader } from "@/components/ui/page-header";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatHours } from "@/lib/format";
+import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { mentorAssignments } from "@/lib/queries";
+import { mentorAssignments, recentMeetings } from "@/lib/queries";
 
 type MentorStudent = {
   profile: {
@@ -122,7 +126,7 @@ export default async function MentorHomePage({
 
   // A mentor's students are the ones an admin allocated hours to FROM this
   // mentor; sessions the mentor logs draw those allocations down.
-  const [assignments, allocations, mySessionSums, delivered] =
+  const [assignments, allocations, mySessionSums, delivered, myMeetings] =
     await Promise.all([
       mentorAssignments(user.id),
       prisma.hourAllocation.findMany({
@@ -145,6 +149,7 @@ export default async function MentorHomePage({
         _sum: { hours: true },
         _count: true,
       }),
+      recentMeetings({ mentorId: user.id, take: 8 }),
     ]);
 
   const usedByStudent = new Map<string, number>();
@@ -217,17 +222,18 @@ export default async function MentorHomePage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">My students</h1>
-        <p className="mt-1.5 text-base text-muted-fg">
-          Assigned to:{" "}
-          {assignments
+      <PageHeader
+        eyebrow="Mentor"
+        title={`Hi, ${user.name?.split(" ")[0] ?? "there"}`}
+        subtitle={`Assigned to ${
+          assignments
             .map((a) =>
               a.cohort ? `${a.program.name} / ${a.cohort.name}` : a.program.name
             )
-            .join(", ") || "none"}
-        </p>
-      </div>
+            .join(", ") || "no programs yet"
+        }.`}
+        monogram={initials(user.name, user.email)}
+      />
 
       <StatCardGrid>
         <StatCard label="Students" value={String(students.length)} />
@@ -265,25 +271,13 @@ export default async function MentorHomePage({
         </div>
       )}
 
-      {assignments.length > 0 && (
-        <BookingLinksForm
-          assignments={assignments.map((a) => ({
-            id: a.id,
-            label: a.cohort
-              ? `${a.program.name} / ${a.cohort.name}`
-              : a.program.name,
-            calendlyUrl: a.calendlyUrl,
-          }))}
-        />
-      )}
-
-      <LogSessionForm
-        students={visible
-          .filter((s) => s.approved && !s.expired)
-          .map((s) => ({
-            profileId: s.profile.id,
-            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
-          }))}
+      <MeetingsLog
+        sessions={myMeetings}
+        title="Your recent meetings"
+        eyebrow="Logged by you"
+        emptyBody="Log a session at the bottom of this page and it appears here."
+        moreHref="/mentor/sessions"
+        moreLabel="All your sessions"
       />
 
       {visible.length === 0 ? (
@@ -294,23 +288,17 @@ export default async function MentorHomePage({
         </p>
       ) : (
         [...byProgram.entries()].map(([programId, group]) => (
-          <section
-            key={programId}
-            className="rounded-xl border border-line bg-surface"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
-              <h2 className="text-base font-semibold text-ink">
-                {group.name}
-              </h2>
-              <p className="text-xs text-muted-fg">
-                {group.students.length} student
-                {group.students.length === 1 ? "" : "s"} ·{" "}
-                {formatHours(
-                  group.students.reduce((sum, s) => sum + s.remaining, 0)
-                )}{" "}
-                hours remaining with you
-              </p>
-            </div>
+          <Panel key={programId} tone="total">
+            <PanelHeader
+              tone="total"
+              eyebrow="Your students"
+              title={group.name}
+              caption={`${group.students.length} student${
+                group.students.length === 1 ? "" : "s"
+              } · ${formatHours(
+                group.students.reduce((sum, s) => sum + s.remaining, 0),
+              )} hours remaining with you`}
+            />
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
@@ -327,17 +315,18 @@ export default async function MentorHomePage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60">
-                  {group.students.map((s) => (
+                  {group.students.map((s, i) => (
                     <tr
                       key={s.profile.id}
-                      className="transition-colors hover:bg-canvas"
+                      className="deal-in transition-colors hover:bg-canvas"
+                      style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
                     >
                       <td className="px-4 py-3">
                         <Link
                           href={`/mentor/students/${s.profile.id}`}
                           className="group block"
                         >
-                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-ink">
+                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand">
                             {s.profile.user.name ?? "—"}
                             {!s.approved && (
                               <Chip tone="amber">Pending approval</Chip>
@@ -400,9 +389,30 @@ export default async function MentorHomePage({
                 </tbody>
               </table>
             </div>
-          </section>
+          </Panel>
         ))
       )}
+
+      {assignments.length > 0 && (
+        <BookingLinksForm
+          assignments={assignments.map((a) => ({
+            id: a.id,
+            label: a.cohort
+              ? `${a.program.name} / ${a.cohort.name}`
+              : a.program.name,
+            calendlyUrl: a.calendlyUrl,
+          }))}
+        />
+      )}
+
+      <LogSessionForm
+        students={visible
+          .filter((s) => s.approved && !s.expired)
+          .map((s) => ({
+            profileId: s.profile.id,
+            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
+          }))}
+      />
     </div>
   );
 }

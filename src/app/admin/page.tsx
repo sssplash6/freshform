@@ -4,14 +4,20 @@ import { ArrowLink } from "@/components/arrow-link";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";
+import { MeetingsLog } from "@/components/meetings-log";
 import { ProgramIslandCard } from "@/components/program-island-card";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Callout } from "@/components/ui/callout";
+import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
+import {
+  recentMeetings,
+  studentsWithHours,
+  type StudentWithHours,
+} from "@/lib/queries";
 
 function totals(students: StudentWithHours[]) {
   return students.reduce(
@@ -33,7 +39,7 @@ function totals(students: StudentWithHours[]) {
 export default async function AdminHomePage() {
   await ensureDeadlineReminders();
 
-  const [programs, students, assignments, unassignedMentors] =
+  const [programs, students, assignments, unassignedMentors, meetings] =
     await Promise.all([
       prisma.program.findMany({
         include: { cohorts: true },
@@ -44,6 +50,7 @@ export default async function AdminHomePage() {
       prisma.user.count({
         where: { role: ROLES.MENTOR, status: USER_STATUS.UNASSIGNED },
       }),
+      recentMeetings({ take: 10 }),
     ]);
 
   const overall = totals(students);
@@ -53,21 +60,23 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-ink">
-          Cross-program dashboard
-        </h1>
-        {unassignedMentors > 0 && (
-          <Link
-            href="/admin/mentors"
-            className="group inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
-          >
-            {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
-            awaiting assignment
-            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Freshman Academy"
+        title="Cross-program dashboard"
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatHours(overall.remaining)} mentoring hours still to deliver.`}
+        actions={
+          unassignedMentors > 0 && (
+            <Link
+              href="/admin/mentors"
+              className="group inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-surface px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
+            >
+              {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
+              awaiting assignment
+              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          )
+        }
+      />
 
       {pending.length > 0 && (
         <Callout
@@ -125,6 +134,13 @@ export default async function AdminHomePage() {
           tone={overall.remaining < 0 ? "danger" : "default"}
         />
       </StatCardGrid>
+
+      <MeetingsLog
+        sessions={meetings}
+        title="Latest meetings"
+        eyebrow="Logged by mentors · every program"
+        emptyBody="As mentors log sessions across the programs, the newest ones land here."
+      />
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">

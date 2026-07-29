@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { Input } from "@/components/ui/field";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { setStudentFolder } from "@/lib/actions/students";
 
 /**
@@ -22,12 +23,14 @@ export function StudentFolderForm({
   const [state, action, pending] = useActionState(setStudentFolder, null);
 
   return (
-    <section className="rounded-xl border border-line bg-surface p-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-base font-semibold text-ink">Student folder</h2>
-        {currentFolderUrl && <StudentFolderLink url={currentFolderUrl} />}
-      </div>
-      <p className="mt-1 text-xs text-muted-fg">
+    <Panel>
+      <PanelHeader
+        eyebrow="Set by staff"
+        title="Student folder"
+        action={currentFolderUrl ? <StudentFolderLink url={currentFolderUrl} /> : undefined}
+      />
+      <div className="px-4 py-4 sm:px-5">
+      <p className="text-xs text-muted-fg">
         A link to the student&apos;s folder (Drive, Docs, …). Every mentor working
         with them can open it from their list and their page. Leave it empty to
         remove the link.
@@ -55,6 +58,7 @@ export function StudentFolderForm({
         </button>
       </form>
       <ActionFeedback state={state} />
-    </section>
+      </div>
+    </Panel>
   );
 }

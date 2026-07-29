@@ -2,13 +2,14 @@ import Link from "next/link";
 
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
-import { Card, SectionHeader } from "@/components/ui/card";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { formatHours } from "@/lib/format";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
 
 /**
- * One program "island": the program's own add-students form and student
- * list in a single box, so each program is managed in its own space.
+ * One program "island": the program's student list, with its add-students form
+ * underneath. The list comes first because reading it is the common visit and
+ * adding students is the occasional one.
  * `programHref` (admin) makes the header open the program's full page.
  */
 export function ProgramStudentsIsland({
@@ -31,12 +32,13 @@ export function ProgramStudentsIsland({
   );
 
   return (
-    <Card as="section">
-      <SectionHeader
-        className="border-b border-line px-4 py-3"
+    <Panel tone="total">
+      <PanelHeader
+        tone="total"
+        eyebrow="Program"
         title={
           programHref ? (
-            <Link href={programHref} className="hover:text-accent-ink">
+            <Link href={programHref} className="hover:text-brand">
               {program.name} →
             </Link>
           ) : (
@@ -45,9 +47,6 @@ export function ProgramStudentsIsland({
         }
         caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
       />
-      <div className="border-b border-line px-4 py-3">
-        <AddStudentsForm program={program} />
-      </div>
       <StudentsTable
         students={students}
         showProgram={false}
@@ -55,6 +54,9 @@ export function ProgramStudentsIsland({
         manageBase={manageBase}
         framed={false}
       />
-    </Card>
+      <div className="border-t border-line px-4 py-4 sm:px-5">
+        <AddStudentsForm program={program} />
+      </div>
+    </Panel>
   );
 }

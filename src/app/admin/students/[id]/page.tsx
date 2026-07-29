@@ -251,14 +251,16 @@ export default async function AdminStudentDetailPage({
         hasSessions={ledger.sessions.length > 0}
       />
 
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
-          Allocation history
-        </h2>
+      <Panel>
+        <PanelHeader
+          eyebrow="Audit trail"
+          title="Allocation history"
+          caption="Every change to this student's hours, and who made it"
+        />
         {profile.allotmentChanges.length === 0 ? (
-          <EmptyState>No allocation changes yet.</EmptyState>
+          <EmptyState framed={false}>No allocation changes yet.</EmptyState>
         ) : (
-          <ul className="divide-y divide-line/60 rounded-xl border border-line bg-surface text-sm">
+          <ul className="divide-y divide-line/60 text-sm">
             {profile.allotmentChanges.map((c) => (
               <li key={c.id} className="flex flex-wrap gap-x-2 px-4 py-3">
                 <span className="tabular-nums text-muted-fg">
@@ -275,7 +277,7 @@ export default async function AdminStudentDetailPage({
             ))}
           </ul>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

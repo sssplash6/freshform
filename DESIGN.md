@@ -63,7 +63,7 @@ and usable at phone widths.
 
 Motion is brief and eases out. Interaction feedback is 150–180ms. Entrances are
 choreographed rather than simultaneous: rows `deal-in` with a ~24ms stagger,
-panels `lift-in`, and meters `meter-fill` from empty so that spending hours is
-something you watch happen once. Nothing loops, nothing bounces, nothing idles.
-Respect reduced-motion preferences — including staggered delays, which must be
+panels `lift-in`, and `Meter` grows its fill from empty on mount so that
+spending hours is something you watch happen once. Nothing loops, nothing
+bounces, nothing idles. Respect reduced-motion preferences — including staggered delays, which must be
 zeroed rather than merely shortened.

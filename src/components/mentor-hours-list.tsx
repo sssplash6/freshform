@@ -1,7 +1,8 @@
 import { Deadline } from "@/components/deadline";
-import { Card } from "@/components/ui/card";
+import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { formatHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -24,17 +25,24 @@ type MentorHours = {
  * without turning hours into a game.
  */
 export function MentorHoursList({ items }: { items: MentorHours[] }) {
-  if (items.length === 0) {
-    return (
-      <EmptyState title="No mentor hours yet">
-        An admin will allocate your mentoring hours soon. They&apos;ll appear
-        here.
-      </EmptyState>
-    );
-  }
-
   return (
-    <Card>
+    <Panel tone="total">
+      <PanelHeader
+        tone="total"
+        eyebrow="Granted by an admin"
+        title="Your hours with each mentor"
+        caption={
+          items.length === 0
+            ? undefined
+            : `${items.length} mentor${items.length === 1 ? "" : "s"}`
+        }
+      />
+      {items.length === 0 ? (
+        <EmptyState framed={false} title="No mentor hours yet">
+          An admin will allocate your mentoring hours soon. They&apos;ll appear
+          here.
+        </EmptyState>
+      ) : (
       <ul className="divide-y divide-line/60">
         {items.map((m) => {
           const overdrawn = m.remaining < 0;
@@ -47,10 +55,8 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
               : 0;
           return (
             <li key={m.mentor.id} className="px-4 py-4 sm:px-5">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate font-medium text-ink">
-                  {m.mentor.name ?? m.mentor.email}
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <PersonChip person={m.mentor} size="sm" />
                 <span className="whitespace-nowrap text-sm text-muted-fg">
                   <span
                     className={cn(
@@ -90,6 +96,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
           );
         })}
       </ul>
-    </Card>
+      )}
+    </Panel>
   );
 }

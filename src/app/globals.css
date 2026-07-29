@@ -191,18 +191,6 @@ body {
   animation: lift-in 500ms var(--ease-out-strong) both;
 }
 
-/* Meters grow from empty to their value once, on load: the bar is the one
-   place motion carries meaning (hours being spent), not just arrival. */
-@keyframes meter-fill {
-  from {
-    transform: scaleX(0);
-  }
-}
-@utility meter-fill {
-  transform-origin: left center;
-  animation: meter-fill 900ms var(--ease-in-out-strong) both;
-}
-
 /* Attention nudge: a hint that bounces when an action is tapped too early. */
 @keyframes hint-bounce {
   0%,
