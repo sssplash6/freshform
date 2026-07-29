@@ -10,6 +10,7 @@ import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Callout } from "@/components/ui/callout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, USER_STATUS } from "@/lib/constants";
+import { monogramOf, programTone } from "@/lib/person-tone";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatHours } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -52,6 +53,16 @@ export default async function AdminHomePage() {
       }),
       recentMeetings({ take: 10 }),
     ]);
+
+  // Program colors go by creation order, so the card here and the banner on the
+  // program's own page always agree. Program has no createdAt, but its cuids are
+  // timestamp-prefixed, so sorting by id IS creation order. Ranked separately
+  // from the name ordering used for display.
+  const positionById = new Map(
+    [...programs]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((p, i) => [p.id, i] as const)
+  );
 
   const overall = totals(students);
   const pending = students.filter(
@@ -176,6 +187,8 @@ export default async function AdminHomePage() {
                 ]}
                 caption={`${formatHours(pt.completed)} of ${formatHours(pt.allotted)} hours completed`}
                 completion={{ completed: pt.completed, allotted: pt.allotted }}
+                tone={programTone(positionById.get(p.id) ?? 0)}
+                monogram={monogramOf(p.name)}
               />
             );
           })}

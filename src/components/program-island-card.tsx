@@ -5,12 +5,17 @@ import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 import { ArrowRightIcon } from "@/components/icons";
 import { Meter } from "@/components/ui/meter";
+import { cn } from "@/lib/cn";
+import type { ProgramTone } from "@/lib/person-tone";
 
 /**
  * A compact program "island": a few headline numbers on a card that expands
  * into the program's full page when clicked. On hover it tilts subtly in 3D
  * toward the cursor and lifts, so the grid feels tactile. Shared by the
  * dashboard and the students page (each picks its own three stats).
+ *
+ * `tone` is the program's own hue, matching the banner on its page, so a row of
+ * cards reads as three distinct places rather than three copies.
  */
 export function ProgramIslandCard({
   name,
@@ -19,6 +24,8 @@ export function ProgramIslandCard({
   stats,
   caption,
   completion,
+  tone,
+  monogram,
 }: {
   name: string;
   href: string;
@@ -26,6 +33,8 @@ export function ProgramIslandCard({
   stats: { label: string; value: string; danger?: boolean; brand?: boolean }[];
   caption: string;
   completion?: { completed: number; allotted: number };
+  tone?: ProgramTone;
+  monogram?: string;
 }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState<CSSProperties>({});
@@ -48,9 +57,24 @@ export function ProgramIslandCard({
       onMouseMove={onMove}
       onMouseLeave={() => setTilt({})}
       style={tilt}
-      className="group block rounded-xl border border-line bg-surface p-5 transition-[transform,box-shadow,border-color] duration-150 ease-out [transform-style:preserve-3d] hover:border-accent/60 hover:shadow-soft"
+      className={cn(
+        "group relative block overflow-hidden rounded-xl border border-line bg-surface pb-5 pl-5 pr-5 pt-[21px] transition-[transform,box-shadow,border-color] duration-150 ease-out [transform-style:preserve-3d] hover:shadow-soft",
+        tone?.cardHover ?? "hover:border-accent/60",
+      )}
     >
-      <div className="flex items-baseline justify-between gap-2">
+      <span
+        aria-hidden="true"
+        className={cn("absolute inset-x-0 top-0 h-[3px]", tone?.rule ?? "bg-line")}
+      />
+      {monogram && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-5 right-2 select-none text-[64px] font-black leading-none tracking-tighter text-ink/[0.04]"
+        >
+          {monogram}
+        </span>
+      )}
+      <div className="relative flex items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{name}</h3>
         {cohortCount > 0 && (
           <span className="text-xs text-muted-fg">

@@ -16,6 +16,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatHours, formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { monogramOf, programTone } from "@/lib/person-tone";
 import { recentMeetings, studentsWithHours, toProgramOptions } from "@/lib/queries";
 
 /**
@@ -35,7 +36,7 @@ export default async function AdminProgramPage({
   });
   if (!program) notFound();
 
-  const [students, assignments, recentSessions] = await Promise.all([
+  const [students, assignments, recentSessions, position] = await Promise.all([
     studentsWithHours({ programId: program.id }),
     prisma.mentorAssignment.findMany({
       where: { programId: program.id },
@@ -43,6 +44,10 @@ export default async function AdminProgramPage({
       orderBy: { createdAt: "asc" },
     }),
     recentMeetings({ programId: program.id, take: 12 }),
+    // Position in creation order picks this program's hue (see programTone).
+    // Program has no createdAt; cuids are timestamp-prefixed, so id order is
+    // creation order, and this must match the ranking on the dashboard.
+    prisma.program.count({ where: { id: { lt: program.id } } }),
   ]);
 
   const totals = students.reduce(
@@ -66,6 +71,8 @@ export default async function AdminProgramPage({
           backHref="/admin"
           backLabel="Dashboard"
           eyebrow="Program"
+          programTone={programTone(position)}
+          monogram={monogramOf(program.name)}
           title={program.name}
           subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatHours(totals.remaining)} hours still to deliver.`}
         />

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ArrowLeftIcon } from "@/components/icons";
 import { cn } from "@/lib/cn";
+import type { ProgramTone } from "@/lib/person-tone";
 
 export type BannerTone = "brand" | "log" | "plan" | "warm";
 
@@ -43,6 +44,7 @@ export function PageHeader({
   actions,
   monogram,
   tone = "brand",
+  programTone,
   className,
 }: {
   backHref?: string;
@@ -53,8 +55,17 @@ export function PageHeader({
   actions?: React.ReactNode;
   monogram?: string;
   tone?: BannerTone;
+  /**
+   * A program's own hue (lib/person-tone.ts), which wins over `tone`. Programs
+   * each get their own so their pages don't read as three identical headers.
+   */
+  programTone?: ProgramTone;
   className?: string;
 }) {
+  const wash = programTone?.wash ?? WASH[tone];
+  const rule = programTone?.rule ?? RULE[tone];
+  const eyebrowColor = programTone?.eyebrow ?? EYEBROW[tone];
+
   return (
     <div className={cn("space-y-2.5", className)}>
       {backHref && (
@@ -68,12 +79,9 @@ export function PageHeader({
       )}
 
       <div className="lift-in relative overflow-hidden rounded-2xl border border-line bg-surface">
-        <div className={cn("h-[3px] w-full", RULE[tone])} aria-hidden="true" />
+        <div className={cn("h-[3px] w-full", rule)} aria-hidden="true" />
         <div
-          className={cn(
-            "bg-gradient-to-br px-5 py-5 sm:px-6 sm:py-6",
-            WASH[tone],
-          )}
+          className={cn("bg-gradient-to-br px-5 py-5 sm:px-6 sm:py-6", wash)}
         >
           {monogram && (
             <span
@@ -89,7 +97,7 @@ export function PageHeader({
                 <div
                   className={cn(
                     "text-[10px] font-bold uppercase tracking-[0.11em]",
-                    EYEBROW[tone],
+                    eyebrowColor,
                   )}
                 >
                   {eyebrow}
