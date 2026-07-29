@@ -11,7 +11,11 @@ import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  SESSION_STATUS,
+  USER_STATUS,
+} from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
@@ -126,7 +130,7 @@ export default async function MentorHomePage({
 
   // A mentor's students are the ones an admin allocated hours to FROM this
   // mentor; sessions the mentor logs draw those allocations down.
-  const [assignments, allocations, mySessionSums, delivered, myMeetings] =
+  const [assignments, allocations, mySessionSums, delivered, myMeetings, myGoals] =
     await Promise.all([
       mentorAssignments(user.id),
       prisma.hourAllocation.findMany({
@@ -150,7 +154,28 @@ export default async function MentorHomePage({
         _count: true,
       }),
       recentMeetings({ mentorId: user.id, take: 8 }),
+      // Goals an admin assigned to THIS mentor; a session must name one.
+      prisma.assignment.findMany({
+        where: { mentorId: user.id },
+        orderBy: [{ studentId: "asc" }, { position: "asc" }],
+        select: { id: true, studentId: true, purpose: true, progress: true },
+      }),
     ]);
+
+  const goalsByStudent = new Map<string, { value: string; label: string }[]>();
+  for (const g of myGoals) {
+    const list = goalsByStudent.get(g.studentId) ?? [];
+    // Done goals stay pickable: a mentor may log a final session for work an
+    // admin has already ticked off, and hiding it would strand those hours.
+    list.push({
+      value: g.id,
+      label:
+        g.progress === ASSIGNMENT_PROGRESS.DONE
+          ? `${g.purpose} (done)`
+          : g.purpose,
+    });
+    goalsByStudent.set(g.studentId, list);
+  }
 
   const usedByStudent = new Map<string, number>();
   const missedByStudent = new Map<string, number>();
@@ -411,6 +436,7 @@ export default async function MentorHomePage({
           .map((s) => ({
             profileId: s.profile.id,
             label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
+            goals: goalsByStudent.get(s.profile.id) ?? [],
           }))}
       />
     </div>

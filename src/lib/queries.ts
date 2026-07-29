@@ -113,7 +113,7 @@ export async function studentLedger(studentProfileId: string) {
   const [sessions, assignments] = await Promise.all([
     prisma.session.findMany({
       where: { studentId: studentProfileId },
-      include: { mentor: true },
+      include: { mentor: true, assignment: { select: { id: true, purpose: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
     prisma.assignment.findMany({
@@ -122,7 +122,25 @@ export async function studentLedger(studentProfileId: string) {
       orderBy: { position: "asc" },
     }),
   ]);
-  return { sessions, assignments };
+
+  // Hours actually delivered against each goal, so a plan can be read against
+  // reality. ACTIVE only: voided sessions returned their hours.
+  const loggedByGoal = new Map<string, number>();
+  for (const session of sessions) {
+    if (!session.assignmentId || session.status !== SESSION_STATUS.ACTIVE) continue;
+    loggedByGoal.set(
+      session.assignmentId,
+      (loggedByGoal.get(session.assignmentId) ?? 0) + session.hours
+    );
+  }
+
+  return {
+    sessions,
+    assignments: assignments.map((a) => ({
+      ...a,
+      loggedHours: loggedByGoal.get(a.id) ?? 0,
+    })),
+  };
 }
 
 export type LedgerSession = Awaited<
@@ -150,6 +168,7 @@ export async function recentMeetings({
     include: {
       mentor: true,
       student: { include: { user: true } },
+      assignment: { select: { id: true, purpose: true } },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take,

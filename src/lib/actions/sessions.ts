@@ -42,9 +42,39 @@ async function remainingWith(
 }
 
 /**
- * Log a completed session. Draws down the hours the student holds with THIS
- * mentor (derived) and notifies them. Overdraw is allowed but flagged back
- * to the mentor.
+ * Resolve the goal a session is being logged against. Required: a mentor says
+ * which assigned piece of work the meeting went toward, so planned hours can be
+ * read against delivered ones. It must be one of the admin's assignments for
+ * THIS student naming THIS mentor as consultant — a mentor cannot log time
+ * against a colleague's goal, or against another student's.
+ */
+async function resolveGoal(
+  raw: FormDataEntryValue | null,
+  studentProfileId: string,
+  mentorId: string
+): Promise<{ id: string; purpose: string } | { error: string }> {
+  const id = String(raw ?? "").trim();
+  if (!id) {
+    return {
+      error:
+        "Pick the goal this session worked on. If none of your goals fit, ask an admin to assign one.",
+    };
+  }
+  const assignment = await prisma.assignment.findUnique({ where: { id } });
+  if (
+    !assignment ||
+    assignment.studentId !== studentProfileId ||
+    assignment.mentorId !== mentorId
+  ) {
+    return { error: "That goal isn't one of yours for this student." };
+  }
+  return { id: assignment.id, purpose: assignment.purpose };
+}
+
+/**
+ * Log a completed session against one of the mentor's assigned goals. Draws
+ * down the hours the student holds with THIS mentor (derived) and notifies
+ * them. Overdraw is allowed but flagged back to the mentor.
  */
 export async function logSession(
   _prev: ActionState,
@@ -104,11 +134,21 @@ export async function logSession(
     };
   }
 
+  // Checked after the allocation, so a mentor with no hours for this student
+  // hears about that first rather than being asked to pick a goal they can't use.
+  const goal = await resolveGoal(
+    formData.get("assignmentId"),
+    profile.id,
+    mentor.id
+  );
+  if ("error" in goal) return { ok: false, error: goal.error };
+
   await prisma.$transaction(async (tx) => {
     await tx.session.create({
       data: {
         studentId: profile.id,
         mentorId: mentor.id,
+        assignmentId: goal.id,
         hours: hoursParsed.value,
         date: dateParsed.value,
         attended,
@@ -121,8 +161,8 @@ export async function logSession(
         userId: profile.userId,
         type: NOTIFICATION_TYPES.SESSION_LOGGED,
         message: attended
-          ? `${mentor.name ?? mentor.email} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}.`
-          : `${mentor.name ?? mentor.email} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}. Those hours were still deducted.`,
+          ? `${mentor.name ?? mentor.email} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
+          : `${mentor.name ?? mentor.email} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`,
       },
     });
   });
@@ -153,8 +193,8 @@ async function findOwnActiveSession(mentorId: string, sessionId: string) {
 }
 
 /**
- * Edit a session the mentor logged in error (hours/date/task/note). The hour
- * delta flows through derived totals; the student is notified.
+ * Edit a session the mentor logged in error (goal/hours/date/task/note). The
+ * hour delta flows through derived totals; the student is notified.
  */
 export async function editSession(
   _prev: ActionState,
@@ -185,6 +225,17 @@ export async function editSession(
   const note = String(formData.get("note") ?? "").trim() || null;
   const attended = formData.get("attended") != null;
 
+  // The goal can be corrected here, but is not forced: sessions logged before
+  // goals existed have none, and re-picking one to fix a typo in the hours
+  // would be a strange thing to demand.
+  const rawGoal = String(formData.get("assignmentId") ?? "").trim();
+  let assignmentId = session.assignmentId;
+  if (rawGoal && rawGoal !== session.assignmentId) {
+    const goal = await resolveGoal(rawGoal, session.studentId, mentor.id);
+    if ("error" in goal) return { ok: false, error: goal.error };
+    assignmentId = goal.id;
+  }
+
   const attendanceChanged = attended !== session.attended;
   const attendanceNote = attendanceChanged
     ? attended
@@ -195,6 +246,7 @@ export async function editSession(
     await tx.session.update({
       where: { id: session.id },
       data: {
+        assignmentId,
         hours: hoursParsed.value,
         date: dateParsed.value,
         attended,

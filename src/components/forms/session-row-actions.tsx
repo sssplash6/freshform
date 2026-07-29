@@ -13,6 +13,7 @@ const inputClass =
  * confirms inline (no browser dialog). */
 export function SessionRowActions({
   session,
+  goals = [],
 }: {
   session: {
     id: string;
@@ -21,7 +22,10 @@ export function SessionRowActions({
     attended: boolean;
     task: string | null;
     note: string | null;
+    assignmentId: string | null;
   };
+  /** The mentor's goals for this session's student, so a mis-pick is fixable. */
+  goals?: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
@@ -52,6 +56,25 @@ export function SessionRowActions({
         <div className="rise-in mt-2 space-y-3 rounded-lg border border-line bg-canvas p-3">
           <form action={editAction} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="sessionId" value={session.id} />
+            {goals.length > 0 && (
+              <label className="block text-xs text-muted-fg">
+                Goal
+                <select
+                  name="assignmentId"
+                  defaultValue={session.assignmentId ?? ""}
+                  className={`${inputClass} block max-w-56`}
+                >
+                  {/* Blank keeps whatever the session already has, so correcting
+                      the hours never forces a goal onto older history. */}
+                  <option value="">Leave unchanged</option>
+                  {goals.map((g) => (
+                    <option key={g.value} value={g.value}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="block text-xs text-muted-fg">
               Hours
               <input

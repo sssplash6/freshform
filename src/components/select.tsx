@@ -20,6 +20,7 @@ export function Select({
   defaultValue = "",
   ariaLabel,
   required = true,
+  onChange,
 }: {
   name: string;
   options: SelectOption[];
@@ -27,6 +28,8 @@ export function Select({
   defaultValue?: string;
   ariaLabel: string;
   required?: boolean;
+  /** Notifies the parent when the choice changes, for dependent fields. */
+  onChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -52,6 +55,7 @@ export function Select({
   const choose = (v: string) => {
     setValue(v);
     setOpen(false);
+    onChange?.(v);
   };
 
   return (

@@ -10,7 +10,11 @@ import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { PageHeader } from "@/components/ui/page-header";
-import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  SESSION_STATUS,
+  USER_STATUS,
+} from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { deadlinePassed } from "@/lib/deadlines";
 import { formatDate, formatHours } from "@/lib/format";
@@ -167,6 +171,15 @@ export default async function MentorStudentDetailPage({
             {
               profileId: profile.id,
               label: `${profile.user.name ?? profile.user.email} · ${formatHours(remaining)}h left with you`,
+              goals: ledger.assignments
+                .filter((a) => a.mentorId === mentor.id)
+                .map((a) => ({
+                  value: a.id,
+                  label:
+                    a.progress === ASSIGNMENT_PROGRESS.DONE
+                      ? `${a.purpose} (done)`
+                      : a.purpose,
+                })),
             },
           ]}
         />

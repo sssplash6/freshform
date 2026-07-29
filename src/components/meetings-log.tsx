@@ -23,6 +23,8 @@ export type LoggedMeeting = {
   mentor: { id: string; name: string | null; email: string };
   /** Present only on cross-student logs, where a Student column is needed. */
   student?: { id: string; user: { name: string | null; email: string } } | null;
+  /** The assigned goal this meeting went toward; null on pre-goals history. */
+  assignment?: { id: string; purpose: string } | null;
 };
 
 /**
@@ -61,6 +63,7 @@ export function MeetingsLog({
     ...(withStudent ? [{ label: "Student" } as Column] : []),
     { label: "Duration", align: "right" },
     { label: "Date" },
+    { label: "Goal" },
     { label: "Notes" },
   ];
 
@@ -139,6 +142,17 @@ export function MeetingsLog({
                   className={`whitespace-nowrap tabular-nums ${voided ? "text-muted-fg" : "text-ink"}`}
                 >
                   {formatDate(s.date)}
+                </Td>
+                <Td className="max-w-56">
+                  {s.assignment ? (
+                    <span
+                      className={`text-plan-ink ${voided ? "opacity-55" : ""}`}
+                    >
+                      {s.assignment.purpose}
+                    </span>
+                  ) : (
+                    <span className="text-muted-fg">—</span>
+                  )}
                 </Td>
                 <Td className="max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>

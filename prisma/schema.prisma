@@ -139,6 +139,7 @@ model Assignment {
   student   StudentProfile @relation(fields: [studentId], references: [id])
   mentor    User           @relation("AssignmentMentor", fields: [mentorId], references: [id])
   createdBy User           @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  sessions  Session[]
 
   @@index([studentId, position])
 }
@@ -170,6 +171,11 @@ model Session {
   id        String   @id @default(cuid())
   studentId String
   mentorId  String
+  // Which assigned goal this meeting went toward. REQUIRED when logging a new
+  // session (enforced in logSession) but nullable in the column, so the
+  // sessions logged before goals existed keep their history instead of being
+  // backfilled with a guess.
+  assignmentId String?
   hours     Float
   date      DateTime
   attended  Boolean  @default(true) // was the student present? false = no-show; the hours are still charged but tallied as "missed"
@@ -179,8 +185,13 @@ model Session {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  student StudentProfile @relation(fields: [studentId], references: [id])
-  mentor  User           @relation("SessionMentor", fields: [mentorId], references: [id])
+  student    StudentProfile @relation(fields: [studentId], references: [id])
+  mentor     User           @relation("SessionMentor", fields: [mentorId], references: [id])
+  // SetNull, not Cascade: deleting a goal must never delete the hours that were
+  // already delivered against it. The session survives, minus its goal.
+  assignment Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId])
 }
 
 // Audit log of admin changes to a student's per-mentor hour allocation.

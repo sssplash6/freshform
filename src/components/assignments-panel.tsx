@@ -43,6 +43,7 @@ export function AssignmentsPanel({
   manage?: boolean;
 }) {
   const planned = assignments.reduce((sum, a) => sum + (a.hourLimit ?? 0), 0);
+  const logged = assignments.reduce((sum, a) => sum + a.loggedHours, 0);
   const done = assignments.filter(
     (a) => a.progress === ASSIGNMENT_PROGRESS.DONE,
   ).length;
@@ -51,6 +52,7 @@ export function AssignmentsPanel({
   const columns: Column[] = [
     { label: "Purpose" },
     { label: "Consultant" },
+    { label: "Logged", align: "right" },
     { label: "Hour limit", align: "right" },
     { label: "Timeline" },
     { label: "Progress" },
@@ -93,6 +95,20 @@ export function AssignmentsPanel({
                   <Td>
                     <PersonChip person={a.mentor} size="sm" />
                   </Td>
+                  {/* Hours mentors actually logged against this goal. Amber once
+                      they pass the budget: overspend is warned, never blocked. */}
+                  <Td
+                    align="right"
+                    className={`tabular-nums ${
+                      a.hourLimit != null && a.loggedHours > a.hourLimit
+                        ? "font-semibold text-amber-700"
+                        : a.loggedHours > 0
+                          ? "text-ink"
+                          : "text-muted-fg"
+                    }`}
+                  >
+                    {a.loggedHours > 0 ? formatHours(a.loggedHours) : "—"}
+                  </Td>
                   <Td align="right" className="font-semibold tabular-nums text-ink">
                     {a.hourLimit == null ? (
                       <span className="font-normal text-muted-fg">—</span>
@@ -131,9 +147,13 @@ export function AssignmentsPanel({
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas px-4 py-3 text-xs sm:px-5">
             <span className="text-muted-fg">
               <span className="font-semibold tabular-nums text-ink">
+                {formatHours(logged)}
+              </span>{" "}
+              hours logged against{" "}
+              <span className="font-semibold tabular-nums text-ink">
                 {formatHours(planned)}
               </span>{" "}
-              hours planned against{" "}
+              planned, of{" "}
               <span className="font-semibold tabular-nums text-ink">
                 {formatHours(hoursAllotted)}
               </span>{" "}

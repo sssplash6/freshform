@@ -36,9 +36,25 @@ export default async function MentorSessionsPage({
 
   const sessions = await prisma.session.findMany({
     where: { mentorId: user.id },
-    include: { student: { include: { user: true, program: true, cohort: true } } },
+    include: {
+      student: { include: { user: true, program: true, cohort: true } },
+      assignment: { select: { id: true, purpose: true } },
+    },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
+
+  // This mentor's goals per student, so a session's goal can be corrected here.
+  const myGoals = await prisma.assignment.findMany({
+    where: { mentorId: user.id },
+    orderBy: [{ studentId: "asc" }, { position: "asc" }],
+    select: { id: true, studentId: true, purpose: true },
+  });
+  const goalsByStudent = new Map<string, { value: string; label: string }[]>();
+  for (const g of myGoals) {
+    const list = goalsByStudent.get(g.studentId) ?? [];
+    list.push({ value: g.id, label: g.purpose });
+    goalsByStudent.set(g.studentId, list);
+  }
 
   // Filter choices come from the sessions themselves, so a mentor only ever
   // sees students/programs they actually logged sessions with.
@@ -215,7 +231,9 @@ export default async function MentorSessionsPage({
                                 attended: s.attended,
                                 task: s.task,
                                 note: s.note,
+                                assignmentId: s.assignmentId,
                               }}
+                              goals={goalsByStudent.get(s.studentId) ?? []}
                             />
                           )}
                         </td>
