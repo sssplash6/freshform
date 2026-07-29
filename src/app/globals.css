@@ -21,6 +21,57 @@
   --color-ink: #1a2733; /* primary text */
   --color-muted-fg: #6b7480; /* secondary text */
 
+  /* ---- Panel identity ------------------------------------------------- *
+   * The student ledger has two halves with two different owners, and the
+   * spreadsheet it replaces already colored them apart. Amber = the meetings
+   * log, which mentors fill in by logging sessions. Violet = the plan, which
+   * only an admin assigns. The hue tells you who owns the half before you
+   * read a word of it. */
+  --color-log-soft: #fdf3de;
+  --color-log-line: #f2dcb0;
+  --color-log-ink: #8a5a08;
+
+  --color-plan-soft: #efecfd;
+  --color-plan-line: #dbd4fa;
+  --color-plan-ink: #5638cf;
+
+  /* ---- Person identity ------------------------------------------------ *
+   * A stable color per mentor, assigned by hashing their id (see
+   * lib/person-tone.ts). Tables of sessions are read by WHO first, so the
+   * name carries a color the eye can track down a column. Tints are muted on
+   * purpose: eight saturated crayons would look like a toy. */
+  --color-tone-violet-soft: #ece9fd;
+  --color-tone-violet-ink: #5334cc;
+  --color-tone-violet-dot: #6d4ee0;
+
+  --color-tone-teal-soft: #daf2ec;
+  --color-tone-teal-ink: #0d6f5f;
+  --color-tone-teal-dot: #12977f;
+
+  --color-tone-amber-soft: #fceecf;
+  --color-tone-amber-ink: #8c5205;
+  --color-tone-amber-dot: #d9860b;
+
+  --color-tone-rose-soft: #fce7ec;
+  --color-tone-rose-ink: #ab2145;
+  --color-tone-rose-dot: #d94065;
+
+  --color-tone-indigo-soft: #e4ebfd;
+  --color-tone-indigo-ink: #2745ad;
+  --color-tone-indigo-dot: #3c66e0;
+
+  --color-tone-lime-soft: #e8f3d3;
+  --color-tone-lime-ink: #4a6d11;
+  --color-tone-lime-dot: #6f9e1f;
+
+  --color-tone-cyan-soft: #d9eff7;
+  --color-tone-cyan-ink: #0b6180;
+  --color-tone-cyan-dot: #1589b0;
+
+  --color-tone-plum-soft: #f5e5f5;
+  --color-tone-plum-ink: #862880;
+  --color-tone-plum-dot: #a93a9e;
+
   /* Elevation is rare and quiet. When a surface lifts (hovered island, menu),
      the shadow is tinted toward the brand blue, never flat black — softer and
      on-brand than a default grey drop shadow. */
@@ -115,6 +166,43 @@ body {
   }
 }
 
+/* Entrance choreography for lists and table rows. Real keyframes rather than
+   @starting-style, because these run on first paint of a server-rendered page.
+   Callers stagger them with an inline animation-delay (~24ms per row), so a
+   long log reads as dealt out in order instead of appearing as a wall. */
+@keyframes deal-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+@utility deal-in {
+  animation: deal-in 400ms var(--ease-out-strong) both;
+}
+
+/* A panel arriving as a block: slightly further, slightly slower than a row. */
+@keyframes lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@utility lift-in {
+  animation: lift-in 500ms var(--ease-out-strong) both;
+}
+
+/* Meters grow from empty to their value once, on load: the bar is the one
+   place motion carries meaning (hours being spent), not just arrival. */
+@keyframes meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@utility meter-fill {
+  transform-origin: left center;
+  animation: meter-fill 900ms var(--ease-in-out-strong) both;
+}
+
 /* Attention nudge: a hint that bounces when an action is tapped too early. */
 @keyframes hint-bounce {
   0%,
@@ -135,12 +223,15 @@ body {
   animation: hint-bounce 450ms var(--ease-out-strong);
 }
 
-/* Reduced motion: keep state changes instant instead of animated. */
+/* Reduced motion: keep state changes instant instead of animated. Staggered
+   delays are zeroed too — otherwise a row with a 300ms delay and a 0.01ms
+   animation just sits invisible for 300ms and then pops in. */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
   ::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }

@@ -4,13 +4,19 @@ const TONES = {
   green: { chip: "bg-green-50 text-green-700", dot: "bg-green-500" },
   gray: { chip: "bg-canvas text-muted-fg", dot: "bg-muted-fg" },
   amber: { chip: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
+  red: { chip: "bg-red-50 text-red-700", dot: "bg-red-500" },
+  // Work in flight, distinct from "done" green and from amber's "needs
+  // attention" — a violet dot ties it to the plan half of the ledger.
+  violet: { chip: "bg-plan-soft text-plan-ink", dot: "bg-plan-ink" },
 } as const;
+
+export type ChipTone = keyof typeof TONES;
 
 export function Chip({
   tone,
   children,
 }: {
-  tone: keyof typeof TONES;
+  tone: ChipTone;
   children: React.ReactNode;
 }) {
   const t = TONES[tone];

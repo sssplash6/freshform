@@ -1,28 +1,48 @@
-/** One number in a dashboard's stat strip. */
+import { cn } from "@/lib/cn";
+
+const VALUE = {
+  default: "text-ink",
+  brand: "text-accent-ink",
+  danger: "text-red-700",
+  muted: "text-muted-fg",
+} as const;
+
+/**
+ * One number in a dashboard's stat strip. `lead` marks the single number the
+ * page is really about (hours remaining, usually) and renders it a step
+ * larger: a strip where every number is the same size has no hierarchy, so the
+ * eye has to read all of them to find the one that matters.
+ */
 export function StatCard({
   label,
   value,
+  suffix,
   tone = "default",
+  lead = false,
 }: {
   label: string;
   value: string;
-  tone?: "default" | "brand" | "danger";
+  suffix?: string;
+  tone?: keyof typeof VALUE;
+  lead?: boolean;
 }) {
-  const valueClass =
-    tone === "danger"
-      ? "text-red-700"
-      : tone === "brand"
-        ? "text-accent-ink"
-        : "text-ink";
-
   return (
     <div>
       <div
-        className={`text-3xl font-bold leading-none tabular-nums ${valueClass}`}
+        className={cn(
+          "font-bold leading-none tracking-tight tabular-nums",
+          lead ? "text-[42px]" : "text-3xl",
+          VALUE[tone],
+        )}
       >
         {value}
+        {suffix && (
+          <span className="ml-1 text-base font-semibold tracking-normal text-muted-fg">
+            {suffix}
+          </span>
+        )}
       </div>
-      <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-fg">
+      <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-fg">
         {label}
       </div>
     </div>
@@ -32,7 +52,7 @@ export function StatCard({
 /** The numbers as one quiet strip between hairlines — no tile boxes. */
 export function StatCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap gap-x-14 gap-y-5 border-y border-line px-1 py-6">
+    <div className="flex flex-wrap items-end gap-x-12 gap-y-5 border-y border-line px-1 py-6">
       {children}
     </div>
   );
