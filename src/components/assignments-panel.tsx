@@ -23,7 +23,9 @@ const PROGRESS_TONE: Record<string, ChipTone> = {
  * students read the same rows without the ⋮ controls.
  *
  * Finished rows carry a green wash, the way they were highlighted in the sheet,
- * so the remaining work is what stands out.
+ * so the remaining work is what stands out. Progress normally follows the hours
+ * logged against a goal; a row an admin has stated by hand reads "pinned",
+ * which is the only reason hours would stop moving it.
  *
  * `hoursAllotted` is the hours actually granted across the student's mentors.
  * Comparing it against the planned total is the whole point of showing both
@@ -120,9 +122,20 @@ export function AssignmentsPanel({
                     {a.timeline ?? <span className="text-muted-fg">—</span>}
                   </Td>
                   <Td>
-                    <Chip tone={PROGRESS_TONE[a.progress] ?? "gray"}>
-                      {ASSIGNMENT_PROGRESS_LABELS[a.progress] ?? a.progress}
-                    </Chip>
+                    <span className="flex items-center gap-1.5">
+                      <Chip tone={PROGRESS_TONE[a.progress] ?? "gray"}>
+                        {ASSIGNMENT_PROGRESS_LABELS[a.progress] ?? a.progress}
+                      </Chip>
+                      {a.progressManual && (
+                        <span
+                          title="Set by hand — logged hours no longer move this"
+                          aria-label="Set by hand"
+                          className="text-[11px] text-muted-fg"
+                        >
+                          pinned
+                        </span>
+                      )}
+                    </span>
                   </Td>
                   {manage && (
                     <Td align="right">
@@ -134,6 +147,7 @@ export function AssignmentsPanel({
                           hourLimit: a.hourLimit,
                           timeline: a.timeline,
                           progress: a.progress,
+                          progressManual: a.progressManual,
                         }}
                         mentors={mentors ?? []}
                       />

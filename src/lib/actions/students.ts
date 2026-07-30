@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+import { notify, notificationHref } from "@/lib/notify";
 import {
   canActAsMentor,
   NOTIFICATION_TYPES,
@@ -313,7 +314,7 @@ export async function completeOnboarding(
       where: { id: actor.id },
       data: { name },
     });
-    await tx.studentProfile.create({
+    const created = await tx.studentProfile.create({
       data: {
         userId: actor.id,
         programId: program.id,
@@ -322,12 +323,14 @@ export async function completeOnboarding(
         createdById: actor.id,
       },
     });
-    await tx.notification.createMany({
-      data: admins.map((admin) => ({
-        userId: admin.id,
-        type: NOTIFICATION_TYPES.STUDENT_SIGNUP,
-        message: `${name} (${actor.email}) signed up for ${enrollmentLabel(program.name, cohort?.name)} and is awaiting approval.`,
-      })),
+    await notify(tx, {
+      to: admins.map((admin) => admin.id),
+      type: NOTIFICATION_TYPES.STUDENT_SIGNUP,
+      actorId: actor.id,
+      // Straight at the approval screen: a signup that needs approving should
+      // be one click from the notice, not a search away.
+      href: notificationHref.adminStudent(created.id),
+      message: `${name} (${actor.email}) signed up for ${enrollmentLabel(program.name, cohort?.name)} and is awaiting approval.`,
     });
   });
 
@@ -376,12 +379,12 @@ export async function moveStudent(
       where: { id: profile.id },
       data: { programId: program.id, cohortId: cohort?.id ?? null },
     });
-    await tx.notification.create({
-      data: {
-        userId: profile.userId,
-        type: NOTIFICATION_TYPES.ENROLLMENT_MOVED,
-        message: `Your enrollment was moved from ${from} to ${to}. Your hours and session history came with you.`,
-      },
+    await notify(tx, {
+      to: [profile.userId],
+      type: NOTIFICATION_TYPES.ENROLLMENT_MOVED,
+      actorId: actor.id,
+      href: notificationHref.studentHome(),
+      message: `Your enrollment was moved from ${from} to ${to}. Your hours and session history came with you.`,
     });
   });
 
@@ -462,12 +465,12 @@ export async function approveStudent(
       where: { id: profile.userId },
       data: { status: USER_STATUS.ACTIVE },
     });
-    await tx.notification.create({
-      data: {
-        userId: profile.userId,
-        type: NOTIFICATION_TYPES.ACCOUNT_APPROVED,
-        message: `Your registration for ${enrollmentLabel(profile.program.name, profile.cohort?.name)} was approved. You'll be notified as mentor hours are allocated to you.`,
-      },
+    await notify(tx, {
+      to: [profile.userId],
+      type: NOTIFICATION_TYPES.ACCOUNT_APPROVED,
+      actorId: actor.id,
+      href: notificationHref.studentHome(),
+      message: `Your registration for ${enrollmentLabel(profile.program.name, profile.cohort?.name)} was approved. You'll be notified as mentor hours are allocated to you.`,
     });
   });
 
@@ -610,12 +613,12 @@ export async function setMentorAllocation(
       await tx.mentorAssignment.create({
         data: { mentorId, programId: profile.programId, cohortId: null },
       });
-      await tx.notification.create({
-        data: {
-          userId: mentorId,
-          type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
-          message: `You were assigned to ${profile.program.name}. Set your booking link on your mentor page so students there can book you.`,
-        },
+      await notify(tx, {
+        to: [mentorId],
+        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+        actorId: actor.id,
+        href: notificationHref.mentorHome(),
+        message: `You were assigned to ${profile.program.name}. Set your booking link on your mentor page so students there can book you.`,
       });
     }
     await tx.hourAllocation.upsert({
@@ -636,6 +639,13 @@ export async function setMentorAllocation(
       },
     });
     if (newHours !== oldHours) {
+      await notify(tx, {
+        to: [mentorId],
+        type: NOTIFICATION_TYPES.HOURS_GRANTED,
+        actorId: actor.id,
+        href: notificationHref.mentorStudent(profile.id),
+        message: `Your hours with ${profile.user.name ?? profile.user.email} are now ${formatHours(newHours)} (was ${formatHours(oldHours)}), to use by ${formatDate(deadline)}.`,
+      });
       await tx.hourAllotmentChange.create({
         data: {
           studentId: profile.id,
@@ -647,17 +657,17 @@ export async function setMentorAllocation(
       });
     }
     const delta = newHours - oldHours;
-    await tx.notification.create({
-      data: {
-        userId: profile.userId,
-        type: NOTIFICATION_TYPES.HOURS_GRANTED,
-        message:
-          delta > 0
-            ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).${deadlineNote}`
-            : delta < 0
-              ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
-              : `The deadline for your hours with ${mentorLabel} was updated to ${formatDate(deadline)}.`,
-      },
+    await notify(tx, {
+      to: [profile.userId],
+      type: NOTIFICATION_TYPES.HOURS_GRANTED,
+      actorId: actor.id,
+      href: notificationHref.studentHome(),
+      message:
+        delta > 0
+          ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).${deadlineNote}`
+          : delta < 0
+            ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
+            : `The deadline for your hours with ${mentorLabel} was updated to ${formatDate(deadline)}.`,
     });
   });
 
@@ -715,12 +725,12 @@ export async function removeMentorAllocation(
     await tx.hourAllocation.delete({
       where: { studentId_mentorId: { studentId: profileId, mentorId } },
     });
-    await tx.notification.create({
-      data: {
-        userId: allocation.student.userId,
-        type: NOTIFICATION_TYPES.HOURS_GRANTED,
-        message: `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`,
-      },
+    await notify(tx, {
+      to: [allocation.student.userId],
+      type: NOTIFICATION_TYPES.HOURS_GRANTED,
+      actorId: actor.id,
+      href: notificationHref.studentHome(),
+      message: `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`,
     });
   });
 

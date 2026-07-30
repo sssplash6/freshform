@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { notify, notificationHref } from "@/lib/notify";
 import { NOTIFICATION_TYPES, SESSION_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 
@@ -56,7 +57,8 @@ export async function ensureDeadlineReminders() {
 
     const stage = passed ? "PASSED_SENT" : "UPCOMING_SENT";
     // Nothing left to use — advance the stage silently, nobody needs a nudge.
-    const notify = remaining > 0;
+    // Only worth telling anyone when hours are actually at stake.
+    const worthSending = remaining > 0;
 
     await prisma.$transaction(async (tx) => {
       // Guard against a concurrent request sending the same reminder.
@@ -69,25 +71,25 @@ export async function ensureDeadlineReminders() {
         where: { id: a.id },
         data: { deadlineStage: stage },
       });
-      if (!notify) return;
+      if (!worthSending) return;
       remindersSent += 1;
-      await tx.notification.createMany({
-        data: [
-          {
-            userId: a.student.userId,
-            type: NOTIFICATION_TYPES.HOURS_DEADLINE,
-            message: passed
-              ? `Your ${date} deadline for hours with ${mentorLabel} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
-              : `Reminder: use your ${formatHours(remaining)} remaining hours with ${mentorLabel} by ${date}, or they expire.`,
-          },
-          {
-            userId: a.mentorId,
-            type: NOTIFICATION_TYPES.HOURS_DEADLINE,
-            message: passed
-              ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
-              : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
-          },
-        ],
+      // No actorId: these are the clock talking, not a person. Each side gets
+      // the destination that is theirs to act on.
+      await notify(tx, {
+        to: [a.student.userId],
+        type: NOTIFICATION_TYPES.HOURS_DEADLINE,
+        href: notificationHref.studentHome(),
+        message: passed
+          ? `Your ${date} deadline for hours with ${mentorLabel} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
+          : `Reminder: use your ${formatHours(remaining)} remaining hours with ${mentorLabel} by ${date}, or they expire.`,
+      });
+      await notify(tx, {
+        to: [a.mentorId],
+        type: NOTIFICATION_TYPES.HOURS_DEADLINE,
+        href: notificationHref.mentorStudent(a.studentId),
+        message: passed
+          ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
+          : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
       });
     });
   }

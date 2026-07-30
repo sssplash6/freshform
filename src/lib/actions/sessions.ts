@@ -11,6 +11,8 @@ import {
   USER_STATUS,
 } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
+import { syncGoalProgress } from "@/lib/goal-progress";
+import { adminIds, notify, notificationHref } from "@/lib/notify";
 import {
   parseDateField,
   parseHoursField,
@@ -143,7 +145,11 @@ export async function logSession(
   );
   if ("error" in goal) return { ok: false, error: goal.error };
 
-  await prisma.$transaction(async (tx) => {
+  const staff = await adminIds();
+  const mentorLabel = mentor.name ?? mentor.email;
+  const studentName = profile.user.name ?? profile.user.email;
+
+  const sync = await prisma.$transaction(async (tx) => {
     await tx.session.create({
       data: {
         studentId: profile.id,
@@ -156,28 +162,62 @@ export async function logSession(
         note,
       },
     });
-    await tx.notification.create({
-      data: {
-        userId: profile.userId,
-        type: NOTIFICATION_TYPES.SESSION_LOGGED,
-        message: attended
-          ? `${mentor.name ?? mentor.email} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
-          : `${mentor.name ?? mentor.email} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`,
-      },
+
+    // Progress follows the hours: this may move the goal to In progress, or
+    // finish it outright if the logged total reached its limit.
+    const synced = await syncGoalProgress(tx, goal.id);
+
+    await notify(tx, {
+      to: [profile.userId],
+      type: NOTIFICATION_TYPES.SESSION_LOGGED,
+      actorId: mentor.id,
+      href: notificationHref.studentHome(),
+      message: attended
+        ? `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
+        : `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`,
     });
+
+    // Staff watch delivery across every program, so a logged session is news
+    // to them as much as to the student.
+    await notify(tx, {
+      to: staff,
+      type: NOTIFICATION_TYPES.SESSION_LOGGED,
+      actorId: mentor.id,
+      href: notificationHref.adminStudent(profile.id),
+      message: attended
+        ? `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
+        : `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}").`,
+    });
+
+    if (synced?.becameDone) {
+      await notify(tx, {
+        to: staff,
+        type: NOTIFICATION_TYPES.GOAL_DONE,
+        actorId: mentor.id,
+        href: notificationHref.adminStudent(profile.id),
+        message: `"${goal.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
+      });
+    }
+    return synced;
   });
 
   revalidatePath("/", "layout");
 
   const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
-  const studentLabel = profile.user.name ?? profile.user.email;
   const noShowNote = attended ? "" : " Recorded as a no-show.";
+  // Tell the mentor what their own log just did to the goal, so an automatic
+  // status change is never a surprise they discover later.
+  const goalNote = sync?.becameDone
+    ? ` "${goal.purpose}" hit its ${formatHours(sync.hourLimit ?? 0)}-hour limit and is now marked done.`
+    : sync?.changed
+      ? ` "${goal.purpose}" is now in progress.`
+      : "";
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged.${noShowNote} Heads up: ${studentLabel} is now overdrawn by ${formatHours(-remaining)} hours with you.`
-        : `Session logged.${noShowNote} ${studentLabel} has ${formatHours(remaining)} hours left with you.`,
+        ? `Session logged.${noShowNote}${goalNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
+        : `Session logged.${noShowNote}${goalNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
   };
 }
 
@@ -242,6 +282,11 @@ export async function editSession(
       ? " Now marked as attended."
       : " Now marked as a no-show."
     : "";
+  const staff = await adminIds();
+  const mentorLabel = mentor.name ?? mentor.email;
+  const studentName = session.student.user.name ?? session.student.user.email;
+  const change = `now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)})`;
+
   await prisma.$transaction(async (tx) => {
     await tx.session.update({
       where: { id: session.id },
@@ -254,12 +299,29 @@ export async function editSession(
         note,
       },
     });
-    await tx.notification.create({
-      data: {
-        userId: session.student.userId,
-        type: NOTIFICATION_TYPES.SESSION_EDITED,
-        message: `${mentor.name ?? mentor.email} corrected a session: now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)}).${attendanceNote}`,
-      },
+
+    // Both goals: the hours left the old one and arrived at the new one, so each
+    // has to be re-derived. A goal that was auto-completed by these hours drops
+    // back to In progress on its own when they move away.
+    for (const id of new Set(
+      [session.assignmentId, assignmentId].filter((v): v is string => !!v)
+    )) {
+      await syncGoalProgress(tx, id);
+    }
+
+    await notify(tx, {
+      to: [session.student.userId],
+      type: NOTIFICATION_TYPES.SESSION_EDITED,
+      actorId: mentor.id,
+      href: notificationHref.studentHome(),
+      message: `${mentorLabel} corrected a session: ${change}.${attendanceNote}`,
+    });
+    await notify(tx, {
+      to: staff,
+      type: NOTIFICATION_TYPES.SESSION_EDITED,
+      actorId: mentor.id,
+      href: notificationHref.adminStudent(session.studentId),
+      message: `${mentorLabel} corrected a session with ${studentName}: ${change}.${attendanceNote}`,
     });
   });
 
@@ -286,17 +348,34 @@ export async function voidSession(
     };
   }
 
+  const staff = await adminIds();
+  const mentorLabel = mentor.name ?? mentor.email;
+  const studentName = session.student.user.name ?? session.student.user.email;
+
   await prisma.$transaction(async (tx) => {
     await tx.session.update({
       where: { id: session.id },
       data: { status: SESSION_STATUS.VOIDED },
     });
-    await tx.notification.create({
-      data: {
-        userId: session.student.userId,
-        type: NOTIFICATION_TYPES.SESSION_VOIDED,
-        message: `${mentor.name ?? mentor.email} voided the ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in your balance.`,
-      },
+
+    // Voiding returns the hours, so a goal these hours had completed reopens.
+    if (session.assignmentId) {
+      await syncGoalProgress(tx, session.assignmentId);
+    }
+
+    await notify(tx, {
+      to: [session.student.userId],
+      type: NOTIFICATION_TYPES.SESSION_VOIDED,
+      actorId: mentor.id,
+      href: notificationHref.studentHome(),
+      message: `${mentorLabel} voided the ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in your balance.`,
+    });
+    await notify(tx, {
+      to: staff,
+      type: NOTIFICATION_TYPES.SESSION_VOIDED,
+      actorId: mentor.id,
+      href: notificationHref.adminStudent(session.studentId),
+      message: `${mentorLabel} voided a ${formatHours(session.hours)}-hour session with ${studentName} from ${formatDate(session.date)}; the hours went back.`,
     });
   });
 

@@ -6,10 +6,15 @@ import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import {
   ASSIGNMENT_PROGRESS,
+  ASSIGNMENT_PROGRESS_AUTO,
   ASSIGNMENT_PROGRESS_LABELS,
   canActAsMentor,
+  NOTIFICATION_TYPES,
   ROLES,
 } from "@/lib/constants";
+import { formatHours } from "@/lib/format";
+import { syncGoalProgress } from "@/lib/goal-progress";
+import { notify, notificationHref } from "@/lib/notify";
 import { parseHoursField, type ActionState } from "@/lib/actions/shared";
 
 /**
@@ -101,20 +106,38 @@ export async function createAssignment(
     select: { position: true },
   });
 
-  await prisma.assignment.create({
-    data: {
-      studentId,
-      mentorId,
-      ...fields,
-      position: (last?.position ?? -1) + 1,
-      createdById: actor.id,
-    },
+  const studentName = student.user.name ?? student.user.email;
+  const budget =
+    fields.hourLimit != null ? ` ${formatHours(fields.hourLimit)} hours` : "";
+  const by = fields.timeline ? ` by ${fields.timeline}` : "";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.create({
+      data: {
+        studentId,
+        mentorId,
+        ...fields,
+        // Progress the admin typed on the form is a starting state, not a pin:
+        // hours logged later still move it. Only setAssignmentProgress pins.
+        progressManual: false,
+        position: (last?.position ?? -1) + 1,
+        createdById: actor.id,
+      },
+    });
+    // The whole point of assigning work is that the consultant finds out.
+    await notify(tx, {
+      to: [mentorId],
+      type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
+      actorId: actor.id,
+      href: notificationHref.mentorStudent(studentId),
+      message: `New goal for ${studentName}: "${fields.purpose}".${budget ? ` Budgeted${budget}${by}.` : by ? ` Due${by}.` : ""} Log your sessions against it.`,
+    });
   });
 
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `"${fields.purpose}" assigned to ${mentor.name ?? mentor.email}.`,
+    message: `"${fields.purpose}" assigned to ${mentor.name ?? mentor.email}, who has been notified.`,
   };
 }
 
@@ -141,9 +164,36 @@ export async function updateAssignment(
   const fields = parseFields(formData);
   if ("error" in fields) return { ok: false, error: fields.error };
 
-  await prisma.assignment.update({
-    where: { id },
-    data: { mentorId, ...fields },
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: existing.studentId },
+    include: { user: true },
+  });
+  const studentName = student
+    ? (student.user.name ?? student.user.email)
+    : "a student";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.update({
+      where: { id },
+      data: { mentorId, ...fields },
+    });
+
+    // Moving the hour limit can finish a goal outright or reopen it, so the
+    // derived progress is recomputed unless an admin has pinned it.
+    await syncGoalProgress(tx, id);
+
+    // Both consultants hear about a hand-off; notify() drops the actor, so an
+    // admin reassigning to themselves isn't told about their own change.
+    await notify(tx, {
+      to: [mentorId, existing.mentorId],
+      type: NOTIFICATION_TYPES.GOAL_CHANGED,
+      actorId: actor.id,
+      href: notificationHref.mentorStudent(existing.studentId),
+      message:
+        mentorId === existing.mentorId
+          ? `Your goal "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.timeline ? `, ${fields.timeline}` : ""}.`
+          : `"${fields.purpose}" for ${studentName} was reassigned.`,
+    });
   });
 
   revalidatePath("/", "layout");
@@ -165,22 +215,59 @@ export async function setAssignmentProgress(
 
   const id = String(formData.get("assignmentId") ?? "");
   const progress = String(formData.get("progress") ?? "");
-  if (!PROGRESS_VALUES.includes(progress)) {
+  // Not a state, a release: hand the goal back to its hours.
+  if (progress !== ASSIGNMENT_PROGRESS_AUTO && !PROGRESS_VALUES.includes(progress)) {
     return { ok: false, error: "Pick a progress state." };
   }
 
   const existing = await prisma.assignment.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Assignment not found." };
-  if (existing.progress === progress) {
+
+  if (progress === ASSIGNMENT_PROGRESS_AUTO) {
+    if (!existing.progressManual) {
+      return { ok: true, message: "This goal already follows its hours." };
+    }
+    const synced = await prisma.$transaction(async (tx) => {
+      await tx.assignment.update({
+        where: { id },
+        data: { progressManual: false },
+      });
+      return syncGoalProgress(tx, id);
+    });
+    revalidatePath("/", "layout");
+    const label = ASSIGNMENT_PROGRESS_LABELS[
+      synced?.to ?? existing.progress
+    ].toLowerCase();
+    return {
+      ok: true,
+      message: `"${existing.purpose}" follows its logged hours again, and reads as ${label}.`,
+    };
+  }
+
+  if (existing.progress === progress && existing.progressManual) {
     return { ok: true, message: "No change." };
   }
 
-  await prisma.assignment.update({ where: { id }, data: { progress } });
+  await prisma.$transaction(async (tx) => {
+    // Stating progress by hand PINS it. Work finished under budget is done even
+    // though the hours say otherwise, and later sessions must not reopen it.
+    await tx.assignment.update({
+      where: { id },
+      data: { progress, progressManual: true },
+    });
+    await notify(tx, {
+      to: [existing.mentorId],
+      type: NOTIFICATION_TYPES.GOAL_CHANGED,
+      actorId: actor.id,
+      href: notificationHref.mentorStudent(existing.studentId),
+      message: `An admin marked your goal "${existing.purpose}" as ${ASSIGNMENT_PROGRESS_LABELS[progress].toLowerCase()}.`,
+    });
+  });
 
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `"${existing.purpose}" is now ${ASSIGNMENT_PROGRESS_LABELS[progress].toLowerCase()}.`,
+    message: `"${existing.purpose}" is now ${ASSIGNMENT_PROGRESS_LABELS[progress].toLowerCase()} and pinned there. Hours logged later won't change it.`,
   };
 }
 
@@ -202,7 +289,16 @@ export async function deleteAssignment(
   const existing = await prisma.assignment.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Assignment not found." };
 
-  await prisma.assignment.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.delete({ where: { id } });
+    await notify(tx, {
+      to: [existing.mentorId],
+      type: NOTIFICATION_TYPES.GOAL_CHANGED,
+      actorId: actor.id,
+      href: notificationHref.mentorStudent(existing.studentId),
+      message: `The goal "${existing.purpose}" was removed from the plan. Sessions you already logged against it are kept.`,
+    });
+  });
 
   revalidatePath("/", "layout");
   return { ok: true, message: `"${existing.purpose}" removed from the plan.` };

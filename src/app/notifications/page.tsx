@@ -1,77 +1,69 @@
-import {
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/lib/actions/notifications";
+import { NotificationList } from "@/components/notification-list";
+import { markAllNotificationsRead } from "@/lib/actions/notifications";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { requireUser } from "@/lib/dal";
-import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+
+/** What this feed is for, in the words of the person reading it. */
+const BLURB: Record<string, string> = {
+  ADMIN:
+    "Sessions your mentors log, goals they finish, signups waiting on approval, and every change to a student's hours.",
+  DEPT_LEADER: "Changes to students and hours across your program.",
+  SALES: "Changes to students and hours across your program.",
+  MENTOR:
+    "Goals an admin assigns you, hours granted for your students, and deadlines coming up.",
+  STUDENT:
+    "Every session your mentors log, every change to your hours, and deadlines before they pass.",
+};
 
 export default async function NotificationsPage() {
   const user = await requireUser();
 
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id },
+    include: { actor: { select: { id: true, name: true, email: true } } },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
   const unread = notifications.filter((n) => !n.read).length;
+  const blurb = BLURB[user.role] ?? "Everything that changed for you.";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink">Notifications</h1>
-        {unread > 0 && (
-          <form action={markAllNotificationsRead}>
-            <button
-              type="submit"
-              className="rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
-            >
-              Mark all read ({unread})
-            </button>
-          </form>
-        )}
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        eyebrow={unread > 0 ? `${unread} unread` : "All caught up"}
+        title="Notifications"
+        subtitle={blurb}
+        tone={unread > 0 ? "warm" : "brand"}
+      />
 
-      {notifications.length === 0 ? (
-        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-          Nothing yet. You&apos;ll be notified here whenever your hours change.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {notifications.map((n) => (
-            <li
-              key={n.id}
-              className={`rounded-lg border p-3 text-sm ${
-                n.read
-                  ? "border-line bg-surface text-muted-fg"
-                  : "border-accent/40 bg-accent-soft text-ink"
-              }`}
-            >
-              <p>{n.message}</p>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-fg">
-                  {formatDateTime(n.createdAt)}
-                </p>
-                {!n.read && (
-                  <form action={markNotificationRead}>
-                    <input
-                      type="hidden"
-                      name="notificationId"
-                      value={n.id}
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-brand/40 px-2 py-0.5 text-xs font-medium text-brand transition-colors hover:bg-brand hover:text-white"
-                    >
-                      Mark read
-                    </button>
-                  </form>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <Panel tone={unread > 0 ? "total" : "neutral"}>
+        <PanelHeader
+          tone={unread > 0 ? "total" : "neutral"}
+          eyebrow="Newest first"
+          title={unread > 0 ? "New for you" : "Recent activity"}
+          action={
+            unread > 0 ? (
+              <form action={markAllNotificationsRead}>
+                <Button type="submit" variant="secondary" size="sm">
+                  Mark all read
+                </Button>
+              </form>
+            ) : undefined
+          }
+        />
+
+        {notifications.length === 0 ? (
+          <EmptyState framed={false} title="Nothing yet">
+            {blurb} It all lands here, newest first.
+          </EmptyState>
+        ) : (
+          <NotificationList notifications={notifications} />
+        )}
+      </Panel>
     </div>
   );
 }

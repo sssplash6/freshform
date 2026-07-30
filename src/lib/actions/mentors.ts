@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+import { notify, notificationHref } from "@/lib/notify";
 import {
   canActAsMentor,
   NOTIFICATION_TYPES,
@@ -133,12 +134,12 @@ export async function createMentor(
       })),
     });
     // Greets them on first sign-in.
-    await tx.notification.create({
-      data: {
-        userId: mentor.id,
-        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
-        message: `You were registered as a mentor in ${labels}. Set your booking link on your mentor page so students there can book you.`,
-      },
+    await notify(tx, {
+      to: [mentor.id],
+      type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+      actorId: actor.id,
+      href: notificationHref.mentorHome(),
+      message: `You were registered as a mentor in ${labels}. Set your booking link on your mentor page so students there can book you.`,
     });
   });
 
@@ -225,12 +226,12 @@ export async function updateMentor(
           cohortId: t.cohortId,
         })),
       });
-      await tx.notification.create({
-        data: {
-          userId: mentorId,
-          type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
-          message: `You were assigned to ${toCreate.map((t) => t.label).join(", ")}. Set your booking link on your mentor page so students there can book you.`,
-        },
+      await notify(tx, {
+        to: [mentorId],
+        type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+        actorId: actor.id,
+        href: notificationHref.mentorHome(),
+        message: `You were assigned to ${toCreate.map((t) => t.label).join(", ")}. Set your booking link on your mentor page so students there can book you.`,
       });
     }
     if (isPureMentor && remaining === 0 && mentor.status === USER_STATUS.ACTIVE) {

@@ -40,6 +40,7 @@ model User {
   allotmentChanges  HourAllotmentChange[] @relation("ChangedBy")
   allotmentMentions HourAllotmentChange[] @relation("ChangeMentor")
   notifications     Notification[]
+  causedNotifications Notification[]      @relation("NotificationActor")
   mentorFeedback    MentorFeedback[]      @relation("FeedbackMentor")
 }
 
@@ -128,7 +129,14 @@ model Assignment {
   purpose   String // what this work is: "Main essay", "Recommendation letters"
   hourLimit Float? // hours this piece of work should take; null = not budgeted
   timeline  String? // free text on purpose: the sheet holds both "Aug 7" and "Mar-May"
-  progress  String  @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | DONE
+  // NOT_STARTED | IN_PROGRESS | DONE. Normally DERIVED from hours logged against
+  // this goal (see lib/goal-progress.ts): the first session moves it to
+  // IN_PROGRESS, reaching hourLimit moves it to DONE.
+  progress String @default("NOT_STARTED")
+  // Set when an ADMIN states the progress by hand, which pins it: work finished
+  // under budget is done even though the hours say otherwise, and auto-sync must
+  // not quietly overrule a person. Cleared when the admin hands control back.
+  progressManual Boolean @default(false)
   // Ties a row to its place in the list, so reordering never depends on
   // createdAt and two rows added in the same second keep a stable order.
   position    Int
@@ -209,15 +217,29 @@ model HourAllotmentChange {
   changedBy User           @relation("ChangedBy", fields: [changedById], references: [id])
 }
 
+// One thing that happened, addressed to one person. See lib/notify.ts — every
+// producer goes through it rather than writing this table directly.
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String // e.g. HOURS_GRANTED | SESSION_LOGGED | SESSION_VOIDED | SESSION_EDITED
-  message   String
+  id      String @id @default(cuid())
+  userId  String
+  type    String // see NOTIFICATION_TYPES in lib/constants.ts
+  message String
+  // Where this notification is ABOUT. Without it a reader learns that something
+  // happened and then has to go hunt for the student it happened to.
+  href String?
+  // Who caused it, when that was a person: shown as their identity chip so a
+  // list of events is scannable by who did them. Null for system notices like
+  // deadline reminders.
+  actorId   String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  // SetNull so removing a staff account never deletes the history of what they
+  // did; the notification survives without its chip.
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
 }
 
 model MentorFeedback {

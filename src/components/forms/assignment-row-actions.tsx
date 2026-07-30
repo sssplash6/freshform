@@ -18,7 +18,11 @@ import {
   setAssignmentProgress,
   updateAssignment,
 } from "@/lib/actions/assignments";
-import { ASSIGNMENT_PROGRESS, ASSIGNMENT_PROGRESS_LABELS } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  ASSIGNMENT_PROGRESS_AUTO,
+  ASSIGNMENT_PROGRESS_LABELS,
+} from "@/lib/constants";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand focus:outline-none";
@@ -38,6 +42,8 @@ type AssignmentFields = {
   hourLimit: number | null;
   timeline: string | null;
   progress: string;
+  /** True when an admin pinned the progress, so hours no longer move it. */
+  progressManual: boolean;
 };
 
 /**
@@ -156,10 +162,18 @@ export function AssignmentRowActions({
                 <div className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg">
                   Progress
                 </div>
+                <p className="mt-1 text-xs text-muted-fg">
+                  {assignment.progressManual
+                    ? "Set by hand, so logged hours no longer move it."
+                    : "Following the logged hours. Setting it here pins it."}
+                </p>
                 <form action={progressAction} className="mt-2 flex flex-wrap gap-1.5">
                   <input type="hidden" name="assignmentId" value={assignment.id} />
                   {PROGRESS_ORDER.map((p) => {
-                    const current = p === assignment.progress;
+                    // "Current" only disables when pinned there: on an automatic
+                    // goal, clicking its present state is how you pin it.
+                    const current =
+                      p === assignment.progress && assignment.progressManual;
                     return (
                       <button
                         key={p}
@@ -178,6 +192,17 @@ export function AssignmentRowActions({
                       </button>
                     );
                   })}
+                  {assignment.progressManual && (
+                    <button
+                      type="submit"
+                      name="progress"
+                      value={ASSIGNMENT_PROGRESS_AUTO}
+                      disabled={progressPending}
+                      className="rounded-lg border border-dashed border-line px-2.5 py-1.5 text-xs font-medium text-muted-fg transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
+                    >
+                      Follow hours
+                    </button>
+                  )}
                 </form>
                 <ActionFeedback state={progressState} />
 

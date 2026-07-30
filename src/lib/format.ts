@@ -40,6 +40,24 @@ export function toDateInputValue(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * How long ago, for a feed where "2h ago" beats a timestamp you have to
+ * subtract in your head. Falls back to the calendar date past a week, since
+ * "23 days ago" is harder to place than "Jul 7".
+ */
+export function formatAgo(d: Date, now: Date = new Date()): string {
+  const seconds = Math.max(0, Math.round((now.getTime() - d.getTime()) / 1000));
+  if (seconds < 45) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return formatDate(d);
+}
+
 /** Timestamps (notifications, audit entries): "8 Jul 2026, 14:32 UTC". */
 export function formatDateTime(d: Date): string {
   const hh = String(d.getUTCHours()).padStart(2, "0");
