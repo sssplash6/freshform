@@ -29,12 +29,12 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
     <Panel tone="total">
       <PanelHeader
         tone="total"
-        eyebrow="Granted by an admin"
-        title="Your hours with each mentor"
+        eyebrow="Your team"
+        title="Hours with each mentor"
         caption={
           items.length === 0
             ? undefined
-            : `${items.length} mentor${items.length === 1 ? "" : "s"}`
+            : `${items.length} mentor${items.length === 1 ? "" : "s"} working with you`
         }
       />
       {items.length === 0 ? (

@@ -191,6 +191,29 @@ body {
   animation: lift-in 500ms var(--ease-out-strong) both;
 }
 
+/* A progress ring drawing itself once, on load. The from-state is the full
+   circumference (an empty ring) and the element's own stroke-dashoffset is the
+   target, so the arc sweeps to its value. Pure CSS: no JS, works server-rendered. */
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-circumference);
+  }
+}
+@utility ring-draw {
+  animation: ring-draw 1100ms var(--ease-out-strong) both;
+}
+
+/* Bars that grow from their left edge. Same idea as the ring, for goal cards. */
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@utility bar-grow {
+  transform-origin: left center;
+  animation: bar-grow 800ms var(--ease-out-strong) both;
+}
+
 /* Attention nudge: a hint that bounces when an action is tapped too early. */
 @keyframes hint-bounce {
   0%,
