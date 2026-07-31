@@ -20,9 +20,12 @@ export function Chip({
   children: React.ReactNode;
 }) {
   const t = TONES[tone];
+  // tracking-normal on purpose: a chip often sits inside a heading, and the
+  // heading's tracking-tight squeezes 12px label text that was never meant to
+  // carry it.
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${t.chip}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium tracking-normal ${t.chip}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} aria-hidden="true" />
       {children}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ChevronDownIcon } from "@/components/icons";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/format";
 
@@ -163,13 +164,16 @@ function Row({
   className?: string;
 }) {
   return (
+    // items-start, so opening the custom range grows the row downward instead
+    // of nudging every pill beside it. leading-9 keeps the label on the pills'
+    // centre line.
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5",
+        "flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-5",
         className
       )}
     >
-      <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-[0.11em] text-muted-fg">
+      <span className="w-14 shrink-0 text-[10px] font-bold uppercase leading-9 tracking-[0.11em] text-muted-fg">
         {label}
       </span>
       {children}
@@ -225,63 +229,85 @@ export function MentorHoursFilter({
       )}
 
       <Row label="Period">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="flex flex-wrap gap-1.5">
-            {/* A preset replaces a typed range, so these drop from/to. */}
+        <div className="flex flex-wrap items-start gap-1.5">
+          {/* A preset replaces a typed range, so these drop from/to. */}
+          <Pill
+            href={href(base, { program: programId })}
+            active={win.active === "all"}
+          >
+            All time
+          </Pill>
+          {PERIODS.map((p) => (
             <Pill
-              href={href(base, { program: programId })}
-              active={win.active === "all"}
+              key={p.value}
+              href={href(base, { program: programId, period: p.value })}
+              active={win.active === p.value}
             >
-              All time
+              {p.label}
             </Pill>
-            {PERIODS.map((p) => (
-              <Pill
-                key={p.value}
-                href={href(base, { program: programId, period: p.value })}
-                active={win.active === p.value}
-              >
-                {p.label}
-              </Pill>
-            ))}
-          </div>
+          ))}
 
-          <form method="get" action={base} className="flex items-center gap-1.5">
-            {programId && (
-              <input type="hidden" name="program" value={programId} />
-            )}
-            <input
-              type="date"
-              name="from"
-              defaultValue={win.fromValue}
-              aria-label="Hours from"
-              className={dateInput}
-            />
-            <span aria-hidden="true" className="text-muted-fg">
-              –
-            </span>
-            <input
-              type="date"
-              name="to"
-              defaultValue={win.toValue}
-              aria-label="Hours to"
-              className={dateInput}
-            />
-            {/* Matches the secondary button, sized to the pills beside it. */}
-            <button
-              type="submit"
-              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-brand/80 px-3.5 text-[13px] font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+          {/*
+            A native disclosure: two date fields are a rarely-wanted control, so
+            they stay folded behind their own pill until asked for — and open by
+            default when a typed range IS what the page is showing. Still no
+            client JS; any pill or Apply navigates, which closes it again.
+          */}
+          <details open={custom} className="group">
+            <summary
+              className={cn(
+                "inline-flex h-9 cursor-pointer list-none items-center whitespace-nowrap rounded-full border px-3.5 text-[13px] font-medium transition-colors [&::-webkit-details-marker]:hidden",
+                custom
+                  ? "border-brand bg-brand text-white"
+                  : "border-line bg-surface text-muted-fg hover:border-brand/40 hover:text-ink"
+              )}
             >
-              Apply
-            </button>
-            {custom && (
-              <Link
-                href={href(base, { program: programId })}
-                className="px-1 text-[13px] font-medium text-muted-fg hover:text-ink"
+              {custom ? win.label : "Custom range"}
+              <ChevronDownIcon className="ml-1.5 h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+            </summary>
+
+            <form
+              method="get"
+              action={base}
+              className="rise-in mt-2 flex flex-wrap items-center gap-1.5"
+            >
+              {programId && (
+                <input type="hidden" name="program" value={programId} />
+              )}
+              <input
+                type="date"
+                name="from"
+                defaultValue={win.fromValue}
+                aria-label="Hours from"
+                className={dateInput}
+              />
+              <span aria-hidden="true" className="text-muted-fg">
+                –
+              </span>
+              <input
+                type="date"
+                name="to"
+                defaultValue={win.toValue}
+                aria-label="Hours to"
+                className={dateInput}
+              />
+              {/* Matches the secondary button, sized to the pills beside it. */}
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-brand/80 px-3.5 text-[13px] font-medium text-brand transition-colors hover:bg-brand hover:text-white"
               >
-                Clear
-              </Link>
-            )}
-          </form>
+                Apply
+              </button>
+              {custom && (
+                <Link
+                  href={href(base, { program: programId })}
+                  className="px-1 text-[13px] font-medium text-muted-fg hover:text-ink"
+                >
+                  Clear
+                </Link>
+              )}
+            </form>
+          </details>
         </div>
       </Row>
     </div>
