@@ -112,6 +112,7 @@ export default async function AdminProgramPage({
         title="Latest meetings"
         eyebrow={`Logged by mentors · ${program.name}`}
         emptyBody={`No sessions logged in ${program.name} yet.`}
+        mentorBase="/admin/mentors"
       />
 
       <Panel tone="total">
@@ -156,7 +157,11 @@ export default async function AdminProgramPage({
                 className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <PersonChip person={a.mentor} size="sm" />
+                  <PersonChip
+                    person={a.mentor}
+                    size="sm"
+                    href={`/admin/mentors/${a.mentor.id}`}
+                  />
                   {a.cohort && (
                     <span className="text-xs text-muted-fg">{a.cohort.name}</span>
                   )}

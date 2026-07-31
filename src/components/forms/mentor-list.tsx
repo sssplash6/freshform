@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
@@ -43,7 +44,12 @@ function MentorRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 font-medium text-ink">
-            {mentor.name ?? "—"}
+            <Link
+              href={`/admin/mentors/${mentor.id}`}
+              className="hover:text-brand"
+            >
+              {mentor.name ?? mentor.email}
+            </Link>
             {mentor.isAdmin && <Chip tone="green">Admin · also mentor</Chip>}
             {mentor.status === USER_STATUS.UNASSIGNED && (
               <Chip tone="amber">Unassigned</Chip>

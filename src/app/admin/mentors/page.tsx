@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { CreateMentorForm } from "@/components/forms/create-mentor-form";
 import { MentorList, type MentorListRow } from "@/components/forms/mentor-list";
 import { ROLES, USER_STATUS } from "@/lib/constants";
@@ -62,7 +64,12 @@ export default async function AdminMentorsPage() {
           <ul className="mt-2 space-y-1 text-sm text-ink">
             {unassigned.map((m) => (
               <li key={m.id}>
-                {m.name ?? "—"}{" "}
+                <Link
+                  href={`/admin/mentors/${m.id}`}
+                  className="font-medium hover:text-brand"
+                >
+                  {m.name ?? m.email}
+                </Link>{" "}
                 <span className="text-muted-fg">({m.email})</span> · signed up{" "}
                 {m.createdAt.toISOString().slice(0, 10)}
               </li>

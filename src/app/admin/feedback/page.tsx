@@ -50,7 +50,10 @@ export default async function AdminFeedbackPage() {
         <h2 className="mb-2 text-base font-semibold text-ink">
           Mentor feedback
         </h2>
-        <MentorFeedbackList feedback={mentorFeedback} />
+        <MentorFeedbackList
+          feedback={mentorFeedback}
+          mentorBase="/admin/mentors"
+        />
       </section>
 
       <section>

@@ -151,6 +151,7 @@ export default async function AdminHomePage() {
         title="Latest meetings"
         eyebrow="Logged by mentors · every program"
         emptyBody="As mentors log sessions across the programs, the newest ones land here."
+        mentorBase="/admin/mentors"
       />
 
       <section>

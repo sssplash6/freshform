@@ -151,6 +151,18 @@ export function programTone(position: number): ProgramTone {
   return PROGRAM_TONES[i % PROGRAM_TONES.length];
 }
 
+/**
+ * One person's own hue as a banner treatment, so a mentor's page opens in the
+ * colour their chip already carries in every table — you recognise whose page
+ * it is before reading the name.
+ *
+ * PROGRAM_TONES lists the same eight hues in the same order as TONES, so
+ * hashing an id through either lands on the same colour. Keep them in step.
+ */
+export function personBanner(id: string): ProgramTone {
+  return PROGRAM_TONES[hashIndex(id, PROGRAM_TONES.length)];
+}
+
 /** How many hues exist before they repeat — handy in tests and docs. */
 export const PROGRAM_TONE_COUNT = PROGRAM_TONES.length;
 

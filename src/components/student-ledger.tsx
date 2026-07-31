@@ -30,6 +30,7 @@ export function StudentLedger({
   mentors,
   manage = false,
   extraStats,
+  mentorBase,
 }: {
   sessions: LedgerSession[];
   assignments: LedgerAssignment[];
@@ -39,6 +40,8 @@ export function StudentLedger({
   manage?: boolean;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
+  /** Base path (admin only) that makes every mentor chip link to their page. */
+  mentorBase?: string;
 }) {
   return (
     <div className="space-y-6">
@@ -69,7 +72,7 @@ export function StudentLedger({
         {extraStats}
       </StatCardGrid>
 
-      <MeetingsLog sessions={sessions} />
+      <MeetingsLog sessions={sessions} mentorBase={mentorBase} />
 
       <AssignmentsPanel
         assignments={assignments}
@@ -77,6 +80,7 @@ export function StudentLedger({
         mentors={mentors}
         hoursAllotted={totals.allotted}
         manage={manage}
+        mentorBase={mentorBase}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AddMentorForm } from "@/components/forms/add-mentor-form";
@@ -132,6 +133,7 @@ export default async function AdminStudentDetailPage({
         studentProfileId={profile.id}
         mentors={mentorOptions}
         manage
+        mentorBase="/admin/mentors"
         extraStats={
           <>
             <StatCard
@@ -180,7 +182,11 @@ export default async function AdminStudentDetailPage({
                 style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
               >
                 <Td>
-                  <PersonChip person={m.mentor} size="sm" />
+                  <PersonChip
+                    person={m.mentor}
+                    size="sm"
+                    href={`/admin/mentors/${m.mentor.id}`}
+                  />
                 </Td>
                 <Td align="right" className="tabular-nums">
                   {formatHours(m.allocated)}
@@ -268,7 +274,13 @@ export default async function AdminStudentDetailPage({
                 </span>
                 <span>
                   {c.changedBy.name ?? c.changedBy.email} set hours with{" "}
-                  {c.mentor.name ?? c.mentor.email}:{" "}
+                  <Link
+                    href={`/admin/mentors/${c.mentor.id}`}
+                    className="font-medium text-ink hover:text-brand"
+                  >
+                    {c.mentor.name ?? c.mentor.email}
+                  </Link>
+                  :{" "}
                   <span className="tabular-nums">
                     {formatHours(c.oldHours)} → {formatHours(c.newHours)}
                   </span>

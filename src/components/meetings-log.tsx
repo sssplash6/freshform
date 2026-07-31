@@ -40,6 +40,8 @@ export function MeetingsLog({
   title = "Meetings log",
   eyebrow = "Logged by mentors",
   emptyBody = "Every session a mentor logs shows up here, newest first.",
+  caption,
+  mentorBase,
   moreHref,
   moreLabel = "All sessions",
 }: {
@@ -47,6 +49,13 @@ export function MeetingsLog({
   title?: string;
   eyebrow?: React.ReactNode;
   emptyBody?: React.ReactNode;
+  /**
+   * Overrides the header's tally. Pass it when these rows are a slice of a
+   * wider set, so the caption describes the whole thing rather than the slice.
+   */
+  caption?: React.ReactNode;
+  /** Base path (admin only) that makes each Team chip link to its mentor. */
+  mentorBase?: string;
   /** Shown in the header when the log is a truncated slice of a longer one. */
   moreHref?: string;
   moreLabel?: string;
@@ -67,10 +76,11 @@ export function MeetingsLog({
     { label: "Notes" },
   ];
 
-  const caption =
-    active.length === 0
+  const tally =
+    caption ??
+    (active.length === 0
       ? "Nothing logged yet"
-      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours`;
+      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours`);
 
   return (
     <Panel tone="log">
@@ -81,7 +91,7 @@ export function MeetingsLog({
         action={
           moreHref ? (
             <span className="flex items-center gap-3 text-xs text-muted-fg">
-              {caption}
+              {tally}
               <Link
                 href={moreHref}
                 className="font-medium text-brand hover:underline"
@@ -91,7 +101,7 @@ export function MeetingsLog({
             </span>
           ) : undefined
         }
-        caption={caption}
+        caption={tally}
       />
 
       {sessions.length === 0 ? (
@@ -110,7 +120,11 @@ export function MeetingsLog({
               >
                 {withTeam && (
                   <Td className={voided ? "opacity-45" : undefined}>
-                    <PersonChip person={s.mentor} size="sm" />
+                    <PersonChip
+                      person={s.mentor}
+                      size="sm"
+                      href={mentorBase && `${mentorBase}/${s.mentor.id}`}
+                    />
                   </Td>
                 )}
                 {withStudent && (

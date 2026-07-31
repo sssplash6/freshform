@@ -37,12 +37,15 @@ export function AssignmentsPanel({
   mentors,
   hoursAllotted,
   manage = false,
+  mentorBase,
 }: {
   assignments: LedgerAssignment[];
   studentProfileId: string;
   mentors?: SelectOption[];
   hoursAllotted: number;
   manage?: boolean;
+  /** Base path (admin only) that makes each Consultant chip link to them. */
+  mentorBase?: string;
 }) {
   const planned = assignments.reduce((sum, a) => sum + (a.hourLimit ?? 0), 0);
   const logged = assignments.reduce((sum, a) => sum + a.loggedHours, 0);
@@ -95,7 +98,11 @@ export function AssignmentsPanel({
                     <span className="font-medium text-ink">{a.purpose}</span>
                   </Td>
                   <Td>
-                    <PersonChip person={a.mentor} size="sm" />
+                    <PersonChip
+                      person={a.mentor}
+                      size="sm"
+                      href={mentorBase && `${mentorBase}/${a.mentor.id}`}
+                    />
                   </Td>
                   {/* Hours mentors actually logged against this goal. Amber once
                       they pass the budget: overspend is warned, never blocked. */}

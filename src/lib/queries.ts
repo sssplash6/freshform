@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { SESSION_STATUS } from "@/lib/constants";
+import { deadlinePassed } from "@/lib/deadlines";
 import type { Prisma } from "@/generated/prisma/client";
 
 /**
@@ -190,6 +191,187 @@ export async function mentorAssignments(mentorId: string) {
     orderBy: { createdAt: "asc" },
   });
 }
+
+/**
+ * Every program a mentor touches: assigned to, holding hours in, or having
+ * logged a session in. Assignment alone isn't enough — a mentor moved off a
+ * program still has its history — so the filter offers all three.
+ */
+export async function mentorPrograms(mentorId: string) {
+  return prisma.program.findMany({
+    where: {
+      OR: [
+        { mentorAssignments: { some: { mentorId } } },
+        { students: { some: { hourAllocations: { some: { mentorId } } } } },
+        { students: { some: { sessions: { some: { mentorId } } } } },
+      ],
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+/** How a mentor's hours are being read: which program, and over what dates. */
+export type MentorHoursWindow = {
+  programId?: string;
+  from?: Date;
+  to?: Date;
+};
+
+/**
+ * One mentor's whole picture for the admin's mentor page: the students holding
+ * hours from them, the sessions inside the chosen window, and both rolled up
+ * per program.
+ *
+ * Two kinds of number live here and the difference is deliberate. BALANCES
+ * (allocated, remaining, forfeited) weigh allocations against every active
+ * session ever logged — a balance has no date range. DELIVERED and MISSED are
+ * hours inside the window. The program filter narrows both halves; the dates
+ * only move the window, which is why the page labels the two apart.
+ */
+export async function mentorOverview(
+  mentorId: string,
+  { programId, from, to }: MentorHoursWindow = {}
+) {
+  const inProgram = programId ? { student: { programId } } : {};
+  const inWindow =
+    from || to
+      ? {
+          date: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {};
+
+  const [allocations, lifetimeSums, sessions] = await Promise.all([
+    prisma.hourAllocation.findMany({
+      where: { mentorId, ...inProgram },
+      include: {
+        student: { include: { user: true, program: true, cohort: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    // Balances draw on every active session this mentor ever logged, not just
+    // the ones the window happens to show.
+    prisma.session.groupBy({
+      by: ["studentId", "attended"],
+      where: { mentorId, status: SESSION_STATUS.ACTIVE },
+      _sum: { hours: true },
+    }),
+    prisma.session.findMany({
+      where: { mentorId, ...inProgram, ...inWindow },
+      include: {
+        mentor: true,
+        student: { include: { user: true, program: true } },
+        assignment: { select: { id: true, purpose: true } },
+      },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    }),
+  ]);
+
+  const usedByStudent = new Map<string, number>();
+  const missedByStudent = new Map<string, number>();
+  for (const s of lifetimeSums) {
+    const hrs = s._sum.hours ?? 0;
+    usedByStudent.set(s.studentId, (usedByStudent.get(s.studentId) ?? 0) + hrs);
+    if (!s.attended) {
+      missedByStudent.set(
+        s.studentId,
+        (missedByStudent.get(s.studentId) ?? 0) + hrs
+      );
+    }
+  }
+
+  // Same forfeiture rule as lib/hours.ts: once the use-by date passes, unused
+  // hours are gone and only an overdraw survives as "remaining".
+  const students = allocations.map((a) => {
+    const used = usedByStudent.get(a.studentId) ?? 0;
+    const missed = missedByStudent.get(a.studentId) ?? 0;
+    const expired = deadlinePassed(a.deadline);
+    return {
+      student: a.student,
+      allocated: a.hours,
+      used,
+      completed: used - missed,
+      missed,
+      remaining: expired ? Math.min(0, a.hours - used) : a.hours - used,
+      forfeited: expired ? Math.max(0, a.hours - used) : 0,
+      expired,
+      deadline: a.deadline,
+      amountPaid: a.amountPaid,
+    };
+  });
+
+  const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
+
+  type ProgramRow = {
+    id: string;
+    name: string;
+    students: number;
+    allocated: number;
+    used: number;
+    forfeited: number;
+    remaining: number;
+    delivered: number;
+    missed: number;
+    sessions: number;
+  };
+  const rows = new Map<string, ProgramRow>();
+  const rowFor = (id: string, name: string) => {
+    const existing = rows.get(id);
+    if (existing) return existing;
+    const fresh: ProgramRow = {
+      id,
+      name,
+      students: 0,
+      allocated: 0,
+      used: 0,
+      forfeited: 0,
+      remaining: 0,
+      delivered: 0,
+      missed: 0,
+      sessions: 0,
+    };
+    rows.set(id, fresh);
+    return fresh;
+  };
+  for (const s of students) {
+    const row = rowFor(s.student.programId, s.student.program.name);
+    row.students += 1;
+    row.allocated += s.allocated;
+    row.used += s.used;
+    row.forfeited += s.forfeited;
+    row.remaining += s.remaining;
+  }
+  // A session can outlive its allocation (an admin may remove one), so the
+  // window's hours land in their program's row either way.
+  for (const s of active) {
+    const row = rowFor(s.student.programId, s.student.program.name);
+    row.sessions += 1;
+    if (s.attended) row.delivered += s.hours;
+    else row.missed += s.hours;
+  }
+
+  const sum = (pick: (row: ProgramRow) => number) =>
+    [...rows.values()].reduce((total, row) => total + pick(row), 0);
+
+  return {
+    students,
+    sessions,
+    byProgram: [...rows.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    totals: {
+      students: students.length,
+      sessions: active.length,
+      delivered: sum((r) => r.delivered),
+      missed: sum((r) => r.missed),
+      allocated: sum((r) => r.allocated),
+      forfeited: sum((r) => r.forfeited),
+      remaining: sum((r) => r.remaining),
+    },
+  };
+}
+
+export type MentorOverview = Awaited<ReturnType<typeof mentorOverview>>;
 
 /**
  * The distinct mentors working in a program (assigned program-wide or to any

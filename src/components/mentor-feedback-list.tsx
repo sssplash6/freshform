@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Rating, average } from "@/components/rating";
 import type { MentorFeedback, StudentProfile, User } from "@/generated/prisma/client";
 
@@ -8,9 +10,17 @@ type FeedbackRow = MentorFeedback & {
 
 /**
  * Mentor feedback grouped per mentor with averages. Staff views include the
- * student's identity (only the mentor-facing view is anonymous).
+ * student's identity (only the mentor-facing view is anonymous). `mentorBase`
+ * links each heading through to the mentor's page — admin only, since leaders
+ * have no such page.
  */
-export function MentorFeedbackList({ feedback }: { feedback: FeedbackRow[] }) {
+export function MentorFeedbackList({
+  feedback,
+  mentorBase,
+}: {
+  feedback: FeedbackRow[];
+  mentorBase?: string;
+}) {
   if (feedback.length === 0) {
     return (
       <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
@@ -38,7 +48,16 @@ export function MentorFeedbackList({ feedback }: { feedback: FeedbackRow[] }) {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-ink">
-                  {mentor.name ?? mentor.email}
+                  {mentorBase ? (
+                    <Link
+                      href={`${mentorBase}/${mentor.id}`}
+                      className="hover:text-brand"
+                    >
+                      {mentor.name ?? mentor.email}
+                    </Link>
+                  ) : (
+                    (mentor.name ?? mentor.email)
+                  )}
                 </h3>
                 <p className="text-xs text-muted-fg">{mentor.email}</p>
               </div>
