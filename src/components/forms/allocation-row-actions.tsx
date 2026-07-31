@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { MoreVerticalIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { removeMentorAllocation, setMentorAllocation } from "@/lib/actions/students";
+import { useAnchoredPosition } from "@/lib/use-anchored-position";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand focus:outline-none";
@@ -48,47 +43,18 @@ export function AllocationRowActions({
   );
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  // Fixed viewport coordinates; null until measured (menu stays hidden so it
-  // never flashes at a stale position). `up` flips the pop-in origin.
-  const [pos, setPos] = useState<{
-    right: number;
-    top?: number;
-    bottom?: number;
-    up: boolean;
-  } | null>(null);
+  // Portaled to <body> and positioned `fixed` so it escapes the table's
+  // `overflow-x-auto` frame, which would otherwise clip it (and force a
+  // scrollbar) instead of letting it float above the page. Null until measured,
+  // so it never flashes at a stale position.
+  const anchored = useAnchoredPosition(open, triggerRef, menuRef, {
+    align: "end",
+  });
 
   const close = () => {
     setOpen(false);
     setConfirmDelete(false);
   };
-
-  // The menu is portaled to <body> and positioned with `fixed` so it escapes
-  // the table's `overflow-x-auto` frame, which would otherwise clip it (and
-  // force a scrollbar) instead of letting it float above the page.
-  useLayoutEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const trigger = triggerRef.current;
-      if (!trigger) return;
-      const rect = trigger.getBoundingClientRect();
-      const menuH = menuRef.current?.offsetHeight ?? 0;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const up = menuH > 0 && spaceBelow < menuH + 12 && rect.top > spaceBelow;
-      setPos({
-        right: Math.max(8, window.innerWidth - rect.right),
-        top: up ? undefined : rect.bottom + 6,
-        bottom: up ? window.innerHeight - rect.top + 6 : undefined,
-        up,
-      });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,14 +92,13 @@ export function AllocationRowActions({
           <div
             ref={menuRef}
             style={{
-              position: "fixed",
-              top: pos?.top,
-              bottom: pos?.bottom,
-              right: pos?.right ?? 8,
-              visibility: pos ? "visible" : "hidden",
+              ...anchored?.style,
+              visibility: anchored ? "visible" : "hidden",
             }}
             className={`pop-in z-50 w-64 rounded-xl border border-line bg-surface p-3 text-left shadow-soft ${
-              pos?.up ? "[--pop-origin:bottom_right]" : "[--pop-origin:top_right]"
+              anchored?.up
+                ? "[--pop-origin:bottom_right]"
+                : "[--pop-origin:top_right]"
             }`}
           >
           <form action={setAction} className="space-y-2.5">

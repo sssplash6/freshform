@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { CheckIcon, ChevronDownIcon } from "@/components/icons";
 import { cn } from "@/lib/cn";
+import { useAnchoredPosition } from "@/lib/use-anchored-position";
 
 export type SelectOption = { value: string; label: string };
 
@@ -12,6 +14,11 @@ export type SelectOption = { value: string; label: string };
  * surfaces (rounded, hairline border, soft shadow, brand-tinted selection)
  * instead of the raw browser dropdown. The chosen value rides a hidden input
  * so server-action forms read it exactly like a native <select>.
+ *
+ * The listbox is portaled to <body> and positioned `fixed`. It has to be: these
+ * selects sit at the foot of `Panel`s, which are `overflow-hidden` to mask
+ * their rounded corners, and an absolutely-positioned list is simply cut off at
+ * that edge — a mentor list would render as an unusable few-pixel sliver.
  */
 export function Select({
   name,
@@ -33,12 +40,24 @@ export function Select({
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const listId = useId();
+
+  const anchored = useAnchoredPosition(open, triggerRef, listRef, {
+    matchTriggerWidth: true,
+    maxHeight: 256,
+  });
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      // The list lives in a portal, so "inside" means either element — a
+      // containment test on the trigger's wrapper alone would treat picking an
+      // option as clicking away and close before the choice registered.
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -51,6 +70,19 @@ export function Select({
     };
   }, [open]);
 
+  useEffect(() => {
+    const list = listRef.current;
+    if (!open || !list) return;
+    // A select can live inside another popover (the row-action menus), and that
+    // menu closes on any mousedown outside its own DOM. Now that the list is
+    // portaled it IS outside, so choosing an option would tear the menu down
+    // around it. Claim the event here, at the element, before it reaches the
+    // document-level listeners that would misread it.
+    const claim = (e: MouseEvent) => e.stopPropagation();
+    list.addEventListener("mousedown", claim);
+    return () => list.removeEventListener("mousedown", claim);
+  }, [open]);
+
   const selected = options.find((o) => o.value === value);
   const choose = (v: string) => {
     setValue(v);
@@ -59,12 +91,14 @@ export function Select({
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <input type="hidden" name={name} value={value} />
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
         aria-label={ariaLabel}
         onClick={() => setOpen((v) => !v)}
         className={cn(
@@ -82,27 +116,41 @@ export function Select({
         />
       </button>
 
-      {open && (
-        <ul
-          role="listbox"
-          className="pop-in absolute z-30 mt-1.5 max-h-64 w-full min-w-max overflow-auto rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top]"
-        >
-          {!required && (
-            <SelectItem selected={value === ""} onSelect={() => choose("")}>
-              {placeholder}
-            </SelectItem>
-          )}
-          {options.map((o) => (
-            <SelectItem
-              key={o.value}
-              selected={o.value === value}
-              onSelect={() => choose(o.value)}
-            >
-              {o.label}
-            </SelectItem>
-          ))}
-        </ul>
-      )}
+      {open &&
+        createPortal(
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            aria-label={ariaLabel}
+            style={{
+              ...anchored?.style,
+              // Hidden for the single frame before it has been measured, so it
+              // never flashes at the top-left corner.
+              visibility: anchored ? "visible" : "hidden",
+            }}
+            className={cn(
+              "pop-in z-50 max-w-[calc(100vw-1rem)] overflow-auto rounded-xl border border-line bg-surface p-1 shadow-soft",
+              anchored?.up ? "[--pop-origin:bottom]" : "[--pop-origin:top]",
+            )}
+          >
+            {!required && (
+              <SelectItem selected={value === ""} onSelect={() => choose("")}>
+                {placeholder}
+              </SelectItem>
+            )}
+            {options.map((o) => (
+              <SelectItem
+                key={o.value}
+                selected={o.value === value}
+                onSelect={() => choose(o.value)}
+              >
+                {o.label}
+              </SelectItem>
+            ))}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }

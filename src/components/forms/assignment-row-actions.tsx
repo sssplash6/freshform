@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { MoreVerticalIcon } from "@/components/icons";
 import { Select, type SelectOption } from "@/components/select";
 import { Button } from "@/components/ui/button";
+import { useAnchoredPosition } from "@/lib/use-anchored-position";
 import {
   deleteAssignment,
   setAssignmentProgress,
@@ -53,7 +48,8 @@ type AssignmentFields = {
  * form to tick something off would be the wrong shape for it.
  *
  * Portaled to <body> and positioned fixed for the same reason as the allocation
- * menu: the table scrolls horizontally and would otherwise clip it.
+ * menu: the table scrolls horizontally and would otherwise clip it. See
+ * lib/use-anchored-position.ts.
  */
 export function AssignmentRowActions({
   assignment,
@@ -73,43 +69,15 @@ export function AssignmentRowActions({
   const [delState, delAction, delPending] = useActionState(deleteAssignment, null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{
-    right: number;
-    top?: number;
-    bottom?: number;
-    up: boolean;
-  } | null>(null);
+  const anchored = useAnchoredPosition(open, triggerRef, menuRef, {
+    align: "end",
+  });
 
   const close = () => {
     setOpen(false);
     setEditing(false);
     setConfirmDelete(false);
   };
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const trigger = triggerRef.current;
-      if (!trigger) return;
-      const rect = trigger.getBoundingClientRect();
-      const menuH = menuRef.current?.offsetHeight ?? 0;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const up = menuH > 0 && spaceBelow < menuH + 12 && rect.top > spaceBelow;
-      setPos({
-        right: Math.max(8, window.innerWidth - rect.right),
-        top: up ? undefined : rect.bottom + 6,
-        bottom: up ? window.innerHeight - rect.top + 6 : undefined,
-        up,
-      });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [open, editing, confirmDelete]);
 
   useEffect(() => {
     if (!open) return;
@@ -147,14 +115,13 @@ export function AssignmentRowActions({
           <div
             ref={menuRef}
             style={{
-              position: "fixed",
-              top: pos?.top,
-              bottom: pos?.bottom,
-              right: pos?.right ?? 8,
-              visibility: pos ? "visible" : "hidden",
+              ...anchored?.style,
+              visibility: anchored ? "visible" : "hidden",
             }}
             className={`pop-in z-50 w-72 rounded-xl border border-line bg-surface p-3 text-left shadow-soft ${
-              pos?.up ? "[--pop-origin:bottom_right]" : "[--pop-origin:top_right]"
+              anchored?.up
+                ? "[--pop-origin:bottom_right]"
+                : "[--pop-origin:top_right]"
             }`}
           >
             {!editing ? (
