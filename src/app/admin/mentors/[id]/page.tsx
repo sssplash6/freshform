@@ -10,6 +10,7 @@ import {
   type HoursQuery,
 } from "@/components/mentor-hours-filter";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
 import { PageHeader } from "@/components/ui/page-header";
@@ -125,6 +126,17 @@ export default async function AdminMentorDetailPage({
               {formatHours(totals.remaining)} hours still to deliver · registered{" "}
               {formatDate(mentor.createdAt)}
             </>
+          }
+          // This page is the delivery record; the profile is the picture, name
+          // and booking links the mentor maintains themself.
+          actions={
+            <LinkButton
+              href={`/mentors/${mentor.id}`}
+              variant="secondary"
+              size="sm"
+            >
+              View profile
+            </LinkButton>
           }
         />
         {assignments.length > 0 && (

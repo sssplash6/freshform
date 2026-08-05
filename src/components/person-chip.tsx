@@ -1,14 +1,25 @@
 import Link from "next/link";
 
+import { Avatar } from "@/components/avatar";
 import { cn } from "@/lib/cn";
-import { initials, personTone } from "@/lib/person-tone";
+import { personTone } from "@/lib/person-tone";
 
-type Person = { id: string; name: string | null; email: string };
+/**
+ * `avatarUpdatedAt` is optional so the many call sites that `select` only
+ * id/name/email still typecheck — they simply render initials, as before.
+ */
+type Person = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatarUpdatedAt?: Date | null;
+};
 
 /**
  * A person as a colored chip with their initials — the "Team" and "Consultant"
  * cells of the ledger. Everyone keeps one color across the whole app, so a
  * column of sessions can be read by who ran them without reading any names.
+ * Once someone sets a profile picture it replaces the initials here.
  *
  * `size="sm"` is the in-table size; the default suits a page header. Passing
  * `href` turns the chip into a link (admins click a mentor through to their
@@ -44,16 +55,10 @@ export function PersonChip({
 
   const body = (
     <>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
-          tone.badge,
-          sm ? "h-5 w-5 text-[9px]" : "h-6 w-6 text-[10px]",
-        )}
-      >
-        {initials(person.name, person.email)}
-      </span>
+      <Avatar
+        person={person}
+        className={sm ? "h-5 w-5 text-[9px]" : "h-6 w-6 text-[10px]"}
+      />
       <span className="truncate">{label}</span>
     </>
   );
@@ -84,17 +89,11 @@ export function PersonBadge({
   person: Person;
   className?: string;
 }) {
-  const tone = personTone(person.id);
   return (
-    <span
+    <Avatar
+      person={person}
       title={person.name ?? person.email}
-      className={cn(
-        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-surface",
-        tone.badge,
-        className,
-      )}
-    >
-      {initials(person.name, person.email)}
-    </span>
+      className={cn("h-6 w-6 text-[10px] ring-2 ring-surface", className)}
+    />
   );
 }

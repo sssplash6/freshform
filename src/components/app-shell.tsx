@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Avatar } from "@/components/avatar";
 import { NavLinks } from "@/components/nav-links";
 import { ChevronDownIcon, LogOutIcon } from "@/components/icons";
 import { signOut } from "@/lib/auth";
@@ -101,12 +102,18 @@ function UserMenu({ user }: { user: User }) {
   return (
     <details className="group relative">
       <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-full pl-1 pr-2.5 transition-colors hover:bg-canvas [&::-webkit-details-marker]:hidden">
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand"
-        >
-          {initial}
-        </span>
+        {user.avatarUpdatedAt ? (
+          <Avatar person={user} className="h-8 w-8" />
+        ) : (
+          // Kept as the brand-soft single initial rather than the identity-tone
+          // badge used elsewhere: this is your OWN chrome, not a person in a list.
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand"
+          >
+            {initial}
+          </span>
+        )}
         <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:inline">
           {label}
         </span>
@@ -156,6 +163,16 @@ export async function AppShell({
     where: { userId: user.id, read: false },
   });
 
+  // A mentor's profile lives at their own id, so this one item can't be a
+  // constant in NAV_BY_ROLE the way the rest are — it's built per viewer here.
+  const navItems =
+    activeRole === ROLES.MENTOR
+      ? [
+          ...NAV_BY_ROLE[activeRole],
+          { href: `/mentors/${user.id}`, label: "My profile" },
+        ]
+      : NAV_BY_ROLE[activeRole];
+
   const brand = (
     <Link href="/" className="shrink-0 text-base font-bold tracking-tight text-brand">
       freshlog
@@ -173,7 +190,7 @@ export async function AppShell({
           </div>
 
           <nav className="flex flex-1 items-center gap-7">
-            <NavLinks items={NAV_BY_ROLE[activeRole]} />
+            <NavLinks items={navItems} />
           </nav>
 
           <div className="flex items-center gap-1 border-l border-line pl-3">
@@ -198,7 +215,7 @@ export async function AppShell({
               </summary>
               <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
                 <nav aria-label="Primary navigation" className="grid gap-1">
-                  <NavLinks items={NAV_BY_ROLE[activeRole]} variant="menu" />
+                  <NavLinks items={navItems} variant="menu" />
                 </nav>
                 <div className="mt-1 border-t border-line pt-1">
                   <div className="px-3 py-2">

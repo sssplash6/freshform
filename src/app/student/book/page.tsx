@@ -94,7 +94,11 @@ export default async function StudentBookPage() {
                   aria-hidden="true"
                 />
                 <div className="flex flex-1 flex-col p-5">
-                  <PersonChip person={a.mentor} className="self-start" />
+                  <PersonChip
+                    person={a.mentor}
+                    href={`/mentors/${a.mentorId}`}
+                    className="self-start"
+                  />
 
                   {remaining === undefined ? (
                     <p className="mt-4 text-sm text-muted-fg">

@@ -24,7 +24,18 @@ export default async function NotificationsPage() {
 
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id },
-    include: { actor: { select: { id: true, name: true, email: true } } },
+    include: {
+      actor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          // Feeds the actor's PersonBadge; without it they'd show initials
+          // here while wearing their picture everywhere else.
+          avatarUpdatedAt: true,
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
