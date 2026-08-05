@@ -116,15 +116,12 @@ export default async function AdminMentorDetailPage({
               )}
             </span>
           }
+          // Deliberately just who they are and since when. The student count and
+          // the hours still to deliver are read off the stat strip below, and a
+          // banner that repeats them makes the same number look like two facts.
           subtitle={
             <>
-              {mentor.email} ·{" "}
-              {totals.students === 0
-                ? "no students yet"
-                : `${totals.students} student${totals.students === 1 ? "" : "s"}`}
-              {" · "}
-              {formatHours(totals.remaining)} hours still to deliver · registered{" "}
-              {formatDate(mentor.createdAt)}
+              {mentor.email} · registered {formatDate(mentor.createdAt)}
             </>
           }
           // This page is the delivery record; the profile is the picture, name
@@ -153,51 +150,65 @@ export default async function AdminMentorDetailPage({
         )}
       </div>
 
-      <MentorHoursFilter
-        base={`/admin/mentors/${mentor.id}`}
-        programs={programs}
-        programId={programId}
-        window={win}
-      />
-
-      <div>
-        <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-fg">
-          {capitalize(win.label)} · {scope ?? "all programs"}
-        </p>
-        <StatCardGrid>
-          <StatCard
-            label="Hours delivered"
-            value={formatHours(totals.delivered)}
-            tone="brand"
-            lead
-          />
-          <StatCard label="Meetings" value={String(totals.sessions)} />
-          {totals.missed > 0 && (
-            <StatCard label="Hours missed" value={formatHours(totals.missed)} />
-          )}
-          <StatCard label="Students" value={String(totals.students)} />
-          <StatCard
-            label="Hours remaining"
-            value={formatHours(totals.remaining)}
-            tone={totals.remaining < 0 ? "danger" : "default"}
-          />
-          {rated && (
-            <StatCard
-              label={`Rating · ${feedback._count}`}
-              value={feedback._avg.rating!.toFixed(1)}
-              tone="muted"
-            />
-          )}
-        </StatCardGrid>
-      </div>
-
+      {/*
+        One panel for the whole hours view: the controls, the totals they
+        produce, and the per-program breakdown behind those totals. These used to
+        be three separate cards, which left the numbers looking unrelated to the
+        filter that had just decided them.
+      */}
       <Panel tone="total">
         <PanelHeader
           tone="total"
           eyebrow="Hours"
-          title="Across the programs"
+          title="Delivery record"
           caption={`Delivered and missed cover ${win.label}; allocated and remaining are balances as of today`}
         />
+
+        <MentorHoursFilter
+          base={`/admin/mentors/${mentor.id}`}
+          programs={programs}
+          programId={programId}
+          window={win}
+          framed={false}
+        />
+
+        {/* The window the numbers below were read through, stated once. */}
+        <div className="border-t border-line px-4 sm:px-5">
+          <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand">
+            {capitalize(win.label)} · {scope ?? "all programs"}
+          </p>
+          <StatCardGrid framed={false} className="pt-4">
+            <StatCard
+              label="Hours delivered"
+              value={formatHours(totals.delivered)}
+              tone="brand"
+              lead
+            />
+            <StatCard label="Meetings" value={String(totals.sessions)} />
+            {totals.missed > 0 && (
+              <StatCard label="Hours missed" value={formatHours(totals.missed)} />
+            )}
+            <StatCard label="Students" value={String(totals.students)} />
+            <StatCard
+              label="Hours remaining"
+              value={formatHours(totals.remaining)}
+              tone={totals.remaining < 0 ? "danger" : "default"}
+            />
+            {rated && (
+              <StatCard
+                label={`Rating · ${feedback._count}`}
+                value={feedback._avg.rating!.toFixed(1)}
+                tone="muted"
+              />
+            )}
+          </StatCardGrid>
+        </div>
+
+        <div className="border-t border-line px-4 pt-4 sm:px-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-fg">
+            Across the programs
+          </p>
+        </div>
         {overview.byProgram.length === 0 ? (
           <EmptyState framed={false} title="No hours here yet">
             Once this mentor holds a student&apos;s hours or logs a session,

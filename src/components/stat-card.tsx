@@ -49,10 +49,31 @@ export function StatCard({
   );
 }
 
-/** The numbers as one quiet strip between hairlines — no tile boxes. */
-export function StatCardGrid({ children }: { children: React.ReactNode }) {
+/**
+ * The numbers as one quiet strip between hairlines — no tile boxes.
+ *
+ * `framed={false}` drops the hairlines and the horizontal inset, for a strip
+ * that sits INSIDE a panel whose own dividers already separate it from what is
+ * above and below. Framed is the default: on the page ground the rules are what
+ * stop the numbers from floating.
+ */
+export function StatCardGrid({
+  children,
+  framed = true,
+  className,
+}: {
+  children: React.ReactNode;
+  framed?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex flex-wrap items-end gap-x-12 gap-y-5 border-y border-line px-1 py-6">
+    <div
+      className={cn(
+        "flex flex-wrap items-end gap-x-12 gap-y-5 py-6",
+        framed && "border-y border-line px-1",
+        className,
+      )}
+    >
       {children}
     </div>
   );

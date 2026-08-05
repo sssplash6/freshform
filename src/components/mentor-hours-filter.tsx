@@ -189,18 +189,25 @@ export function MentorHoursFilter({
   programs,
   programId,
   window: win,
+  framed = true,
 }: {
   /** The page's own path, which every pill links back to. */
   base: string;
   programs: { id: string; name: string }[];
   programId?: string;
   window: HoursWindow;
+  /**
+   * `false` when the filter sits inside the panel it controls, which owns the
+   * frame. A filter in its own separate card reads as unrelated chrome — the
+   * numbers it produces look like they arrived on their own.
+   */
+  framed?: boolean;
 }) {
   const period = win.active === "custom" || win.active === "all" ? undefined : win.active;
   const custom = win.active === "custom";
 
   return (
-    <div className="rounded-2xl border border-line bg-surface">
+    <div className={cn(framed && "rounded-2xl border border-line bg-surface")}>
       {programs.length > 1 && (
         <Row label="Program" className="border-b border-line/60">
           <div className="flex flex-wrap gap-1.5">

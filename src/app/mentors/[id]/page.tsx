@@ -9,16 +9,11 @@ import { ArrowUpRightIcon } from "@/components/icons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { MentorHoursSummary } from "@/components/mentor-hours-summary";
 import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import {
-  assignmentsForStudentWhere,
-  mentorAssignments,
-  mentorOverview,
-} from "@/lib/queries";
+import { assignmentsForStudentWhere, mentorAssignments } from "@/lib/queries";
 
 /** "Global Admissions / Spring 25", or just the program when there's no cohort. */
 function labelOf(a: {
@@ -42,9 +37,9 @@ function labelOf(a: {
  *     only if one exists — a mentor from a program they're not in 404s, and a
  *     mentor's other programs are never named to them.
  *
- * The hours panel follows the same line: a mentor's totals are summed across
- * every student they teach, so it is shown to the mentor and to staff and
- * withheld from students, who would be reading their classmates' allocations.
+ * Deliberately carries NO hours. The delivery record lives on
+ * /admin/mentors/[id], where it can be filtered by period and program; a second
+ * unfiltered copy here was the same numbers twice.
  */
 export default async function MentorProfilePage({
   params,
@@ -82,9 +77,6 @@ export default async function MentorProfilePage({
   } else {
     visible = await mentorAssignments(mentor.id);
   }
-
-  // No window passed, so these are lifetime figures rather than a period's.
-  const hours = isStudent ? null : await mentorOverview(mentor.id);
 
   const name = mentor.name ?? mentor.email;
   const banner = personBanner(mentor.id);
@@ -146,15 +138,6 @@ export default async function MentorProfilePage({
             </div>
           </div>
         </Panel>
-      )}
-
-      {/* Hours. Withheld from students — see the note on this component. */}
-      {hours && (
-        <MentorHoursSummary
-          totals={hours.totals}
-          byProgram={hours.byProgram}
-          possessive={isSelf ? "Your" : "Their"}
-        />
       )}
 
       {/* Booking links. Editable for the owner, one scoped link for a student,
