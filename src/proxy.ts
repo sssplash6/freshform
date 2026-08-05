@@ -3,7 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 // Optimistic auth check only (cookie presence — no DB, no JWT verification).
 // Real enforcement lives in the DAL (src/lib/dal.ts): every page and server
 // action verifies the session and role server-side.
-const PUBLIC_PATHS = ["/login"];
+// Both unsubscribe paths are reached from the footer of a weekly digest, by
+// someone who is not signed in and should not have to be to stop receiving
+// email. They authorize on a signed token in the URL instead
+// (src/lib/email/unsubscribe.ts): /unsubscribe is the human confirm page, and
+// /api/email/unsubscribe is the one-click POST that mail clients make.
+//
+// The API path MUST be listed. Bouncing it to /login would answer a mail
+// client's unsubscribe POST with a redirect to a sign-in page, which reads as
+// success to the client while nothing was actually turned off.
+const PUBLIC_PATHS = ["/login", "/unsubscribe", "/api/email"];
 
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

@@ -46,6 +46,16 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # Outbound email (the weekly hours digest). Until BOTH are set the digest
+      # still runs and logs what it would have sent, so nothing breaks before
+      # the sending domain is verified — the cron response reports live: false.
+      #   RESEND_API_KEY  from resend.com → API Keys
+      #   EMAIL_FROM      e.g. "Freshman Academy <hours@freshlog.net>"; the
+      #                   domain needs SPF + DKIM records added at Resend first
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
 
   # Daily deadline reminders. The SQLite disk belongs to the web service, so
   # the cron job can't touch the database directly — it calls the app's
@@ -66,6 +76,29 @@ services:
       # private-network hostname (e.g. "freshform-srma"), which has no public TLS
       # listener, so curl to https://<that>:443 fails with "couldn't connect".
       # Use the public custom domain directly.
+      - key: APP_URL
+        value: "https://freshlog.net"
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: freshform
+          envVarKey: CRON_SECRET
+
+  # The weekly hours email: what each person redeemed last week, what is still
+  # theirs to redeem, and when it expires. Same arrangement as the reminders
+  # above — the cron calls the web service, which owns the SQLite disk.
+  # 04:00 UTC Monday = 09:00 Monday in Tashkent.
+  - type: cron
+    name: freshform-weekly-digest
+    runtime: node
+    plan: starter
+    schedule: "0 4 * * 1"
+    buildCommand: "true"
+    startCommand: >-
+      curl -fsS --retry 3 --retry-delay 10
+      -H "Authorization: Bearer $CRON_SECRET"
+      "$APP_URL/api/cron/weekly-digest"
+    envVars:
       - key: APP_URL
         value: "https://freshlog.net"
       - key: CRON_SECRET

@@ -35,6 +35,14 @@ model User {
   // Kept here rather than joined because a person chip appears in every table.
   avatarUpdatedAt DateTime?
 
+  // The Monday hours email. On by default — it is the reminder that stops hours
+  // expiring unnoticed — and switchable off from /notifications or the
+  // unsubscribe link in the footer of every send.
+  weeklyDigest Boolean   @default(true)
+  // When the last digest actually went out. This is the idempotency guard: a
+  // re-run of the cron, or two instances firing at once, must not send twice.
+  digestSentAt DateTime?
+
   program           Program?              @relation(fields: [programId], references: [id])
   studentProfile    StudentProfile?       @relation("StudentUser")
   createdStudents   StudentProfile[]      @relation("CreatedBy")

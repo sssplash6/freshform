@@ -1,5 +1,7 @@
 import { NotificationList } from "@/components/notification-list";
 import { markAllNotificationsRead } from "@/lib/actions/notifications";
+import { setWeeklyDigest } from "@/lib/actions/email-prefs";
+import { ROLES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -74,6 +76,34 @@ export default async function NotificationsPage() {
         ) : (
           <NotificationList notifications={notifications} />
         )}
+      </Panel>
+
+      {/* The signed-in way to switch the weekly email off. The other way is the
+          link in its own footer, for people who won't sign in to say stop. */}
+      <Panel tone="neutral">
+        <PanelHeader eyebrow="By email" title="Weekly hours summary" />
+        <form
+          action={setWeeklyDigest}
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-4 sm:p-5"
+        >
+          <label className="flex max-w-lg items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              name="weeklyDigest"
+              defaultChecked={user.weeklyDigest}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+            />
+            <span className="text-muted-fg">
+              Every Monday, a summary of the hours{" "}
+              {user.role === ROLES.STUDENT
+                ? "you used last week and the hours you still have to book, with their deadlines."
+                : "delivered last week and the hours still to deliver, with the deadlines they fall under."}
+            </span>
+          </label>
+          <Button type="submit" variant="secondary" size="sm">
+            Save
+          </Button>
+        </form>
       </Panel>
     </div>
   );
