@@ -9,11 +9,16 @@ import { ArrowUpRightIcon } from "@/components/icons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { MentorHoursSummary } from "@/components/mentor-hours-summary";
 import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { assignmentsForStudentWhere, mentorAssignments } from "@/lib/queries";
+import {
+  assignmentsForStudentWhere,
+  mentorAssignments,
+  mentorOverview,
+} from "@/lib/queries";
 
 /** "Global Admissions / Spring 25", or just the program when there's no cohort. */
 function labelOf(a: {
@@ -36,6 +41,10 @@ function labelOf(a: {
  *   - a student: ONLY the pairing that covers their own program or cohort, and
  *     only if one exists — a mentor from a program they're not in 404s, and a
  *     mentor's other programs are never named to them.
+ *
+ * The hours panel follows the same line: a mentor's totals are summed across
+ * every student they teach, so it is shown to the mentor and to staff and
+ * withheld from students, who would be reading their classmates' allocations.
  */
 export default async function MentorProfilePage({
   params,
@@ -74,12 +83,19 @@ export default async function MentorProfilePage({
     visible = await mentorAssignments(mentor.id);
   }
 
+  // No window passed, so these are lifetime figures rather than a period's.
+  const hours = isStudent ? null : await mentorOverview(mentor.id);
+
   const name = mentor.name ?? mentor.email;
   const banner = personBanner(mentor.id);
   const bookable = visible.filter((a) => a.calendlyUrl);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {/* Identity lives in the banner. For a visitor the picture rides in it,
+          so the page opens with the mentor's face; for the owner it is left out
+          here because the edit panel below shows it next to the upload button,
+          and one page does not need two of the same face. */}
       <PageHeader
         backHref={isStudent ? "/student/book" : undefined}
         backLabel={isStudent ? "Book a session" : undefined}
@@ -88,53 +104,58 @@ export default async function MentorProfilePage({
         subtitle={
           isStudent
             ? `Your mentor in ${visible.map(labelOf).join(", ")}.`
-            : visible.length > 0
-              ? visible.map(labelOf).join(" · ")
-              : "Not assigned to a program yet."
+            : [
+                visible.length > 0
+                  ? visible.map(labelOf).join(" · ")
+                  : "Not assigned to a program yet",
+                // Staff need the sign-in address to tell two similar names
+                // apart; the mentor knows their own.
+                ...(isSelf ? [] : [mentor.email]),
+              ].join(" · ")
         }
-        monogram={initials(mentor.name, mentor.email)}
+        leading={
+          isSelf ? undefined : (
+            <Avatar
+              person={mentor}
+              alt={`${name}'s profile picture`}
+              className="h-20 w-20 text-3xl sm:h-24 sm:w-24"
+            />
+          )
+        }
+        // The ghost initials say the same thing the picture beside them already
+        // does, and a long subtitle runs into them. Only the owner's banner —
+        // which carries no picture — keeps the watermark.
+        monogram={isSelf ? initials(mentor.name, mentor.email) : undefined}
         programTone={banner}
       />
 
-      {/* Identity. For the owner this is also where they change it. */}
-      <Panel tone="neutral">
-        <PanelHeader
-          eyebrow={isSelf ? "Yours to edit" : "Profile"}
-          title={isSelf ? "Picture and name" : name}
-          caption={isSelf ? undefined : mentor.email}
-        />
-        <div className="space-y-5 p-4 sm:p-5">
-          {isSelf ? (
-            <>
-              <AvatarForm
-                person={{
-                  id: mentor.id,
-                  name: mentor.name,
-                  email: mentor.email,
-                  avatarUpdatedAt: mentor.avatarUpdatedAt,
-                }}
-              />
-              <div className="border-t border-line pt-5">
-                <OwnNameForm defaultName={mentor.name ?? ""} />
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-4">
-              <Avatar
-                person={mentor}
-                alt={`${name}'s profile picture`}
-                className="h-20 w-20 text-2xl"
-              />
-              <div className="min-w-0">
-                <p className="truncate text-lg font-semibold text-ink">{name}</p>
-                {!isStudent && (
-                  <p className="truncate text-sm text-muted-fg">{mentor.email}</p>
-                )}
-              </div>
+      {isSelf && (
+        <Panel tone="neutral">
+          <PanelHeader eyebrow="Yours to edit" title="Picture and name" />
+          <div className="space-y-5 p-4 sm:p-5">
+            <AvatarForm
+              person={{
+                id: mentor.id,
+                name: mentor.name,
+                email: mentor.email,
+                avatarUpdatedAt: mentor.avatarUpdatedAt,
+              }}
+            />
+            <div className="border-t border-line pt-5">
+              <OwnNameForm defaultName={mentor.name ?? ""} />
             </div>
-          )}
-        </div>
-      </Panel>
+          </div>
+        </Panel>
+      )}
+
+      {/* Hours. Withheld from students — see the note on this component. */}
+      {hours && (
+        <MentorHoursSummary
+          totals={hours.totals}
+          byProgram={hours.byProgram}
+          possessive={isSelf ? "Your" : "Their"}
+        />
+      )}
 
       {/* Booking links. Editable for the owner, one scoped link for a student,
           a read-only audit for staff. */}

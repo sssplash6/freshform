@@ -15,6 +15,8 @@ export type PersonTone = {
   badge: string;
   /** Same hue as text alone, for use on an untinted surface. */
   ink: string;
+  /** Ring colour, so a PHOTO can still carry the person's identity hue. */
+  ring: string;
 };
 
 const TONES: PersonTone[] = [
@@ -22,41 +24,49 @@ const TONES: PersonTone[] = [
     chip: "bg-tone-violet-soft text-tone-violet-ink",
     badge: "bg-tone-violet-dot",
     ink: "text-tone-violet-ink",
+    ring: "ring-tone-violet-dot",
   },
   {
     chip: "bg-tone-teal-soft text-tone-teal-ink",
     badge: "bg-tone-teal-dot",
     ink: "text-tone-teal-ink",
+    ring: "ring-tone-teal-dot",
   },
   {
     chip: "bg-tone-amber-soft text-tone-amber-ink",
     badge: "bg-tone-amber-dot",
     ink: "text-tone-amber-ink",
+    ring: "ring-tone-amber-dot",
   },
   {
     chip: "bg-tone-rose-soft text-tone-rose-ink",
     badge: "bg-tone-rose-dot",
     ink: "text-tone-rose-ink",
+    ring: "ring-tone-rose-dot",
   },
   {
     chip: "bg-tone-indigo-soft text-tone-indigo-ink",
     badge: "bg-tone-indigo-dot",
     ink: "text-tone-indigo-ink",
+    ring: "ring-tone-indigo-dot",
   },
   {
     chip: "bg-tone-lime-soft text-tone-lime-ink",
     badge: "bg-tone-lime-dot",
     ink: "text-tone-lime-ink",
+    ring: "ring-tone-lime-dot",
   },
   {
     chip: "bg-tone-cyan-soft text-tone-cyan-ink",
     badge: "bg-tone-cyan-dot",
     ink: "text-tone-cyan-ink",
+    ring: "ring-tone-cyan-dot",
   },
   {
     chip: "bg-tone-plum-soft text-tone-plum-ink",
     badge: "bg-tone-plum-dot",
     ink: "text-tone-plum-ink",
+    ring: "ring-tone-plum-dot",
   },
 ];
 

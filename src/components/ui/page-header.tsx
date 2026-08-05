@@ -42,6 +42,7 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  leading,
   monogram,
   tone = "brand",
   programTone,
@@ -53,6 +54,8 @@ export function PageHeader({
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Rendered left of the title block — a profile picture, typically. */
+  leading?: React.ReactNode;
   monogram?: string;
   tone?: BannerTone;
   /**
@@ -92,7 +95,11 @@ export function PageHeader({
             </span>
           )}
           <div className="relative flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-            <div className="min-w-0">
+            {/* `leading` sits left of the title block — a profile picture, so a
+                person's page opens with their face instead of repeating their
+                name in a card underneath. */}
+            {leading && <div className="shrink-0">{leading}</div>}
+            <div className="min-w-0 flex-1">
               {eyebrow && (
                 <div
                   className={cn(

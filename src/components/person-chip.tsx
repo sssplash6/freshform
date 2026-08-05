@@ -55,9 +55,12 @@ export function PersonChip({
 
   const body = (
     <>
+      {/* `sm` stays small: it sits in the dense ledger tables, where the name
+          beside it does the identifying and row height is the scarce resource.
+          `md` is the header/card size and has room for a face. */}
       <Avatar
         person={person}
-        className={sm ? "h-5 w-5 text-[9px]" : "h-6 w-6 text-[10px]"}
+        className={sm ? "h-5 w-5 text-[9px]" : "h-8 w-8 text-[11px]"}
       />
       <span className="truncate">{label}</span>
     </>

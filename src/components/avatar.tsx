@@ -30,6 +30,12 @@ export function Avatar({
     // A plain <img>: /api/avatar is an auth-gated dynamic byte route, which the
     // next/image optimizer can neither read at build time nor improve on — the
     // bytes are already a 256px WebP.
+    //
+    // The ring is not decoration. A person's identity hue is what makes a
+    // column of sessions readable without reading any names (DESIGN.md), and a
+    // photograph carries no such hue — so the hue moves to the ring and the
+    // scanning property survives the picture. It also does the work at the
+    // sizes where a face is too small to recognise anyway.
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -37,7 +43,11 @@ export function Avatar({
         alt={alt ?? ""}
         title={title}
         aria-hidden={alt ? undefined : true}
-        className={cn("shrink-0 rounded-full bg-canvas object-cover", className)}
+        className={cn(
+          "shrink-0 rounded-full bg-canvas object-cover ring-2",
+          personTone(person.id).ring,
+          className
+        )}
       />
     );
   }
