@@ -34,8 +34,10 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
     { id: 1, email: "", name: "", folderUrl: "" },
   ]);
 
-  const validCount = rows.filter((r) =>
-    EMAIL_RE.test(normalizeEmail(r.email)),
+  // A row is ready when it has both halves of an identity: the address they sign
+  // in with, and the name everyone will read them by.
+  const validCount = rows.filter(
+    (r) => EMAIL_RE.test(normalizeEmail(r.email)) && r.name.trim().length > 0,
   ).length;
 
   // Reset to two empty rows once the students have been added.
@@ -73,7 +75,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
                 value={r.name}
                 onChange={(e) => update(r.id, "name", e.target.value)}
                 placeholder="Full name"
-                aria-label={`Student ${i + 1} name`}
+                aria-label={`Student ${i + 1} full name`}
               />
               {/* Not type="url": native validation would reject a pasted
                   `drive.google.com/…`, which the action accepts and https-fixes. */}
@@ -107,8 +109,9 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
             + Add another student
           </button>
           <p className="text-xs text-muted-fg">
-            The folder link is optional — paste the student&apos;s Drive or Docs
-            URL and their mentors can open it from their page.
+            Email and full name are both needed. The folder link is optional —
+            paste the student&apos;s Drive or Docs URL and their mentors can open
+            it from their page.
           </p>
         </div>
       </div>

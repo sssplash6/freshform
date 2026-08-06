@@ -5,7 +5,7 @@ import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { SESSION_STATUS } from "@/lib/constants";
+import { ATTENDANCE, ATTENDANCE_META, attendanceOf, SESSION_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 
 /**
@@ -17,7 +17,7 @@ export type LoggedMeeting = {
   hours: number;
   date: Date;
   attended: boolean;
-  task: string | null;
+  late: boolean;
   note: string | null;
   status: string;
   mentor: { id: string; name: string | null; email: string };
@@ -60,6 +60,8 @@ export function MeetingsLog({
   moreHref?: string;
   moreLabel?: string;
 }) {
+  // The tally counts what was actually charged: rescheduled and voided rows are
+  // part of the history, not of the hours.
   const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
   const loggedHours = active.reduce((sum, s) => sum + s.hours, 0);
   const withStudent = sessions.some((s) => s.student);
@@ -112,6 +114,7 @@ export function MeetingsLog({
         <Table framed={false} columns={columns}>
           {sessions.map((s, i) => {
             const voided = s.status === SESSION_STATUS.VOIDED;
+            const state = attendanceOf(s);
             return (
               <Tr
                 key={s.id}
@@ -144,7 +147,7 @@ export function MeetingsLog({
                 <Td align="right">
                   <span
                     className={
-                      voided
+                      voided || state === ATTENDANCE.RESCHEDULED
                         ? "text-muted-fg line-through tabular-nums"
                         : "font-semibold tabular-nums text-ink"
                     }
@@ -170,23 +173,22 @@ export function MeetingsLog({
                 </Td>
                 <Td className="max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>
-                    {s.task ? (
-                      <div className="text-ink">{s.task}</div>
+                    {s.note ? (
+                      <div className="text-ink">{s.note}</div>
                     ) : (
-                      !s.note && <span className="text-muted-fg">—</span>
-                    )}
-                    {s.note && (
-                      <div className={s.task ? "text-xs text-muted-fg" : "text-ink"}>
-                        {s.note}
-                      </div>
+                      <span className="text-muted-fg">—</span>
                     )}
                   </div>
-                  {(voided || !s.attended) && (
+                  {/* What kind of meeting it was, when it wasn't the ordinary
+                      kind. Voiding wins: those hours went back. */}
+                  {(voided || state !== ATTENDANCE.ATTENDED) && (
                     <div className="mt-1.5">
                       {voided ? (
                         <Chip tone="gray">Voided, hours returned</Chip>
                       ) : (
-                        <Chip tone="amber">No-show, hours still charged</Chip>
+                        <Chip tone={ATTENDANCE_META[state].tone ?? "gray"}>
+                          {ATTENDANCE_META[state].chip}
+                        </Chip>
                       )}
                     </div>
                   )}

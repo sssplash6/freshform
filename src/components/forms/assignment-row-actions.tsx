@@ -35,7 +35,7 @@ type AssignmentFields = {
   purpose: string;
   mentorId: string;
   hourLimit: number | null;
-  timeline: string | null;
+  deadline: string | null;
   note: string | null;
   progress: string;
   /** True when an admin pinned the progress, so hours no longer move it. */
@@ -254,13 +254,13 @@ export function AssignmentRowActions({
                       />
                     </label>
                     <label className={`${labelClass} flex-1`}>
-                      Timeline
+                      Deadline
                       <input
-                        name="timeline"
+                        name="deadline"
                         type="text"
                         maxLength={60}
-                        placeholder="Aug 7"
-                        defaultValue={assignment.timeline ?? ""}
+                        placeholder="August 7"
+                        defaultValue={assignment.deadline ?? ""}
                         className={inputClass}
                       />
                     </label>

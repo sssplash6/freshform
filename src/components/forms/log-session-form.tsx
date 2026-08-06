@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 
@@ -107,21 +108,12 @@ export function LogSessionForm({
             className={inputClass}
           />
         </label>
-        <label className="block text-sm">
-          <span className="text-muted-fg">What you covered</span>
-          <input
-            name="task"
-            type="text"
-            placeholder="Optional — e.g. reviewed draft 2, next: activities list"
-            className={inputClass}
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted-fg">Note</span>
+        <label className="block text-sm sm:col-span-2 lg:col-span-3">
+          <span className="text-muted-fg">Notes</span>
           <input
             name="note"
             type="text"
-            placeholder="Optional"
+            placeholder="Optional — what you covered, and what's next"
             className={inputClass}
           />
         </label>
@@ -135,23 +127,8 @@ export function LogSessionForm({
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <label className="flex items-start gap-2.5 text-sm">
-          <input
-            name="attended"
-            type="checkbox"
-            defaultChecked
-            value="yes"
-            className="mt-0.5 h-4 w-4 rounded border-line text-brand focus:ring-brand"
-          />
-          <span>
-            <span className="font-medium text-ink">Student was present</span>
-            <span className="block text-xs text-muted-fg">
-              Uncheck for a no-show. The hours are still deducted, but recorded
-              as missed.
-            </span>
-          </span>
-        </label>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <AttendancePicker />
         <Button
           type="submit"
           disabled={pending || noGoals}

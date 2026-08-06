@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { editSession, voidSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { ChevronDownIcon } from "@/components/icons";
 
 const inputClass =
@@ -19,8 +20,8 @@ export function SessionRowActions({
     id: string;
     hours: number;
     date: string;
-    attended: boolean;
-    task: string | null;
+    /** One of the four states in lib/constants.ts ATTENDANCE. */
+    attendance: string;
     note: string | null;
     assignmentId: string | null;
   };
@@ -97,34 +98,19 @@ export function SessionRowActions({
                 className={`${inputClass} block`}
               />
             </label>
-            <label className="block flex-1 text-xs text-muted-fg">
-              What you covered
-              <input
-                name="task"
-                type="text"
-                defaultValue={session.task ?? ""}
-                className={`${inputClass} block w-full`}
-              />
-            </label>
-            <label className="block flex-1 text-xs text-muted-fg">
-              Note
+            <label className="block w-full flex-1 text-xs text-muted-fg">
+              Notes
               <input
                 name="note"
                 type="text"
                 defaultValue={session.note ?? ""}
+                placeholder="What you covered"
                 className={`${inputClass} block w-full`}
               />
             </label>
-            <label className="flex w-full items-center gap-2 text-xs text-ink">
-              <input
-                name="attended"
-                type="checkbox"
-                value="yes"
-                defaultChecked={session.attended}
-                className="h-4 w-4 rounded border-line text-brand focus:ring-brand"
-              />
-              Student was present (uncheck for a no-show)
-            </label>
+            <div className="w-full">
+              <AttendancePicker defaultValue={session.attendance} compact />
+            </div>
             <button
               type="submit"
               disabled={editPending}

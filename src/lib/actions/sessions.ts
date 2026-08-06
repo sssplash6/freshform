@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import {
+  ATTENDANCE,
+  ATTENDANCE_META,
+  attendanceFields,
+  attendanceOf,
   canActAsMentor,
   NOTIFICATION_TYPES,
   SESSION_STATUS,
@@ -18,6 +22,16 @@ import {
   parseHoursField,
   type ActionState,
 } from "@/lib/actions/shared";
+
+/**
+ * Which of the four kinds of meeting this was. Defaults to Attended, so a form
+ * that somehow arrives without the field records the ordinary case rather than
+ * failing — and an unknown value is never written.
+ */
+function readAttendance(raw: FormDataEntryValue | null): string {
+  const value = String(raw ?? "").trim().toUpperCase();
+  return value in ATTENDANCE_META ? value : ATTENDANCE.ATTENDED;
+}
 
 async function requireActiveMentor() {
   const actor = await getCurrentUser();
@@ -95,10 +109,10 @@ export async function logSession(
   if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
-  const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
-  // Unchecked "Student was present" box → no-show (still charged, tallied missed).
-  const attended = formData.get("attended") != null;
+  const state = readAttendance(formData.get("attendance"));
+  const fields = attendanceFields(state);
+  const rescheduled = state === ATTENDANCE.RESCHEDULED;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: studentProfileId },
@@ -128,7 +142,9 @@ export async function logSession(
   }
 
   // Deadlines are hard: once passed, the unused hours are forfeited and no
-  // further sessions can be logged against this allocation.
+  // further sessions can be logged against this allocation. A rescheduled
+  // meeting charges nothing, but recording one against expired hours would still
+  // be recording work on a pool that is closed.
   if (allocation.deadline.getTime() < Date.now()) {
     return {
       ok: false,
@@ -157,9 +173,8 @@ export async function logSession(
         assignmentId: goal.id,
         hours: hoursParsed.value,
         date: dateParsed.value,
-        attended,
-        task,
         note,
+        ...fields,
       },
     });
 
@@ -172,9 +187,11 @@ export async function logSession(
       type: NOTIFICATION_TYPES.SESSION_LOGGED,
       actorId: mentor.id,
       href: notificationHref.studentHome(),
-      message: attended
-        ? `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
-        : `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`,
+      message: rescheduled
+        ? `${mentorLabel} recorded that your ${formatHours(hoursParsed.value)}-hour meeting on ${formatDate(dateParsed.value)} for "${goal.purpose}" was rescheduled. No hours were charged.`
+        : state === ATTENDANCE.ABSENT
+          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`
+          : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}"${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
     });
 
     // Staff watch delivery across every program, so a logged session is news
@@ -184,9 +201,11 @@ export async function logSession(
       type: NOTIFICATION_TYPES.SESSION_LOGGED,
       actorId: mentor.id,
       href: notificationHref.adminStudent(profile.id),
-      message: attended
-        ? `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)} toward "${goal.purpose}".`
-        : `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}").`,
+      message: rescheduled
+        ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}") — no hours charged.`
+        : state === ATTENDANCE.ABSENT
+          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}").`
+          : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)} toward "${goal.purpose}"${state === ATTENDANCE.LATE ? " (came late)" : ""}.`,
     });
 
     if (synced?.becameDone) {
@@ -204,7 +223,8 @@ export async function logSession(
   revalidatePath("/", "layout");
 
   const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
-  const noShowNote = attended ? "" : " Recorded as a no-show.";
+  const stateNote =
+    state === ATTENDANCE.ATTENDED ? "" : ` Recorded as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
   // Tell the mentor what their own log just did to the task, so an automatic
   // status change is never a surprise they discover later.
   const goalNote = sync?.becameDone
@@ -212,23 +232,33 @@ export async function logSession(
     : sync?.changed
       ? ` "${goal.purpose}" is now in progress.`
       : "";
+  if (rescheduled) {
+    return {
+      ok: true,
+      message: `Rescheduled meeting recorded — no hours charged. ${studentName} still has ${formatHours(remaining)} hours left with you.`,
+    };
+  }
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged.${noShowNote}${goalNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
-        : `Session logged.${noShowNote}${goalNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
+        ? `Session logged.${stateNote}${goalNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
+        : `Session logged.${stateNote}${goalNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
   };
 }
 
-/** Load a session and verify the acting mentor logged it and it's ACTIVE. */
-async function findOwnActiveSession(mentorId: string, sessionId: string) {
+/**
+ * Load a session and verify the acting mentor logged it and it can still be
+ * corrected. Anything but a voided session can: a rescheduled one is a live
+ * record, and correcting it back to attended is exactly how a mis-tick is fixed.
+ */
+async function findOwnEditableSession(mentorId: string, sessionId: string) {
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: { student: { include: { user: true } } },
   });
   if (!session || session.mentorId !== mentorId) return null;
-  if (session.status !== SESSION_STATUS.ACTIVE) return null;
+  if (session.status === SESSION_STATUS.VOIDED) return null;
   return session;
 }
 
@@ -246,11 +276,11 @@ export async function editSession(
   }
 
   const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findOwnActiveSession(mentor.id, sessionId);
+  const session = await findOwnEditableSession(mentor.id, sessionId);
   if (!session) {
     return {
       ok: false,
-      error: "You can only edit active sessions you logged yourself.",
+      error: "You can only edit sessions you logged yourself, and not voided ones.",
     };
   }
 
@@ -261,9 +291,9 @@ export async function editSession(
   if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
-  const task = String(formData.get("task") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
-  const attended = formData.get("attended") != null;
+  const state = readAttendance(formData.get("attendance"));
+  const fields = attendanceFields(state);
 
   // The task can be corrected here, but is not forced: sessions logged before
   // tasks existed have none, and re-picking one to fix a typo in the hours
@@ -276,12 +306,9 @@ export async function editSession(
     assignmentId = goal.id;
   }
 
-  const attendanceChanged = attended !== session.attended;
-  const attendanceNote = attendanceChanged
-    ? attended
-      ? " Now marked as attended."
-      : " Now marked as a no-show."
-    : "";
+  const wasState = attendanceOf(session);
+  const attendanceNote =
+    state === wasState ? "" : ` Now marked as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
   const staff = await adminIds();
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
@@ -294,9 +321,8 @@ export async function editSession(
         assignmentId,
         hours: hoursParsed.value,
         date: dateParsed.value,
-        attended,
-        task,
         note,
+        ...fields,
       },
     });
 
@@ -340,11 +366,11 @@ export async function voidSession(
   }
 
   const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findOwnActiveSession(mentor.id, sessionId);
+  const session = await findOwnEditableSession(mentor.id, sessionId);
   if (!session) {
     return {
       ok: false,
-      error: "You can only void active sessions you logged yourself.",
+      error: "You can only void sessions you logged yourself, and not twice.",
     };
   }
 

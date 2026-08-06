@@ -36,9 +36,9 @@ function GoalCard({
         <h3 className="text-[15px] font-semibold leading-snug text-ink">
           {goal.purpose}
         </h3>
-        {goal.timeline && (
+        {goal.deadline && (
           <span className="shrink-0 rounded-full bg-canvas px-2.5 py-0.5 text-xs font-medium text-muted-fg">
-            {goal.timeline}
+            {goal.deadline}
           </span>
         )}
       </div>

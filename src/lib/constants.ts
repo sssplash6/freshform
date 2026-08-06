@@ -22,9 +22,91 @@ export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export const SESSION_STATUS = {
   ACTIVE: "ACTIVE",
   VOIDED: "VOIDED",
+  // The meeting moved, so nothing was delivered. Kept as a status rather than an
+  // attendance state because every hours query already counts ACTIVE only —
+  // which is exactly the accounting a rescheduled meeting needs.
+  RESCHEDULED: "RESCHEDULED",
 } as const;
 
 export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
+
+/**
+ * What kind of meeting a mentor is logging. One question with four answers,
+ * because they are mutually exclusive and each one means something different for
+ * the hours:
+ *
+ *   ATTENDED     the meeting happened          hours charged, delivered
+ *   LATE         it happened, they were late   hours charged, delivered
+ *   ABSENT       they didn't come              hours charged, tallied as missed
+ *   RESCHEDULED  the meeting moved             no hours charged at all
+ *
+ * Stored across `attended`, `late` and `status` (see attendanceOf), so the hours
+ * engine keeps working off ACTIVE sessions without knowing this vocabulary.
+ */
+export const ATTENDANCE = {
+  ATTENDED: "ATTENDED",
+  LATE: "LATE",
+  ABSENT: "ABSENT",
+  RESCHEDULED: "RESCHEDULED",
+} as const;
+
+export type Attendance = (typeof ATTENDANCE)[keyof typeof ATTENDANCE];
+
+export const ATTENDANCE_META: Record<
+  string,
+  { label: string; hint: string; chip?: string; tone?: "amber" | "gray" }
+> = {
+  ATTENDED: { label: "Attended", hint: "The meeting happened as planned." },
+  LATE: {
+    label: "Came late",
+    hint: "It happened; log the hours you actually spent.",
+    chip: "Came late",
+    tone: "amber",
+  },
+  ABSENT: {
+    label: "Absent",
+    hint: "A no-show. The hours are still charged, but tallied as missed.",
+    chip: "No-show, hours still charged",
+    tone: "amber",
+  },
+  RESCHEDULED: {
+    label: "Rescheduled",
+    hint: "The meeting moved, so no hours are charged.",
+    chip: "Rescheduled, no hours charged",
+    tone: "gray",
+  },
+};
+
+/** How a stored session reads back as one of the four states. */
+export function attendanceOf(session: {
+  attended: boolean;
+  late: boolean;
+  status: string;
+}): Attendance {
+  if (session.status === SESSION_STATUS.RESCHEDULED) return ATTENDANCE.RESCHEDULED;
+  if (!session.attended) return ATTENDANCE.ABSENT;
+  return session.late ? ATTENDANCE.LATE : ATTENDANCE.ATTENDED;
+}
+
+/** The three columns one of the four states writes. */
+export function attendanceFields(state: string): {
+  attended: boolean;
+  late: boolean;
+  status: string;
+} {
+  switch (state) {
+    case ATTENDANCE.LATE:
+      return { attended: true, late: true, status: SESSION_STATUS.ACTIVE };
+    case ATTENDANCE.ABSENT:
+      return { attended: false, late: false, status: SESSION_STATUS.ACTIVE };
+    case ATTENDANCE.RESCHEDULED:
+      // attended stays true so that, if the status is ever corrected back, the
+      // hours land as delivered rather than silently as missed.
+      return { attended: true, late: false, status: SESSION_STATUS.RESCHEDULED };
+    default:
+      return { attended: true, late: false, status: SESSION_STATUS.ACTIVE };
+  }
+}
 
 /** How far along one planned piece of work is. Admin-set, never derived. */
 export const ASSIGNMENT_PROGRESS = {

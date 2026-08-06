@@ -32,7 +32,7 @@ import { parseHoursField, type ActionState } from "@/lib/actions/shared";
  */
 
 const PROGRESS_VALUES: string[] = Object.values(ASSIGNMENT_PROGRESS);
-const MAX_TIMELINE = 60;
+const MAX_DEADLINE = 60;
 const MAX_NOTE = 500;
 
 /** Every field an assignment row holds, validated together. */
@@ -43,7 +43,7 @@ function parseFields(
   | {
       purpose: string;
       hourLimit: number | null;
-      timeline: string | null;
+      deadline: string | null;
       note: string | null;
       progress: string;
     } {
@@ -67,9 +67,10 @@ function parseFields(
     hourLimit = parsed.value;
   }
 
-  const timeline = String(formData.get("timeline") ?? "").trim();
-  if (timeline.length > MAX_TIMELINE) {
-    return { error: `Keep the timeline under ${MAX_TIMELINE} characters.` };
+  // Free text on purpose: the team writes both "August 7" and "March-May".
+  const deadline = String(formData.get("deadline") ?? "").trim();
+  if (deadline.length > MAX_DEADLINE) {
+    return { error: `Keep the deadline under ${MAX_DEADLINE} characters.` };
   }
 
   const note = String(formData.get("note") ?? "").trim();
@@ -85,13 +86,13 @@ function parseFields(
   return {
     purpose,
     hourLimit,
-    timeline: timeline || null,
+    deadline: deadline || null,
     note: note || null,
     progress,
   };
 }
 
-/** Edit a task: any of name, consultant, hour limit, timeline, progress. */
+/** Edit a task: any of name, consultant, hour limit, deadline, progress, note. */
 export async function updateAssignment(
   _prev: ActionState,
   formData: FormData
@@ -141,7 +142,7 @@ export async function updateAssignment(
       href: notificationHref.mentorStudent(existing.studentId),
       message:
         mentorId === existing.mentorId
-          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.timeline ? `, ${fields.timeline}` : ""}.`
+          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.deadline ? `, due ${fields.deadline}` : ""}.`
           : `"${fields.purpose}" for ${studentName} was reassigned.`,
     });
   });

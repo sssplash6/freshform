@@ -69,7 +69,7 @@ export function AssignmentsPanel({
     { label: "Consultant" },
     { label: "Logged", align: "right" },
     { label: "Budget", align: "right" },
-    { label: "Timeline" },
+    { label: "Deadline" },
     { label: "Progress" },
     ...(manage ? [{ label: "", align: "right" } as Column] : []),
   ];
@@ -143,7 +143,7 @@ export function AssignmentsPanel({
                     )}
                   </Td>
                   <Td className="whitespace-nowrap">
-                    {a.timeline ?? <span className="text-muted-fg">—</span>}
+                    {a.deadline ?? <span className="text-muted-fg">—</span>}
                   </Td>
                   <Td>
                     <span className="flex items-center gap-1.5">
@@ -169,7 +169,7 @@ export function AssignmentsPanel({
                           purpose: a.purpose,
                           mentorId: a.mentorId,
                           hourLimit: a.hourLimit,
-                          timeline: a.timeline,
+                          deadline: a.deadline,
                           note: a.note,
                           progress: a.progress,
                           progressManual: a.progressManual,

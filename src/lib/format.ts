@@ -15,14 +15,16 @@ export function formatMoney(n: number): string {
   });
 }
 
+// Spelled out in full, everywhere: a date should never need working out, and
+// "8/3" means two different days on two sides of the world.
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 /**
  * Calendar dates (stored at UTC midnight) read the way the team says them out
- * loud: "Aug 3", "Oct 7". The year is only spelled out when it isn't the
+ * loud: "August 3", "October 7". The year is only spelled out when it isn't the
  * current one, so a log spanning new year stays unambiguous without repeating
  * "2026" down every row.
  */
@@ -58,7 +60,7 @@ export function formatAgo(d: Date, now: Date = new Date()): string {
   return formatDate(d);
 }
 
-/** Timestamps (notifications, audit entries): "8 Jul 2026, 14:32 UTC". */
+/** Timestamps (notifications, audit entries): "8 July 2026, 14:32 UTC". */
 export function formatDateTime(d: Date): string {
   const hh = String(d.getUTCHours()).padStart(2, "0");
   const mm = String(d.getUTCMinutes()).padStart(2, "0");

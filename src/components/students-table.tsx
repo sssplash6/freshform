@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { ArrowLink } from "@/components/arrow-link";
 import { Chip } from "@/components/chip";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
@@ -13,8 +12,10 @@ import type { StudentWithHours } from "@/lib/queries";
 /**
  * Students with derived hour totals (allotted = sum of per-mentor
  * allocations). Negative remaining renders red (overdraw is allowed but
- * warned). `manageBase` (admin only) links each row to its detail page where
- * approval and per-mentor allocations live. `showCohort` is off for lists
+ * warned). `manageBase` (admin only) turns each student's NAME into the link to
+ * their page — where approval and per-mentor allocations live — so opening a
+ * student is a click on who they are, not on a button at the end of a table that
+ * scrolls sideways. `showCohort` is off for lists
  * scoped to programs without cohorts — programs are flat by default, so the
  * column is opt-in. `framed=false` drops the outer border for tables
  * embedded in a program island box.
@@ -46,7 +47,6 @@ export function StudentsTable({
     { label: "Completed", align: "right" },
     { label: "Missed", align: "right" },
     { label: "Remaining", align: "right" },
-    ...(manageBase ? [{ label: "" } as Column] : []),
   ];
 
   return (
@@ -108,13 +108,6 @@ export function StudentsTable({
           >
             {formatHours(s.remainingHours)}
           </Td>
-          {manageBase && (
-            <Td align="right">
-              <ArrowLink href={`${manageBase}/${s.id}`} className="text-[13px]">
-                Open
-              </ArrowLink>
-            </Td>
-          )}
         </Tr>
       ))}
     </Table>

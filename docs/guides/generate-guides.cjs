@@ -182,11 +182,16 @@ const mentor = {
       { steps: [
         `Use the "Log a completed session" form on "My students" (or on a student's page).`,
         'Pick the student, then pick the task the meeting went toward — required, and the list holds exactly the tasks an admin allocated your hours for.',
-        "Enter the hours and the date, and note what you covered if it helps the next person.",
-        '"Student was present" is ticked by default — untick it for a no-show.',
+        "Enter the hours and the date, and a note on what you covered.",
+        'Say how it went: Attended, Came late, Absent, or Rescheduled.',
         'Click "Log session".',
       ] },
-      { tip: "A no-show still draws the hours down, but it's tracked separately as “missed” so everyone can see it." },
+      { bullets: [
+        "Attended — the ordinary case. The hours are charged.",
+        "Came late — it happened; log the hours you actually spent.",
+        "Absent — a no-show. The hours are still charged, but tracked separately as “missed” so everyone can see it.",
+        "Rescheduled — the meeting moved, so no hours are charged. It stays in the log as a record.",
+      ] },
       { tip: "Empty task list? No hours have been allocated to you for that student yet. Ask an admin — hours and the task they are for arrive together." },
     ] },
     { n: 4, heading: "Deadlines", blocks: [
@@ -194,7 +199,7 @@ const mentor = {
       { tip: "After the deadline those hours expire — you can't log new sessions against them. Ask an admin to extend the deadline or allocate fresh hours." },
     ] },
     { n: 5, heading: "Fix or void a session", blocks: [
-      { p: 'On the "Sessions" page, click "Correct" on any active session to change the task it counted toward, its hours, date, notes, or attendance — or to void it, which returns the hours to the student. The student is notified of every change.' },
+      { p: 'On the "Sessions" page, click "Correct" on any session you logged to change the task it counted toward, its hours, date, notes, or how it went — or to void it, which returns the hours to the student. The student is notified of every change.' },
     ] },
     { n: 6, heading: "Feedback & notifications", blocks: [
       { p: '"My feedback" shows the ratings students left you. The bell icon (top-right) collects your updates.' },
@@ -213,7 +218,8 @@ const admin = {
     ] },
     { n: 2, heading: "Add & approve students", blocks: [
       { steps: [
-        "Open a program, go to the Students tab, and paste one or more student emails to register them; they confirm their name and Telegram on first sign-in.",
+        "Open a program, go to the Students tab, and enter each student's email and full name; both are required. They confirm their Telegram on first sign-in.",
+        "Click a student's name anywhere in the app to open their page.",
         'Students who signed up on their own appear under "Pending approvals" — approve them, then allocate their hours.',
       ] },
     ] },
@@ -222,6 +228,7 @@ const admin = {
       { steps: [
         'Open a student from the Students tab and find "Assign a task" under Tasks.',
         "Pick the consultant, then the task (one of the presets or type your own), the hours, and the use-by date.",
+        "Use the note to say what doing it well looks like — “review the intro of each essay” — and the consultant sees it under the task.",
         "For Master's Program students, also enter what they paid for these hours.",
         "The hours are added to what that consultant already holds with the student, and become the task's budget. Picking a task they already have open tops that budget up instead of starting a second copy of it.",
       ] },
@@ -231,7 +238,7 @@ const admin = {
     { n: 4, heading: "Tasks — what the hours are for", blocks: [
       { p: "Hours are always granted for a task, so the plan and the ledger are the same thing seen from two sides: the task carries the hours as its budget, and the mentor logs each session against one of the student's tasks." },
       { bullets: [
-        "The Tasks panel on a student's page shows each task, its consultant, hours logged against hours budgeted, and its progress.",
+        "The Tasks panel on a student's page shows each task, its consultant, hours logged against hours budgeted, its deadline and its progress.",
         "Progress follows the hours on its own: the first session moves a task to In progress, reaching the budget marks it Done. Setting progress by hand pins it there.",
         "A task always arrives with hours, because a task nobody has hours for can't be worked on.",
         "Going over a task's budget is warned, never blocked — the number turns amber.",

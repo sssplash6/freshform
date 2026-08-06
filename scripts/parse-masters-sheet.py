@@ -12,6 +12,7 @@ so inserting a column doesn't silently shift the import:
 
   <consultant> | Duration | Date | Notes        the meetings log (left half)
   Purpose | Consultant | Hour Limit | Timeline | Progress    the plan (right half)
+  (the sheet's "Timeline" is what the platform calls a task's deadline)
   Hours | Completed | Remain                   the tab's own totals
 
 The left half's consultant column carries no header in the sheet, so it is read
@@ -38,6 +39,9 @@ NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
 EXCEL_EPOCH = date(1899, 12, 30)
 MONTHS = {m: i + 1 for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
+# Spelled out, the way the app writes dates (src/lib/format.ts).
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
 
 
 def parse_xml(data: bytes) -> ET.Element:
@@ -179,7 +183,7 @@ def as_date(v: object, today: date) -> str | None:
 def display_date(iso: str, today: date) -> str:
     """ISO → the way the team says it out loud, matching src/lib/format.ts."""
     d = date.fromisoformat(iso)
-    short = f"{list(MONTHS)[d.month - 1].capitalize()} {d.day}"
+    short = f"{MONTH_NAMES[d.month - 1]} {d.day}"
     return short if d.year == today.year else f"{short}, {d.year}"
 
 
@@ -266,9 +270,9 @@ def parse_tab(name: str, rows: list[dict[str, object]], today: date) -> dict[str
                     "hourLimit": limit,
                     # A real date renders like the app does; anything the team typed
                     # by hand ("Mar-May") is kept verbatim.
-                    "timeline": display_date(timeline_iso, today) if timeline_iso
+                    "deadline": display_date(timeline_iso, today) if timeline_iso
                                 else as_text(raw_timeline),
-                    "timelineDate": timeline_iso,
+                    "deadlineDate": timeline_iso,
                     "progress": as_text(row.get(progress_col)) if progress_col else None,
                 })
 

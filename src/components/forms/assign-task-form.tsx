@@ -46,7 +46,8 @@ export function AssignTaskForm({
       <h3 className="text-sm font-semibold text-ink">Assign a task</h3>
       <p className="mt-1 text-xs text-muted-fg">
         The hours are granted to this mentor for this task, and become its
-        budget. Every session they log names one of the student&apos;s tasks.
+        budget. Every session they log names one of the student&apos;s tasks; the
+        note is where you say what doing it well looks like.
       </p>
       <input type="hidden" name="studentProfileId" value={studentProfileId} />
       <input type="hidden" name="mode" value="add" />
@@ -104,6 +105,17 @@ export function AssignTaskForm({
             type="date"
             required
             min={today}
+            className="mt-1"
+          />
+        </label>
+
+        <label className="min-w-0 sm:col-span-2 lg:col-span-3">
+          <span className={labelClass}>Note</span>
+          <Input
+            name="taskNote"
+            type="text"
+            maxLength={500}
+            placeholder="Optional — e.g. review the intro of each essay"
             className="mt-1"
           />
         </label>

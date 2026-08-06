@@ -99,8 +99,9 @@ export async function createStudents(
   }
 
   // One (email, name, folder link) triple per row, index-aligned with the
-  // emails. Name and folder link are both optional — a blank name is filled
-  // in by the student on first sign-in, and a folder can be attached later.
+  // emails. The name is required: every list, chip and log in the app reads
+  // people by name, and a nameless row shows up as an email for as long as it
+  // takes the student to sign in. The folder link stays optional.
   const emails = formData.getAll("email").map((e) => normalizeEmail(e));
   const names = formData.getAll("name").map((n) => String(n ?? "").trim());
   const folderUrls = formData.getAll("folderUrl");
@@ -123,8 +124,11 @@ export async function createStudents(
 
   const invalid = withFolders
     .filter((r) => !EMAIL_RE.test(r.email))
-    .map((r) => r.email);
-  const valid = withFolders.filter((r) => EMAIL_RE.test(r.email));
+    .map((r) => `${r.email} (not a valid email)`);
+  const nameless = withFolders
+    .filter((r) => EMAIL_RE.test(r.email) && !r.name)
+    .map((r) => `${r.email} (no full name)`);
+  const valid = withFolders.filter((r) => EMAIL_RE.test(r.email) && r.name);
 
   const enrollment = await resolveEnrollment(formData);
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
@@ -149,7 +153,7 @@ export async function createStudents(
       const studentUser = await tx.user.create({
         data: {
           email,
-          name: name || null,
+          name,
           role: ROLES.STUDENT,
           status: USER_STATUS.ACTIVE,
         },
@@ -168,7 +172,8 @@ export async function createStudents(
 
   const skipped = [
     ...[...taken].map((e) => `${e} (already registered)`),
-    ...invalid.map((e) => `${e} (not a valid email)`),
+    ...invalid,
+    ...nameless,
   ];
   if (fresh.length === 0) {
     return {
@@ -182,7 +187,7 @@ export async function createStudents(
     ok: true,
     message:
       `${fresh.length} student${fresh.length === 1 ? "" : "s"} added to ${enrollmentLabel(program.name, cohort?.name)}. ` +
-      `They'll confirm their name and Telegram username when they first sign in.` +
+      `They'll confirm their Telegram username when they first sign in.` +
       (skipped.length > 0 ? ` Skipped: ${skipped.join(", ")}.` : ""),
   };
 }
@@ -686,8 +691,10 @@ export async function setMentorAllocation(
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
-  // Hours arriving means work arriving, so the grant says what the work is.
+  // Hours arriving means work arriving, so the grant says what the work is —
+  // and, if there is anything to say about how to do it, what that is too.
   let task: string | null = null;
+  let taskNote: string | null = null;
   if (granted > 0) {
     const parsedTask = parseTaskField(
       formData.get("task"),
@@ -695,6 +702,12 @@ export async function setMentorAllocation(
     );
     if ("error" in parsedTask) return { ok: false, error: parsedTask.error };
     task = parsedTask.value;
+
+    const rawNote = String(formData.get("taskNote") ?? "").trim();
+    if (rawNote.length > 500) {
+      return { ok: false, error: "Keep the task note under 500 characters." };
+    }
+    taskNote = rawNote || null;
   }
 
   const mentorLabel = mentor.name ?? mentor.email;
@@ -748,9 +761,15 @@ export async function setMentorAllocation(
       });
       if (open) {
         const budget = Number(((open.hourLimit ?? 0) + granted).toFixed(2));
+        // A note written with a top-up is added to what the task already says,
+        // since the earlier instruction is usually still true.
+        const note =
+          taskNote && !(open.note ?? "").includes(taskNote)
+            ? [open.note, taskNote].filter(Boolean).join(" · ")
+            : open.note;
         await tx.assignment.update({
           where: { id: open.id },
-          data: { hourLimit: budget },
+          data: { hourLimit: budget, note },
         });
         // A raised budget can reopen work the old limit had finished.
         await syncGoalProgress(tx, open.id);
@@ -767,9 +786,10 @@ export async function setMentorAllocation(
             mentorId,
             purpose: task,
             hourLimit: granted,
+            note: taskNote,
             // The date THIS grant was aimed at, which the pooled use-by date can
             // outlive once other hours are added to the same mentor.
-            timeline: formatDate(enteredDeadline),
+            deadline: formatDate(enteredDeadline),
             position: (last?.position ?? -1) + 1,
             createdById: actor.id,
           },
@@ -824,14 +844,14 @@ export async function setMentorAllocation(
   revalidatePath("/", "layout");
   const paidNote =
     isMasters && newPaid !== null ? ` · ${formatMoney(newPaid)} paid` : "";
-  const taskNote = taskOutcome
+  const taskSummary = taskOutcome
     ? taskOutcome.created
       ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
       : ` "${taskOutcome.task}" is now budgeted ${formatHours(taskOutcome.budget)} hours.`
     : "";
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.${taskNote}`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.${taskSummary}`,
   };
 }
 

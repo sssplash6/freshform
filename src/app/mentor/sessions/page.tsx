@@ -2,7 +2,12 @@ import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
-import { SESSION_STATUS } from "@/lib/constants";
+import {
+  ATTENDANCE,
+  ATTENDANCE_META,
+  attendanceOf,
+  SESSION_STATUS,
+} from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -181,7 +186,7 @@ export default async function MentorSessionsPage({
                     <th className="px-4 py-3">Student</th>
                     <th className="px-4 py-3 text-right">Hours</th>
                     <th className="px-4 py-3">Task</th>
-                    <th className="px-4 py-3">Note</th>
+                    <th className="px-4 py-3">Notes</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -206,8 +211,8 @@ export default async function MentorSessionsPage({
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatHours(s.hours)}
                         </td>
-                        <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
-                          {s.task ?? "—"}
+                        <td className="max-w-56 truncate px-4 py-3 text-plan-ink">
+                          {s.assignment?.purpose ?? "—"}
                         </td>
                         <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
                           {s.note ?? "—"}
@@ -215,10 +220,12 @@ export default async function MentorSessionsPage({
                         <td className="px-4 py-3">
                           {voided ? (
                             <Chip tone="gray">Voided</Chip>
-                          ) : s.attended ? (
-                            <Chip tone="green">Active</Chip>
+                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
+                            <Chip tone="green">Logged</Chip>
                           ) : (
-                            <Chip tone="amber">No-show</Chip>
+                            <Chip tone={ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"}>
+                              {ATTENDANCE_META[attendanceOf(s)].label}
+                            </Chip>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -228,8 +235,7 @@ export default async function MentorSessionsPage({
                                 id: s.id,
                                 hours: s.hours,
                                 date: toDateInputValue(s.date),
-                                attended: s.attended,
-                                task: s.task,
+                                attendance: attendanceOf(s),
                                 note: s.note,
                                 assignmentId: s.assignmentId,
                               }}

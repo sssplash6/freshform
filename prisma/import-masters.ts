@@ -12,7 +12,7 @@
 //               mentors can log against them, and their weekly email is OFF
 //               until a real address replaces the placeholder.
 //   tasks     — the plan half of each tab (Purpose / Consultant / Hour Limit /
-//               Timeline / Progress). A Progress cell that says more than its
+//               Deadline / Progress). A Progress cell that says more than its
 //               state keeps the rest as the task's note.
 //   sessions  — the log half (Consultant / Duration / Date / Notes), each one
 //               attached to the task it most likely went toward.
@@ -54,8 +54,8 @@ type SheetTask = {
   purpose: string | null;
   consultant: string;
   hourLimit: number | null;
-  timeline: string | null;
-  timelineDate: string | null;
+  deadline: string | null;
+  deadlineDate: string | null;
   progress: string | null;
 };
 type SheetStudent = {
@@ -381,7 +381,7 @@ async function main() {
         (t) =>
           t.mentorId === mentor.id &&
           t.purpose === purpose &&
-          (t.timeline ?? "") === (task.timeline ?? "") &&
+          (t.deadline ?? "") === (task.deadline ?? "") &&
           (t.hourLimit ?? null) ===
             (task.hourLimit == null ? null : hours(task.hourLimit))
       );
@@ -393,7 +393,7 @@ async function main() {
       log(
         `  + task  ${purpose.slice(0, 44).padEnd(44)} ${mentor.label.padEnd(20)}` +
           `${task.hourLimit != null ? `${task.hourLimit}h` : "—"}`.padEnd(6) +
-          `${(task.timeline ?? "—").padEnd(12)} ${state.progress}${state.pinned ? " (pinned)" : ""}`
+          `${(task.deadline ?? "—").padEnd(12)} ${state.progress}${state.pinned ? " (pinned)" : ""}`
       );
       if (combined) log(`          note: ${combined.slice(0, 110)}`);
       if (purpose === UNTITLED) {
@@ -407,7 +407,7 @@ async function main() {
             mentorId: mentor.id,
             purpose,
             hourLimit: task.hourLimit == null ? null : hours(task.hourLimit),
-            timeline: task.timeline,
+            deadline: task.deadline,
             note: combined,
             progress: state.progress,
             progressManual: state.pinned,
@@ -500,14 +500,14 @@ async function main() {
         `${student.totals.hours ? ` · package ${student.totals.hours}h` : ""}`
     );
 
-    // The use-by dates to enter when allocating: each mentor's last timeline.
+    // The use-by dates to enter when allocating: each mentor's last deadline.
     const byMentor = new Map<string, { hours: number; latest: string | null }>();
     for (const t of student.tasks) {
       const key = mentors.get(t.consultant)!.label;
       const row = byMentor.get(key) ?? { hours: 0, latest: null };
       row.hours += t.hourLimit ?? 0;
-      if (t.timelineDate && (!row.latest || t.timelineDate > row.latest)) {
-        row.latest = t.timelineDate;
+      if (t.deadlineDate && (!row.latest || t.deadlineDate > row.latest)) {
+        row.latest = t.deadlineDate;
       }
       byMentor.set(key, row);
     }

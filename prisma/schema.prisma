@@ -161,7 +161,10 @@ model Assignment {
   mentorId  String
   purpose   String // what this work is: "Main essay", "Recommendation letters"
   hourLimit Float? // hours this piece of work should take; null = not budgeted
-  timeline  String? // free text on purpose: the sheet holds both "Aug 7" and "Mar-May"
+  // When the work is due, as free text on purpose: the tracking sheet holds both
+  // "Aug 7" and "March-May". Not the same thing as HourAllocation.deadline,
+  // which is a hard date that forfeits the hours it carries.
+  deadline String?
   // What a person needs to say about this task that the state can't: "missed an
   // hour, not excused", "GMAT prep but when?". The tracking spreadsheet wrote
   // exactly this into its Progress cells next to the state, so a status word
@@ -225,9 +228,12 @@ model Session {
   hours     Float
   date      DateTime
   attended  Boolean  @default(true) // was the student present? false = no-show; the hours are still charged but tallied as "missed"
-  task      String? // what the session focused on (optional, mentor-entered)
-  note      String?
-  status    String   @default("ACTIVE") // ACTIVE | VOIDED
+  late      Boolean  @default(false) // the student turned up, but late — a label on the meeting, not on the hours
+  note      String? // what was covered, in the mentor's words (one field, optional)
+  // ACTIVE | VOIDED | RESCHEDULED. Only ACTIVE sessions draw hours down: a
+  // voided one gave them back, and a rescheduled one never delivered anything —
+  // it is a record that the meeting moved.
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

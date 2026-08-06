@@ -2,7 +2,7 @@ import { Chip } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { SESSION_STATUS } from "@/lib/constants";
+import { ATTENDANCE, attendanceOf, SESSION_STATUS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 import { personTone } from "@/lib/person-tone";
 import { cn } from "@/lib/cn";
@@ -92,17 +92,18 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                       {s.assignment.purpose}
                     </p>
                   )}
-                  {s.task && (
-                    <p className="mt-1 text-[15px] text-ink">{s.task}</p>
-                  )}
                   {s.note && (
-                    <p className="mt-0.5 text-sm text-muted-fg">{s.note}</p>
+                    <p className="mt-1 text-[15px] text-ink">{s.note}</p>
                   )}
 
-                  {(voided || !s.attended) && (
+                  {(voided || attendanceOf(s) !== ATTENDANCE.ATTENDED) && (
                     <div className="mt-2">
                       {voided ? (
                         <Chip tone="gray">Cancelled, hours returned</Chip>
+                      ) : attendanceOf(s) === ATTENDANCE.RESCHEDULED ? (
+                        <Chip tone="gray">Rescheduled, no hours charged</Chip>
+                      ) : attendanceOf(s) === ATTENDANCE.LATE ? (
+                        <Chip tone="amber">You came late</Chip>
                       ) : (
                         <Chip tone="amber">Missed, hours still charged</Chip>
                       )}
