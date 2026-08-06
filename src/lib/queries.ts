@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { SESSION_STATUS } from "@/lib/constants";
+import { ASSIGNMENT_PROGRESS, SESSION_STATUS } from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -179,6 +179,47 @@ export async function recentMeetings({
 export type LedgerAssignment = Awaited<
   ReturnType<typeof studentLedger>
 >["assignments"][number];
+
+/**
+ * Every task in a program with the hours logged against it — the program's work
+ * in flight. Unfinished tasks come first, then the sheet's own order, so a
+ * dashboard can show what is outstanding without filtering client-side.
+ */
+export async function programTasks(programId: string) {
+  const tasks = await prisma.assignment.findMany({
+    where: { student: { programId } },
+    include: {
+      mentor: true,
+      student: { include: { user: true } },
+    },
+    orderBy: [{ studentId: "asc" }, { position: "asc" }],
+  });
+  if (tasks.length === 0) return [];
+
+  const logged = await prisma.session.groupBy({
+    by: ["assignmentId"],
+    where: {
+      status: SESSION_STATUS.ACTIVE,
+      assignmentId: { in: tasks.map((t) => t.id) },
+    },
+    _sum: { hours: true },
+  });
+  const loggedById = new Map(
+    logged.map((l) => [l.assignmentId ?? "", l._sum.hours ?? 0])
+  );
+
+  return tasks
+    .map((task) => ({ ...task, loggedHours: loggedById.get(task.id) ?? 0 }))
+    .sort((a, b) => {
+      // Stable sort, so unfinished work floats up and each student's own order
+      // survives underneath.
+      const aDone = a.progress === ASSIGNMENT_PROGRESS.DONE ? 1 : 0;
+      const bDone = b.progress === ASSIGNMENT_PROGRESS.DONE ? 1 : 0;
+      return aDone - bDone;
+    });
+}
+
+export type ProgramTask = Awaited<ReturnType<typeof programTasks>>[number];
 
 /**
  * The programs (and, for Global Admissions, cohorts) a mentor is assigned

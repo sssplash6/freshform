@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ArrowLink } from "@/components/arrow-link";
 import { Chip } from "@/components/chip";
 import { StudentFolderLink } from "@/components/student-folder-link";
@@ -52,16 +54,21 @@ export function StudentsTable({
       {students.map((s) => (
         <Tr key={s.id}>
           <Td>
-            <div className="flex items-center gap-2 font-medium text-ink">
-              {s.user.name ?? "—"}
-              {s.user.status === USER_STATUS.PENDING && (
-                <Chip tone="amber">Pending approval</Chip>
-              )}
-              {s.user.status === USER_STATUS.ACTIVE && !s.telegramUsername && (
-                <Chip tone="gray">Hasn&apos;t signed in yet</Chip>
-              )}
-            </div>
-            <div className="text-xs text-muted-fg">{s.user.email}</div>
+            {/* The name is the way in wherever a detail page exists: clicking a
+                student should open them, not hunt for the link at the far right
+                of a table that scrolls. */}
+            <NameCell href={manageBase && `${manageBase}/${s.id}`}>
+              <div className="flex items-center gap-2 font-medium text-ink group-hover:text-brand">
+                {s.user.name ?? "—"}
+                {s.user.status === USER_STATUS.PENDING && (
+                  <Chip tone="amber">Pending approval</Chip>
+                )}
+                {s.user.status === USER_STATUS.ACTIVE && !s.telegramUsername && (
+                  <Chip tone="gray">Hasn&apos;t signed in yet</Chip>
+                )}
+              </div>
+              <div className="text-xs text-muted-fg">{s.user.email}</div>
+            </NameCell>
           </Td>
           {showProgram && <Td>{s.program.name}</Td>}
           {showCohort && <Td>{s.cohort?.name ?? "—"}</Td>}
@@ -104,12 +111,28 @@ export function StudentsTable({
           {manageBase && (
             <Td align="right">
               <ArrowLink href={`${manageBase}/${s.id}`} className="text-[13px]">
-                Manage
+                Open
               </ArrowLink>
             </Td>
           )}
         </Tr>
       ))}
     </Table>
+  );
+}
+
+/** The student's name and email, linked when there's a page to link to. */
+function NameCell({
+  href,
+  children,
+}: {
+  href?: string | false;
+  children: React.ReactNode;
+}) {
+  if (!href) return <div>{children}</div>;
+  return (
+    <Link href={href} className="group block">
+      {children}
+    </Link>
   );
 }

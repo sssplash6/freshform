@@ -300,6 +300,86 @@ export async function setBookingLink(
   return { ok: true, message: `Booking link for ${label} saved.` };
 }
 
+/**
+ * Assign one mentor to one program (or one of its cohorts) from the program's
+ * own settings — the same pairing the mentors page edits per mentor, reached
+ * from the side an admin is usually standing on: "who works in this program".
+ * A first assignment activates a mentor who was parked as UNASSIGNED.
+ */
+export async function assignMentorToProgram(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return { ok: false, error: "Only admins can assign mentors." };
+  }
+
+  const programId = String(formData.get("programId") ?? "");
+  const program = await prisma.program.findUnique({
+    where: { id: programId },
+    include: { cohorts: true },
+  });
+  if (!program) return { ok: false, error: "Program not found." };
+
+  const mentorId = String(formData.get("mentorId") ?? "");
+  const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+  if (!mentor || !canActAsMentor(mentor)) {
+    return { ok: false, error: "Pick a mentor." };
+  }
+
+  // Program-wide unless a cohort was named, which is only offered where the
+  // program has cohorts at all.
+  const rawCohort = String(formData.get("cohortId") ?? "").trim();
+  const cohort = rawCohort
+    ? program.cohorts.find((c) => c.id === rawCohort)
+    : null;
+  if (rawCohort && !cohort) {
+    return { ok: false, error: `Pick a cohort in ${program.name}.` };
+  }
+  const label = cohort ? `${program.name} / ${cohort.name}` : program.name;
+
+  const existing = await prisma.mentorAssignment.findFirst({
+    where: { mentorId, programId, cohortId: cohort?.id ?? null },
+  });
+  if (existing) {
+    return {
+      ok: true,
+      message: `${mentor.name ?? mentor.email} is already assigned to ${label}.`,
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.mentorAssignment.create({
+      data: { mentorId, programId, cohortId: cohort?.id ?? null },
+    });
+    // Assignments are what activate a plain mentor; dual-role admins are
+    // already ACTIVE and stay that way.
+    if (
+      mentor.role === ROLES.MENTOR &&
+      mentor.status === USER_STATUS.UNASSIGNED
+    ) {
+      await tx.user.update({
+        where: { id: mentorId },
+        data: { status: USER_STATUS.ACTIVE },
+      });
+    }
+    await notify(tx, {
+      to: [mentorId],
+      type: NOTIFICATION_TYPES.MENTOR_ASSIGNED,
+      actorId: actor.id,
+      href: notificationHref.mentorHome(),
+      message: `You were assigned to ${label}. Set your booking link on your mentor page so students there can book you.`,
+    });
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: `${mentor.name ?? mentor.email} assigned to ${label}.`,
+  };
+}
+
 /** Remove a mentor-program/cohort assignment (admin correction). */
 export async function removeAssignment(
   _prev: ActionState,
