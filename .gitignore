@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Real student data pulled out of the tracking spreadsheet — never committed.
 /sheet-import/
+
+# python bytecode from scripts/
+__pycache__/
