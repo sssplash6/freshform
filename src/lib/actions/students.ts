@@ -342,6 +342,56 @@ export async function completeOnboarding(
 }
 
 /**
+ * Correct the email a student signs in with (admin only). Their account, hours
+ * and history all stay put — only the address changes. This is what makes an
+ * imported student real: the tracking spreadsheet held no emails, so students
+ * brought over from it carry a placeholder until someone fills the real one in,
+ * and until then they cannot sign in at all.
+ */
+export async function setStudentEmail(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return { ok: false, error: "Only admins can change a student's email." };
+  }
+
+  const profileId = String(formData.get("studentProfileId") ?? "");
+  const profile = await prisma.studentProfile.findUnique({
+    where: { id: profileId },
+    include: { user: true },
+  });
+  if (!profile) return { ok: false, error: "Student not found." };
+
+  const email = normalizeEmail(formData.get("email"));
+  if (!EMAIL_RE.test(email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+  if (email === profile.user.email) {
+    return { ok: true, message: "No change: that's already their address." };
+  }
+  const taken = await prisma.user.findUnique({ where: { email } });
+  if (taken) {
+    return { ok: false, error: `${email} already has an account.` };
+  }
+
+  // A real address means the weekly hours email can reach them, so it goes back
+  // to the app's default. A placeholder had it switched off on the way in.
+  const reachable = !email.endsWith("@import.invalid");
+  await prisma.user.update({
+    where: { id: profile.userId },
+    data: { email, ...(reachable ? { weeklyDigest: true } : {}) },
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: `${profile.user.name ?? "This student"} now signs in with ${email}.`,
+  };
+}
+
+/**
  * Move a student to a different cohort or program (admin correction for
  * mis-enrollments). Hour allocations and session history follow the student
  * untouched; the student is notified. Mentors visible to the student change

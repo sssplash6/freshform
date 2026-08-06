@@ -2,8 +2,14 @@
 
 import { useActionState, useState } from "react";
 
-import { deleteStudent, moveStudent } from "@/lib/actions/students";
+import {
+  deleteStudent,
+  moveStudent,
+  setStudentEmail,
+} from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import type { ProgramOption } from "@/lib/queries";
 
@@ -11,23 +17,26 @@ const selectClass =
   "min-h-11 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm text-ink transition hover:border-brand/40 focus:border-brand focus:outline-none";
 
 /**
- * Admin corrections for a mis-enrolled student: move them to the right
- * cohort/program (hours and history follow), or remove the record entirely
- * while no sessions exist.
+ * Admin corrections for one student: the address they sign in with, the program
+ * or cohort they're enrolled in (hours and history follow), or removing the
+ * record entirely while no sessions exist.
  */
 export function StudentCorrections({
   studentProfileId,
+  currentEmail,
   programs,
   currentProgramId,
   currentCohortId,
   hasSessions,
 }: {
   studentProfileId: string;
+  currentEmail: string;
   programs: ProgramOption[];
   currentProgramId: string;
   currentCohortId: string | null;
   hasSessions: boolean;
 }) {
+  const [emailState, emailAction, emailPending] = useActionState(setStudentEmail, null);
   const [moveState, moveAction, movePending] = useActionState(moveStudent, null);
   const [deleteState, deleteAction, deletePending] = useActionState(deleteStudent, null);
   const [programId, setProgramId] = useState(currentProgramId);
@@ -39,6 +48,28 @@ export function StudentCorrections({
       <PanelHeader eyebrow="Admin only" title="Corrections" />
       <div className="px-4 py-4 sm:px-5">
       <p className="text-xs text-muted-fg">
+        The address they sign in with. Students brought over from the tracking
+        sheet start with a placeholder and can&apos;t sign in until it&apos;s
+        their real one.
+      </p>
+      <form action={emailAction} className="mt-3 flex flex-wrap items-end gap-2">
+        <input type="hidden" name="studentProfileId" value={studentProfileId} />
+        <div className="min-w-64 flex-1">
+          <Input
+            name="email"
+            type="email"
+            required
+            defaultValue={currentEmail}
+            aria-label="Student email"
+          />
+        </div>
+        <Button type="submit" variant="secondary" disabled={emailPending}>
+          {emailPending ? "Saving…" : "Save email"}
+        </Button>
+      </form>
+      <ActionFeedback state={emailState} />
+
+      <p className="mt-4 border-t border-line pt-4 text-xs text-muted-fg">
         Enrolled in the wrong place? Move them — hours and session history
         follow. The student is notified.
       </p>

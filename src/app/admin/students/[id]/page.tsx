@@ -285,6 +285,7 @@ export default async function AdminStudentDetailPage({
 
       <StudentCorrections
         studentProfileId={profile.id}
+        currentEmail={profile.user.email}
         programs={toProgramOptions(programs)}
         currentProgramId={profile.programId}
         currentCohortId={profile.cohortId}
