@@ -13,23 +13,25 @@ const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
 
 /**
- * Grant a student hours from one mentor, for one task. Always ADDS — a grant is
- * new hours on top of whatever the student already holds with that mentor, and
- * correcting a total is the ⋮ menu's job on the row itself.
+ * The one way work reaches a mentor: a task, and the hours to do it in. They are
+ * the same act — a task nobody has hours for can't be worked on, and hours that
+ * name no task can't be logged against — so there is one form rather than two
+ * that each did half of it.
  *
- * The task is required, and the picker leads with the tasks this mentor already
- * has open for the student so more hours for the same work top that budget up
- * instead of splitting it across two identical rows. Picking a mentor who isn't
- * in the student's program yet assigns them to it as part of the same action.
+ * Always ADDS: these hours go on top of whatever the student already holds with
+ * this mentor, and the task is created — or, if they already have one by that
+ * name, its budget grows. Correcting a total is the ⋮ menu's job on the row
+ * itself. Picking a mentor who isn't in the student's program yet assigns them
+ * to it as part of the same action.
  */
-export function AllocateHoursForm({
+export function AssignTaskForm({
   studentProfileId,
   mentors,
   openTasksByMentor = {},
   showAmountPaid = false,
 }: {
   studentProfileId: string;
-  /** Every mentor, labelled with what the student already holds with them. */
+  /** Every mentor who could take this on. */
   mentors: SelectOption[];
   /** mentorId → the open tasks they already have with this student. */
   openTasksByMentor?: Record<string, OpenTask[]>;
@@ -41,11 +43,10 @@ export function AllocateHoursForm({
 
   return (
     <form action={action}>
-      <h3 className="text-sm font-semibold text-ink">Allocate hours</h3>
+      <h3 className="text-sm font-semibold text-ink">Assign a task</h3>
       <p className="mt-1 text-xs text-muted-fg">
-        Hours are granted per mentor, for a named task. The mentor logs every
-        session against one of the student&apos;s tasks, so say what these hours
-        are for.
+        The hours are granted to this mentor for this task, and become its
+        budget. Every session they log names one of the student&apos;s tasks.
       </p>
       <input type="hidden" name="studentProfileId" value={studentProfileId} />
       <input type="hidden" name="mode" value="add" />
@@ -53,12 +54,12 @@ export function AllocateHoursForm({
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="min-w-0">
           <span className={labelClass}>
-            Mentor <span className="text-accent-ink">*</span>
+            Consultant <span className="text-accent-ink">*</span>
           </span>
           <div className="mt-1">
             <Select
               name="mentorId"
-              ariaLabel="Mentor"
+              ariaLabel="Consultant"
               options={mentors}
               placeholder="Choose a mentor…"
               onChange={setMentorId}
@@ -66,8 +67,8 @@ export function AllocateHoursForm({
           </div>
         </div>
 
-        {/* Remounted per mentor, so a task picked for one mentor can never be
-            left selected underneath another's list. */}
+        {/* Remounted per mentor: their open tasks lead the list, and a task
+            picked for one mentor must never be left selected under another's. */}
         <TaskPicker
           key={mentorId}
           className="lg:col-span-2"
@@ -89,7 +90,7 @@ export function AllocateHoursForm({
             min="0.01"
             step="any"
             required
-            placeholder="5"
+            placeholder="3"
             className="mt-1"
           />
         </label>
@@ -127,7 +128,7 @@ export function AllocateHoursForm({
 
       <div className="mt-3.5">
         <Button type="submit" disabled={pending}>
-          {pending ? "Allocating…" : "Allocate hours"}
+          {pending ? "Assigning…" : "Assign task & hours"}
         </Button>
       </div>
       <ActionFeedback state={state} />

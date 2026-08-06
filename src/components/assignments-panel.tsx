@@ -1,7 +1,8 @@
 import { Chip, type ChipTone } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
-import { AddAssignmentForm } from "@/components/forms/add-assignment-form";
+import { AssignTaskForm } from "@/components/forms/assign-task-form";
 import { AssignmentRowActions } from "@/components/forms/assignment-row-actions";
+import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
@@ -38,6 +39,8 @@ export function AssignmentsPanel({
   assignments,
   studentProfileId,
   mentors,
+  openTasksByMentor,
+  showAmountPaid = false,
   hoursAllotted,
   manage = false,
   mentorBase,
@@ -45,6 +48,10 @@ export function AssignmentsPanel({
   assignments: LedgerAssignment[];
   studentProfileId: string;
   mentors?: SelectOption[];
+  /** mentorId → their open tasks here, so a second grant tops one up. */
+  openTasksByMentor?: Record<string, OpenTask[]>;
+  /** Master's records what was paid for the hours a task is given. */
+  showAmountPaid?: boolean;
   hoursAllotted: number;
   manage?: boolean;
   /** Base path (admin only) that makes each Consultant chip link to them. */
@@ -83,7 +90,7 @@ export function AssignmentsPanel({
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="No tasks yet">
           {manage
-            ? "Allocate hours to a mentor and the task those hours are for lands here — or assign a task now and fund it later."
+            ? "Assign the first piece of work below, with the hours the consultant has to do it in."
             : "An admin sets out the work planned for this student here."}
         </EmptyState>
       ) : (
@@ -203,9 +210,11 @@ export function AssignmentsPanel({
 
       {manage && mentors && mentors.length > 0 && (
         <div className="border-t border-line px-4 py-4 sm:px-5">
-          <AddAssignmentForm
+          <AssignTaskForm
             studentProfileId={studentProfileId}
             mentors={mentors}
+            openTasksByMentor={openTasksByMentor}
+            showAmountPaid={showAmountPaid}
           />
         </div>
       )}

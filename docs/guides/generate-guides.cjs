@@ -217,22 +217,23 @@ const admin = {
         'Students who signed up on their own appear under "Pending approvals" — approve them, then allocate their hours.',
       ] },
     ] },
-    { n: 3, heading: "Allocate hours (per mentor, for a task)", blocks: [
+    { n: 3, heading: "Assign a task, with the hours for it", blocks: [
+      { p: "Assigning work and granting the hours for it are one act, so there is one form for both, at the foot of the Tasks panel." },
       { steps: [
-        'Open a student from the Students tab and find "Hours by mentor".',
-        'Use "Allocate hours": pick the mentor, pick the task these hours are for (one of the presets or type your own — required), enter the hours and the use-by date.',
+        'Open a student from the Students tab and find "Assign a task" under Tasks.',
+        "Pick the consultant, then the task (one of the presets or type your own), the hours, and the use-by date.",
         "For Master's Program students, also enter what they paid for these hours.",
-        "Picking a task the mentor already has open adds the hours to that task's budget instead of starting a second copy of it.",
+        "The hours are added to what that consultant already holds with the student, and become the task's budget. Picking a task they already have open tops that budget up instead of starting a second copy of it.",
       ] },
       { tip: "Deadlines are enforced: once one passes, the unused hours expire and mentors can no longer log sessions against them. Extend the deadline to reopen them." },
-      { tip: "To fix a mistake rather than grant more, use the ⋮ menu on the mentor's row — it sets the total hours, the use-by date and the amount paid. Raising the total there also asks which task the extra hours are for." },
+      { tip: "To fix a mistake rather than grant more, use the ⋮ menu on the mentor's row in \u201cHours by mentor\u201d — it sets the total hours, the use-by date and the amount paid. Raising the total there also asks which task the extra hours are for." },
     ] },
     { n: 4, heading: "Tasks — what the hours are for", blocks: [
-      { p: "Every grant of hours names a task, so the plan and the ledger are the same thing seen from two sides: the task carries the hours as its budget, and the mentor logs each session against one of the student's tasks." },
+      { p: "Hours are always granted for a task, so the plan and the ledger are the same thing seen from two sides: the task carries the hours as its budget, and the mentor logs each session against one of the student's tasks." },
       { bullets: [
         "The Tasks panel on a student's page shows each task, its consultant, hours logged against hours budgeted, and its progress.",
         "Progress follows the hours on its own: the first session moves a task to In progress, reaching the budget marks it Done. Setting progress by hand pins it there.",
-        'Planning work before it is paid for? "Assign a task" adds one with no hours; allocate the hours for it later.',
+        "A task always arrives with hours, because a task nobody has hours for can't be worked on.",
         "Going over a task's budget is warned, never blocked — the number turns amber.",
       ] },
     ] },

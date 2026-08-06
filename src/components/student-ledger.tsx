@@ -1,5 +1,6 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
 import { MeetingsLog } from "@/components/meetings-log";
+import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { formatHours } from "@/lib/format";
@@ -28,6 +29,8 @@ export function StudentLedger({
   totals,
   studentProfileId,
   mentors,
+  openTasksByMentor,
+  showAmountPaid,
   manage = false,
   extraStats,
   mentorBase,
@@ -37,6 +40,9 @@ export function StudentLedger({
   totals: Totals;
   studentProfileId: string;
   mentors?: SelectOption[];
+  /** mentorId → their open tasks, for the assign-a-task form (admin only). */
+  openTasksByMentor?: Record<string, OpenTask[]>;
+  showAmountPaid?: boolean;
   manage?: boolean;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
@@ -78,6 +84,8 @@ export function StudentLedger({
         assignments={assignments}
         studentProfileId={studentProfileId}
         mentors={mentors}
+        openTasksByMentor={openTasksByMentor}
+        showAmountPaid={showAmountPaid}
         hoursAllotted={totals.allotted}
         manage={manage}
         mentorBase={mentorBase}

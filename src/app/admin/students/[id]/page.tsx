@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { Deadline } from "@/components/deadline";
 import { Chip } from "@/components/chip";
@@ -69,19 +68,9 @@ export default async function AdminStudentDetailPage({
     label: m.name ?? m.email,
   }));
 
-  // Allocating hours works for any mentor — one who already has hours here gets
-  // topped up, one who doesn't is pulled into the program by the same action —
-  // so the picker shows the whole bench and says who is already holding time.
-  const heldByMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
-  const allocateOptions = allMentors.map((m) => {
-    const held = heldByMentor.get(m.id);
-    return {
-      value: m.id,
-      label: held
-        ? `${m.name ?? m.email} · holds ${formatHours(held.allocated)}h, ${formatHours(held.remaining)}h left`
-        : (m.name ?? m.email),
-    };
-  });
+  // Assigning a task works for any mentor: one who already holds hours here gets
+  // topped up, one who doesn't is pulled into the program by the same action.
+  // What they hold is right below in Hours by mentor, so the picker stays names.
 
   // Their open tasks, so granting more hours for work already underway tops that
   // budget up instead of starting a second row with the same name.
@@ -159,6 +148,8 @@ export default async function AdminStudentDetailPage({
         totals={hours}
         studentProfileId={profile.id}
         mentors={mentorOptions}
+        openTasksByMentor={openTasksByMentor}
+        showAmountPaid={isMasters}
         manage
         mentorBase="/admin/mentors"
         extraStats={
@@ -184,7 +175,8 @@ export default async function AdminStudentDetailPage({
         />
         {hours.perMentor.length === 0 ? (
           <EmptyState framed={false} title="No mentors yet">
-            Add a mentor below to allocate this student&apos;s hours.
+            A mentor appears here once they&apos;re given a task with hours, in
+            the panel above.
           </EmptyState>
         ) : (
           <Table
@@ -261,21 +253,6 @@ export default async function AdminStudentDetailPage({
             ))}
           </Table>
         )}
-        <div className="border-t border-line px-4 py-4 sm:px-5">
-          {allocateOptions.length === 0 ? (
-            <p className="text-sm text-muted-fg">
-              No mentors exist yet — register one on the Mentors page, then come
-              back to allocate hours.
-            </p>
-          ) : (
-            <AllocateHoursForm
-              studentProfileId={profile.id}
-              mentors={allocateOptions}
-              openTasksByMentor={openTasksByMentor}
-              showAmountPaid={isMasters}
-            />
-          )}
-        </div>
       </Panel>
 
       <StudentFolderForm

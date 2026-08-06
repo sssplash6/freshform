@@ -25,9 +25,10 @@ import { parseHoursField, type ActionState } from "@/lib/actions/shared";
  * run: the mentor fills the meetings log by logging sessions, the admin
  * assigns the work.
  *
- * A task budgets hours, it does not grant them. Granting stays in
- * setMentorAllocation — which names a task too, and is the usual way a task is
- * born, since hours and the work they pay for arrive together.
+ * A task is BORN in setMentorAllocation, not here — assigning work and granting
+ * the hours for it are one act, so there is one form for both and the task's
+ * budget is the hours it was given. What lives here is everything that happens
+ * to a task afterwards: editing it, stating its progress, removing it.
  */
 
 const PROGRESS_VALUES: string[] = Object.values(ASSIGNMENT_PROGRESS);
@@ -87,75 +88,6 @@ function parseFields(
     timeline: timeline || null,
     note: note || null,
     progress,
-  };
-}
-
-/** Add a task to a student's plan. */
-export async function createAssignment(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can assign work." };
-  }
-
-  const studentId = String(formData.get("studentProfileId") ?? "");
-  const student = await prisma.studentProfile.findUnique({
-    where: { id: studentId },
-    include: { user: true },
-  });
-  if (!student) return { ok: false, error: "Student not found." };
-
-  const mentorId = String(formData.get("mentorId") ?? "");
-  const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
-  if (!mentor || !canActAsMentor(mentor)) {
-    return { ok: false, error: "Pick a consultant." };
-  }
-
-  const fields = parseFields(formData);
-  if ("error" in fields) return { ok: false, error: fields.error };
-
-  // Append: one past the current highest position, so a new row lands last
-  // even after rows have been deleted from the middle.
-  const last = await prisma.assignment.findFirst({
-    where: { studentId },
-    orderBy: { position: "desc" },
-    select: { position: true },
-  });
-
-  const studentName = student.user.name ?? student.user.email;
-  const budget =
-    fields.hourLimit != null ? ` ${formatHours(fields.hourLimit)} hours` : "";
-  const by = fields.timeline ? ` by ${fields.timeline}` : "";
-
-  await prisma.$transaction(async (tx) => {
-    await tx.assignment.create({
-      data: {
-        studentId,
-        mentorId,
-        ...fields,
-        // Progress the admin typed on the form is a starting state, not a pin:
-        // hours logged later still move it. Only setAssignmentProgress pins.
-        progressManual: false,
-        position: (last?.position ?? -1) + 1,
-        createdById: actor.id,
-      },
-    });
-    // The whole point of assigning work is that the consultant finds out.
-    await notify(tx, {
-      to: [mentorId],
-      type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
-      actorId: actor.id,
-      href: notificationHref.mentorStudent(studentId),
-      message: `New task for ${studentName}: "${fields.purpose}".${budget ? ` Budgeted${budget}${by}.` : by ? ` Due${by}.` : ""} Log your sessions against it.`,
-    });
-  });
-
-  revalidatePath("/", "layout");
-  return {
-    ok: true,
-    message: `"${fields.purpose}" assigned to ${mentor.name ?? mentor.email}, who has been notified.`,
   };
 }
 
