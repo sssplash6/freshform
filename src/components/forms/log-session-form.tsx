@@ -13,16 +13,17 @@ const inputClass =
 export type LogSessionStudent = {
   profileId: string;
   label: string;
-  /** The mentor's own assigned goals for this student, in the admin's order. */
+  /** The mentor's own open tasks for this student, in the admin's order. */
   goals: { value: string; label: string }[];
 };
 
 /**
- * Log a completed session. A goal is required: the mentor says which assigned
- * piece of work the meeting went toward, which is what lets planned hours be
- * read against delivered ones. Goals belong to a student, so the list is
- * re-scoped whenever the student changes, and both selects are keyed to that
- * student so a stale goal can't be left selected underneath a new one.
+ * Log a completed session. A task is required: the mentor says which of the
+ * tasks the admin allocated hours for this meeting went toward, which is what
+ * lets planned hours be read against delivered ones. Tasks belong to a student,
+ * so the list is re-scoped whenever the student changes, and both selects are
+ * keyed to that student so a stale task can't be left selected underneath a
+ * new one.
  */
 export function LogSessionForm({
   students,
@@ -64,21 +65,21 @@ export function LogSessionForm({
           </div>
         </div>
         <div className="block text-sm">
-          <span className="text-muted-fg">Goal worked on *</span>
+          <span className="text-muted-fg">Task worked on *</span>
           <div className="mt-0.5">
             <Select
               // Remount per student so the previous student's goal is never
               // left selected behind the new student's list.
               key={studentId}
               name="assignmentId"
-              ariaLabel="Goal worked on"
+              ariaLabel="Task worked on"
               options={goals}
               placeholder={
                 !student
                   ? "Pick a student first…"
                   : noGoals
-                    ? "No goals assigned yet"
-                    : "Choose a goal…"
+                    ? "No tasks assigned yet"
+                    : "Choose a task…"
               }
             />
           </div>
@@ -107,11 +108,11 @@ export function LogSessionForm({
           />
         </label>
         <label className="block text-sm">
-          <span className="text-muted-fg">Task focused on</span>
+          <span className="text-muted-fg">What you covered</span>
           <input
             name="task"
             type="text"
-            placeholder="Optional — e.g. personal statement draft"
+            placeholder="Optional — e.g. reviewed draft 2, next: activities list"
             className={inputClass}
           />
         </label>
@@ -128,9 +129,9 @@ export function LogSessionForm({
 
       {noGoals && (
         <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          An admin hasn&apos;t assigned you any goals for this student yet, so
-          there is nothing to log against. Ask them to add one on the student&apos;s
-          page.
+          An admin hasn&apos;t assigned you any tasks for this student yet, so
+          there is nothing to log against. Tasks arrive with the hours an admin
+          allocates you — ask them to allocate hours for a task.
         </p>
       )}
 

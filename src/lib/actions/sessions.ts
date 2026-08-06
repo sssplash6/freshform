@@ -44,11 +44,11 @@ async function remainingWith(
 }
 
 /**
- * Resolve the goal a session is being logged against. Required: a mentor says
- * which assigned piece of work the meeting went toward, so planned hours can be
- * read against delivered ones. It must be one of the admin's assignments for
- * THIS student naming THIS mentor as consultant — a mentor cannot log time
- * against a colleague's goal, or against another student's.
+ * Resolve the task a session is being logged against. Required: a mentor says
+ * which piece of work the meeting went toward, so planned hours can be read
+ * against delivered ones. It must be one of the tasks an admin gave THIS mentor
+ * for THIS student — a mentor cannot log time against a colleague's task, or
+ * against another student's.
  */
 async function resolveGoal(
   raw: FormDataEntryValue | null,
@@ -59,7 +59,7 @@ async function resolveGoal(
   if (!id) {
     return {
       error:
-        "Pick the goal this session worked on. If none of your goals fit, ask an admin to assign one.",
+        "Pick the task this session worked on. If none of them fit, ask an admin to allocate hours for the right task.",
     };
   }
   const assignment = await prisma.assignment.findUnique({ where: { id } });
@@ -68,15 +68,15 @@ async function resolveGoal(
     assignment.studentId !== studentProfileId ||
     assignment.mentorId !== mentorId
   ) {
-    return { error: "That goal isn't one of yours for this student." };
+    return { error: "That task isn't one of yours for this student." };
   }
   return { id: assignment.id, purpose: assignment.purpose };
 }
 
 /**
- * Log a completed session against one of the mentor's assigned goals. Draws
- * down the hours the student holds with THIS mentor (derived) and notifies
- * them. Overdraw is allowed but flagged back to the mentor.
+ * Log a completed session against one of the mentor's open tasks for the
+ * student. Draws down the hours the student holds with THIS mentor (derived) and
+ * notifies them. Overdraw is allowed but flagged back to the mentor.
  */
 export async function logSession(
   _prev: ActionState,
@@ -137,7 +137,7 @@ export async function logSession(
   }
 
   // Checked after the allocation, so a mentor with no hours for this student
-  // hears about that first rather than being asked to pick a goal they can't use.
+  // hears about that first rather than being asked to pick a task they can't use.
   const goal = await resolveGoal(
     formData.get("assignmentId"),
     profile.id,
@@ -163,7 +163,7 @@ export async function logSession(
       },
     });
 
-    // Progress follows the hours: this may move the goal to In progress, or
+    // Progress follows the hours: this may move the task to In progress, or
     // finish it outright if the logged total reached its limit.
     const synced = await syncGoalProgress(tx, goal.id);
 
@@ -205,7 +205,7 @@ export async function logSession(
 
   const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
   const noShowNote = attended ? "" : " Recorded as a no-show.";
-  // Tell the mentor what their own log just did to the goal, so an automatic
+  // Tell the mentor what their own log just did to the task, so an automatic
   // status change is never a surprise they discover later.
   const goalNote = sync?.becameDone
     ? ` "${goal.purpose}" hit its ${formatHours(sync.hourLimit ?? 0)}-hour limit and is now marked done.`
@@ -233,8 +233,8 @@ async function findOwnActiveSession(mentorId: string, sessionId: string) {
 }
 
 /**
- * Edit a session the mentor logged in error (goal/hours/date/task/note). The
- * hour delta flows through derived totals; the student is notified.
+ * Edit a session the mentor logged in error (task/hours/date/notes). The hour
+ * delta flows through derived totals; the student is notified.
  */
 export async function editSession(
   _prev: ActionState,
@@ -265,8 +265,8 @@ export async function editSession(
   const note = String(formData.get("note") ?? "").trim() || null;
   const attended = formData.get("attended") != null;
 
-  // The goal can be corrected here, but is not forced: sessions logged before
-  // goals existed have none, and re-picking one to fix a typo in the hours
+  // The task can be corrected here, but is not forced: sessions logged before
+  // tasks existed have none, and re-picking one to fix a typo in the hours
   // would be a strange thing to demand.
   const rawGoal = String(formData.get("assignmentId") ?? "").trim();
   let assignmentId = session.assignmentId;
@@ -300,8 +300,8 @@ export async function editSession(
       },
     });
 
-    // Both goals: the hours left the old one and arrived at the new one, so each
-    // has to be re-derived. A goal that was auto-completed by these hours drops
+    // Both tasks: the hours left the old one and arrived at the new one, so each
+    // has to be re-derived. A task that was auto-completed by these hours drops
     // back to In progress on its own when they move away.
     for (const id of new Set(
       [session.assignmentId, assignmentId].filter((v): v is string => !!v)
@@ -358,7 +358,7 @@ export async function voidSession(
       data: { status: SESSION_STATUS.VOIDED },
     });
 
-    // Voiding returns the hours, so a goal these hours had completed reopens.
+    // Voiding returns the hours, so a task these hours had completed reopens.
     if (session.assignmentId) {
       await syncGoalProgress(tx, session.assignmentId);
     }

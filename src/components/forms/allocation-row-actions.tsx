@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { TaskPicker, type OpenTask } from "@/components/forms/task-picker";
 import { MoreVerticalIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { removeMentorAllocation, setMentorAllocation } from "@/lib/actions/students";
@@ -13,9 +14,14 @@ const inputClass =
   "mt-1 w-full rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand focus:outline-none";
 
 /**
- * Per-row allocation actions for one mentor, tucked behind a ⋮ menu: set or
- * add hours (with the required deadline, plus amount paid for Master's), or
- * remove the mentor from the student entirely.
+ * Per-row allocation actions for one mentor, tucked behind a ⋮ menu: correct the
+ * total hours, the use-by date and (for Master's) the amount paid, or remove the
+ * mentor from the student entirely.
+ *
+ * Granting hours lives in the Allocate hours form, not here, because a grant has
+ * to name the task it is for. A correction that happens to raise the total is
+ * still a grant, so the task picker appears the moment the typed hours go above
+ * what the student already holds.
  */
 export function AllocationRowActions({
   studentProfileId,
@@ -23,6 +29,7 @@ export function AllocationRowActions({
   mentorLabel,
   currentHours,
   currentDeadline,
+  openTasks = [],
   showAmountPaid = false,
   currentAmountPaid = null,
 }: {
@@ -31,11 +38,16 @@ export function AllocationRowActions({
   mentorLabel: string;
   currentHours: number;
   currentDeadline: string | null;
+  /** This mentor's open tasks with the student, for a raise that grants hours. */
+  openTasks?: OpenTask[];
   showAmountPaid?: boolean;
   currentAmountPaid?: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [hours, setHours] = useState(String(currentHours));
+  // A raise grants hours, and hours arriving name the work they are for.
+  const granting = Number(hours) > currentHours;
   const [setState, setAction, setPending] = useActionState(setMentorAllocation, null);
   const [delState, delAction, delPending] = useActionState(
     removeMentorAllocation,
@@ -104,14 +116,19 @@ export function AllocationRowActions({
           <form action={setAction} className="space-y-2.5">
             <input type="hidden" name="studentProfileId" value={studentProfileId} />
             <input type="hidden" name="mentorId" value={mentorId} />
+            <input type="hidden" name="mode" value="set" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-muted-fg">
+              Correct this allocation
+            </p>
             <label className="block text-xs font-medium text-muted-fg">
-              Hours
+              Total hours
               <input
                 name="hours"
                 type="number"
                 min="0"
                 step="any"
-                defaultValue={currentHours}
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
                 className={inputClass}
               />
             </label>
@@ -127,7 +144,7 @@ export function AllocationRowActions({
             </label>
             {showAmountPaid && (
               <label className="block text-xs font-medium text-muted-fg">
-                Amount paid ($)
+                Total paid ($)
                 <input
                   name="amountPaid"
                   type="number"
@@ -139,21 +156,17 @@ export function AllocationRowActions({
                 />
               </label>
             )}
-            <div className="flex gap-2">
-              <Button type="submit" name="mode" value="set" size="sm" disabled={setPending}>
-                {setPending ? "…" : "Set"}
-              </Button>
-              <Button
-                type="submit"
-                name="mode"
-                value="add"
-                size="sm"
-                variant="secondary"
-                disabled={setPending}
-              >
-                Add
-              </Button>
-            </div>
+            {granting && (
+              <div className="rise-in">
+                <TaskPicker compact openTasks={openTasks} />
+                <p className="mt-1.5 text-[11px] text-muted-fg">
+                  These extra hours need a task — they become its budget.
+                </p>
+              </div>
+            )}
+            <Button type="submit" size="sm" disabled={setPending}>
+              {setPending ? "Saving…" : "Save"}
+            </Button>
           </form>
           <ActionFeedback state={setState} />
 

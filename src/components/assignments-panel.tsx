@@ -17,18 +17,21 @@ const PROGRESS_TONE: Record<string, ChipTone> = {
 };
 
 /**
- * The right half of the tracking spreadsheet: what each consultant is doing for
- * this student, its hour budget, its timeline and how far along it is. Only an
- * admin writes here, which is what the violet panel tone says — mentors and
- * students read the same rows without the ⋮ controls.
+ * The right half of the tracking spreadsheet: the tasks each consultant is doing
+ * for this student, each with its hour budget, its timeline and how far along it
+ * is. Tasks are born with the hours an admin allocates for them, and every
+ * session a mentor logs names one — so this panel is the plan the meetings log
+ * is delivering against. Only an admin writes here, which is what the violet
+ * panel tone says; mentors and students read the same rows without the ⋮
+ * controls.
  *
  * Finished rows carry a green wash, the way they were highlighted in the sheet,
  * so the remaining work is what stands out. Progress normally follows the hours
- * logged against a goal; a row an admin has stated by hand reads "pinned",
+ * logged against a task; a row an admin has stated by hand reads "pinned",
  * which is the only reason hours would stop moving it.
  *
  * `hoursAllotted` is the hours actually granted across the student's mentors.
- * Comparing it against the planned total is the whole point of showing both
+ * Comparing it against the budgeted total is the whole point of showing both
  * halves on one page: it catches a plan that promises more than was paid for.
  */
 export function AssignmentsPanel({
@@ -55,10 +58,10 @@ export function AssignmentsPanel({
   const overPlanned = planned > hoursAllotted;
 
   const columns: Column[] = [
-    { label: "Purpose" },
+    { label: "Task" },
     { label: "Consultant" },
     { label: "Logged", align: "right" },
-    { label: "Hour limit", align: "right" },
+    { label: "Budget", align: "right" },
     { label: "Timeline" },
     { label: "Progress" },
     ...(manage ? [{ label: "", align: "right" } as Column] : []),
@@ -68,19 +71,19 @@ export function AssignmentsPanel({
     <Panel tone="plan">
       <PanelHeader
         tone="plan"
-        eyebrow="Assigned by an admin"
-        title="Assignments"
+        eyebrow="What the hours are for"
+        title="Tasks"
         caption={
           assignments.length === 0
             ? "Nothing assigned yet"
-            : `${done} of ${assignments.length} done · ${formatHours(planned)} hours planned`
+            : `${done} of ${assignments.length} done · ${formatHours(planned)} hours budgeted`
         }
       />
 
       {assignments.length === 0 ? (
-        <EmptyState framed={false} title="No assignments yet">
+        <EmptyState framed={false} title="No tasks yet">
           {manage
-            ? "Add the pieces of work this student's consultants are taking on, each with its own hour limit and timeline."
+            ? "Allocate hours to a mentor and the task those hours are for lands here — or assign a task now and fund it later."
             : "An admin sets out the work planned for this student here."}
         </EmptyState>
       ) : (
@@ -104,7 +107,7 @@ export function AssignmentsPanel({
                       href={mentorBase && `${mentorBase}/${a.mentor.id}`}
                     />
                   </Td>
-                  {/* Hours mentors actually logged against this goal. Amber once
+                  {/* Hours mentors actually logged against this task. Amber once
                       they pass the budget: overspend is warned, never blocked. */}
                   <Td
                     align="right"
@@ -174,7 +177,7 @@ export function AssignmentsPanel({
               <span className="font-semibold tabular-nums text-ink">
                 {formatHours(planned)}
               </span>{" "}
-              planned, of{" "}
+              budgeted, of{" "}
               <span className="font-semibold tabular-nums text-ink">
                 {formatHours(hoursAllotted)}
               </span>{" "}
@@ -182,7 +185,7 @@ export function AssignmentsPanel({
             </span>
             {overPlanned && (
               <span className="font-medium text-amber-700">
-                Planned work exceeds the hours this student holds by{" "}
+                Budgeted work exceeds the hours this student holds by{" "}
                 {formatHours(planned - hoursAllotted)}.
               </span>
             )}

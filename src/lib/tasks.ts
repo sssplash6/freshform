@@ -1,0 +1,46 @@
+import { TASK_PRESETS } from "../../config/app-config";
+
+/**
+ * The task vocabulary, shared by the client pickers and the server actions.
+ *
+ * A task is what hours are FOR. An admin names one whenever they grant hours
+ * (config/app-config.ts holds the preset list, and anything can be typed in its
+ * place), which creates the student's piece of work with that grant as its hour
+ * budget. The mentor then logs every session against one of the open tasks they
+ * hold for that student, so planned hours and delivered hours line up without
+ * anyone reconciling two lists by hand.
+ *
+ * The model calls these `Assignment` rows — see prisma/schema.prisma. "Task" is
+ * the word the team uses, so it is the word the UI uses.
+ */
+
+export { TASK_PRESETS };
+
+/** What the picker submits for "none of these — I'll type it". */
+export const TASK_OTHER = "__other__";
+
+export const MAX_TASK_LENGTH = 200;
+
+/**
+ * Read a task out of a submitted form: the picked preset (or existing task), or
+ * whatever was typed into the box the picker reveals for anything else.
+ */
+export function parseTaskField(
+  raw: FormDataEntryValue | null,
+  rawCustom: FormDataEntryValue | null
+): { value: string } | { error: string } {
+  const picked = String(raw ?? "").trim();
+  const typed = String(rawCustom ?? "").trim();
+  const value = !picked || picked === TASK_OTHER ? typed : picked;
+
+  if (!value) {
+    return {
+      error:
+        "Say which task these hours are for — pick one from the list or type your own.",
+    };
+  }
+  if (value.length > MAX_TASK_LENGTH) {
+    return { error: `Keep the task under ${MAX_TASK_LENGTH} characters.` };
+  }
+  return { value };
+}

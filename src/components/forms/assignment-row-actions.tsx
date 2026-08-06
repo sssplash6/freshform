@@ -138,7 +138,7 @@ export function AssignmentRowActions({
                   <input type="hidden" name="assignmentId" value={assignment.id} />
                   {PROGRESS_ORDER.map((p) => {
                     // "Current" only disables when pinned there: on an automatic
-                    // goal, clicking its present state is how you pin it.
+                    // task, clicking its present state is how you pin it.
                     const current =
                       p === assignment.progress && assignment.progressManual;
                     return (
@@ -219,7 +219,7 @@ export function AssignmentRowActions({
                   <input type="hidden" name="assignmentId" value={assignment.id} />
                   <input type="hidden" name="progress" value={assignment.progress} />
                   <label className={labelClass}>
-                    Purpose
+                    Task
                     <input
                       name="purpose"
                       type="text"

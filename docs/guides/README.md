@@ -3,8 +3,8 @@
 Simple, one-role-per-file instruction sheets (PDF):
 
 - **student-guide.pdf** — signing in, reading your hours, deadlines, booking, no-shows.
-- **mentor-guide.pdf** — signing in, booking links, logging sessions (incl. no-shows), deadlines, corrections.
-- **admin-guide.pdf** — dashboard, students, allocating hours (deadlines + Master's amount paid), mentors, the admin/mentor toggle, reading the stats.
+- **mentor-guide.pdf** — signing in, booking links, logging sessions against a task (incl. no-shows), deadlines, corrections.
+- **admin-guide.pdf** — dashboard, a program's three tabs, allocating hours for a task (deadlines + Master's amount paid), tasks, mentors, program settings, the admin/mentor toggle, reading the stats.
 
 ## Regenerating
 

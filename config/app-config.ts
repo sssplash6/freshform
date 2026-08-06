@@ -15,6 +15,22 @@ export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 export const MASTERS_PROGRAM_NAME = "Master's Program";
 
 /**
+ * The pieces of work hours are normally granted for. Allocating hours names one
+ * of these (or anything typed in its place), which is what the mentor then logs
+ * every session against — so this list is the shared vocabulary of the two
+ * halves of the app. Editing it changes what the pickers offer; tasks already
+ * created keep the wording they were created with.
+ */
+export const TASK_PRESETS: string[] = [
+  "Personal Statement Review",
+  "Overall profile review and University advising",
+  "Supplemental Essays",
+  "Recommendation Essays & Bragsheets",
+  "EC descriptions",
+  "University Selection",
+];
+
+/**
  * Starter programs. All are flat single programs — no seeded cohorts;
  * students belong to the program directly. Admins can add cohorts (and whole
  * programs) from the dashboard when a program grows into them.

@@ -12,11 +12,11 @@ import { prisma } from "@/lib/prisma";
 /** What this feed is for, in the words of the person reading it. */
 const BLURB: Record<string, string> = {
   ADMIN:
-    "Sessions your mentors log, goals they finish, signups waiting on approval, and every change to a student's hours.",
+    "Sessions your mentors log, tasks they finish, signups waiting on approval, and every change to a student's hours.",
   DEPT_LEADER: "Changes to students and hours across your program.",
   SALES: "Changes to students and hours across your program.",
   MENTOR:
-    "Goals an admin assigns you, hours granted for your students, and deadlines coming up.",
+    "Tasks an admin assigns you, hours granted for your students, and deadlines coming up.",
   STUDENT:
     "Every session your mentors log, every change to your hours, and deadlines before they pass.",
 };

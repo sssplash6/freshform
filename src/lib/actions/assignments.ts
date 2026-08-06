@@ -15,21 +15,22 @@ import {
 import { formatHours } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { notify, notificationHref } from "@/lib/notify";
+import { parseTaskField } from "@/lib/tasks";
 import { parseHoursField, type ActionState } from "@/lib/actions/shared";
 
 /**
- * The plan half of a student's ledger: which consultant is doing what, with
+ * The plan half of a student's ledger: which consultant is doing what task, with
  * what hour budget, by when, and how far along it is. Only admins write here
  * (mentors and students read it), matching how the tracking spreadsheet was
  * run: the mentor fills the meetings log by logging sessions, the admin
  * assigns the work.
  *
- * An assignment budgets hours, it does not grant them. Granting stays in
- * setMentorAllocation, which is what sessions draw down and deadlines forfeit.
+ * A task budgets hours, it does not grant them. Granting stays in
+ * setMentorAllocation — which names a task too, and is the usual way a task is
+ * born, since hours and the work they pay for arrive together.
  */
 
 const PROGRESS_VALUES: string[] = Object.values(ASSIGNMENT_PROGRESS);
-const MAX_PURPOSE = 200;
 const MAX_TIMELINE = 60;
 
 /** Every field an assignment row holds, validated together. */
@@ -43,11 +44,15 @@ function parseFields(
       timeline: string | null;
       progress: string;
     } {
-  const purpose = String(formData.get("purpose") ?? "").trim();
-  if (!purpose) return { error: "Say what this assignment is for." };
-  if (purpose.length > MAX_PURPOSE) {
-    return { error: `Keep the purpose under ${MAX_PURPOSE} characters.` };
-  }
+  // Either a task off the shared list or one typed in its place — the same
+  // vocabulary the allocation forms use, so the two ways of creating a task
+  // can't drift into two sets of names.
+  const task = parseTaskField(
+    formData.get("purpose"),
+    formData.get("purposeCustom")
+  );
+  if ("error" in task) return { error: task.error };
+  const purpose = task.value;
 
   // Blank means "not budgeted yet", which is a normal state for a row an admin
   // is still thinking about — only a non-empty value has to be a valid number.
@@ -72,7 +77,7 @@ function parseFields(
   return { purpose, hourLimit, timeline: timeline || null, progress };
 }
 
-/** Add a row to a student's plan. */
+/** Add a task to a student's plan. */
 export async function createAssignment(
   _prev: ActionState,
   formData: FormData
@@ -130,7 +135,7 @@ export async function createAssignment(
       type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(studentId),
-      message: `New goal for ${studentName}: "${fields.purpose}".${budget ? ` Budgeted${budget}${by}.` : by ? ` Due${by}.` : ""} Log your sessions against it.`,
+      message: `New task for ${studentName}: "${fields.purpose}".${budget ? ` Budgeted${budget}${by}.` : by ? ` Due${by}.` : ""} Log your sessions against it.`,
     });
   });
 
@@ -141,19 +146,19 @@ export async function createAssignment(
   };
 }
 
-/** Edit a row: any of purpose, consultant, hour limit, timeline, progress. */
+/** Edit a task: any of name, consultant, hour limit, timeline, progress. */
 export async function updateAssignment(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
   if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change assignments." };
+    return { ok: false, error: "Only admins can change tasks." };
   }
 
   const id = String(formData.get("assignmentId") ?? "");
   const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "Assignment not found." };
+  if (!existing) return { ok: false, error: "That task no longer exists." };
 
   const mentorId = String(formData.get("mentorId") ?? "");
   const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
@@ -191,7 +196,7 @@ export async function updateAssignment(
       href: notificationHref.mentorStudent(existing.studentId),
       message:
         mentorId === existing.mentorId
-          ? `Your goal "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.timeline ? `, ${fields.timeline}` : ""}.`
+          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.timeline ? `, ${fields.timeline}` : ""}.`
           : `"${fields.purpose}" for ${studentName} was reassigned.`,
     });
   });
@@ -210,7 +215,7 @@ export async function setAssignmentProgress(
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
   if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change assignments." };
+    return { ok: false, error: "Only admins can change tasks." };
   }
 
   const id = String(formData.get("assignmentId") ?? "");
@@ -221,11 +226,11 @@ export async function setAssignmentProgress(
   }
 
   const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "Assignment not found." };
+  if (!existing) return { ok: false, error: "That task no longer exists." };
 
   if (progress === ASSIGNMENT_PROGRESS_AUTO) {
     if (!existing.progressManual) {
-      return { ok: true, message: "This goal already follows its hours." };
+      return { ok: true, message: "This task already follows its hours." };
     }
     const synced = await prisma.$transaction(async (tx) => {
       await tx.assignment.update({
@@ -260,7 +265,7 @@ export async function setAssignmentProgress(
       type: NOTIFICATION_TYPES.GOAL_CHANGED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(existing.studentId),
-      message: `An admin marked your goal "${existing.purpose}" as ${ASSIGNMENT_PROGRESS_LABELS[progress].toLowerCase()}.`,
+      message: `An admin marked your task "${existing.purpose}" as ${ASSIGNMENT_PROGRESS_LABELS[progress].toLowerCase()}.`,
     });
   });
 
@@ -282,12 +287,12 @@ export async function deleteAssignment(
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
   if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can remove assignments." };
+    return { ok: false, error: "Only admins can remove tasks." };
   }
 
   const id = String(formData.get("assignmentId") ?? "");
   const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "Assignment not found." };
+  if (!existing) return { ok: false, error: "That task no longer exists." };
 
   await prisma.$transaction(async (tx) => {
     await tx.assignment.delete({ where: { id } });
@@ -296,7 +301,7 @@ export async function deleteAssignment(
       type: NOTIFICATION_TYPES.GOAL_CHANGED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(existing.studentId),
-      message: `The goal "${existing.purpose}" was removed from the plan. Sessions you already logged against it are kept.`,
+      message: `The task "${existing.purpose}" was removed from the plan. Sessions you already logged against it are kept.`,
     });
   });
 

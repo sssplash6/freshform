@@ -58,8 +58,8 @@ export const NOTIFICATION_TYPES = {
   MENTOR_ASSIGNED: "MENTOR_ASSIGNED", // to the mentor: assigned to a program, set your booking link
   HOURS_DEADLINE: "HOURS_DEADLINE", // to student + mentor: allocation deadline approaching or passed
   ENROLLMENT_MOVED: "ENROLLMENT_MOVED", // to the student: admin corrected their program/cohort
-  GOAL_ASSIGNED: "GOAL_ASSIGNED", // to the mentor: an admin assigned them a goal
-  GOAL_CHANGED: "GOAL_CHANGED", // to the mentor: their goal was edited, re-staged or removed
+  GOAL_ASSIGNED: "GOAL_ASSIGNED", // to the mentor: an admin gave them a task (usually with the hours for it)
+  GOAL_CHANGED: "GOAL_CHANGED", // to the mentor: their task was edited, re-staged or removed
   GOAL_DONE: "GOAL_DONE", // to admins: work an admin planned is finished
 } as const;
 
@@ -84,9 +84,9 @@ export const NOTIFICATION_META: Record<
   MENTOR_ASSIGNED: { label: "Assigned", tone: "brand" },
   HOURS_DEADLINE: { label: "Deadline", tone: "warning" },
   ENROLLMENT_MOVED: { label: "Enrollment", tone: "brand" },
-  GOAL_ASSIGNED: { label: "New goal", tone: "plan" },
-  GOAL_CHANGED: { label: "Goal changed", tone: "plan" },
-  GOAL_DONE: { label: "Goal done", tone: "success" },
+  GOAL_ASSIGNED: { label: "New task", tone: "plan" },
+  GOAL_CHANGED: { label: "Task changed", tone: "plan" },
+  GOAL_DONE: { label: "Task done", tone: "success" },
 };
 
 /**

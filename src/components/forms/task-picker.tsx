@@ -1,0 +1,96 @@
+"use client";
+
+import { useState } from "react";
+
+import { Select } from "@/components/select";
+import { Input } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
+import { MAX_TASK_LENGTH, TASK_OTHER, TASK_PRESETS } from "@/lib/tasks";
+
+/** An open task this pairing already has, offered so it can be topped up. */
+export type OpenTask = { purpose: string; hint?: string };
+
+/**
+ * Names the piece of work hours are for: one of the presets, one of the tasks
+ * this mentor already has open with the student (which tops its budget up
+ * instead of creating a near-duplicate), or anything typed into the box that
+ * "Something else…" reveals.
+ *
+ * Two fields ride out to the action — the picked value and the typed one — and
+ * lib/tasks.ts#parseTaskField resolves them the same way on every form.
+ */
+export function TaskPicker({
+  openTasks = [],
+  name = "task",
+  customName = "taskCustom",
+  compact = false,
+  className,
+  hint,
+}: {
+  openTasks?: OpenTask[];
+  /** Field names, for actions that call this field something else (`purpose`). */
+  name?: string;
+  customName?: string;
+  /** Tighter labels, for the narrow row-action popovers. */
+  compact?: boolean;
+  className?: string;
+  hint?: React.ReactNode;
+}) {
+  const [picked, setPicked] = useState("");
+
+  // Open tasks lead: when one exists, granting more hours for it is the likely
+  // intent, and the alternative (a second row with the same name) is one an
+  // admin would have to clean up later.
+  const openPurposes = new Set(openTasks.map((t) => t.purpose));
+  const options = [
+    ...openTasks.map((t) => ({
+      value: t.purpose,
+      label: t.hint ? `${t.purpose} · ${t.hint}` : t.purpose,
+    })),
+    ...TASK_PRESETS.filter((p) => !openPurposes.has(p)).map((p) => ({
+      value: p,
+      label: p,
+    })),
+    { value: TASK_OTHER, label: "Something else…" },
+  ];
+
+  return (
+    <div className={cn("min-w-0", className)}>
+      <span
+        className={cn(
+          "block",
+          compact
+            ? "text-xs font-medium text-muted-fg"
+            : "text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg",
+        )}
+      >
+        Task <span className="text-accent-ink">*</span>
+      </span>
+      <div className="mt-1">
+        <Select
+          name={name}
+          ariaLabel="Task these hours are for"
+          options={options}
+          placeholder="What are these hours for?"
+          onChange={setPicked}
+        />
+      </div>
+      {picked === TASK_OTHER && (
+        <Input
+          name={customName}
+          type="text"
+          required
+          autoFocus
+          maxLength={MAX_TASK_LENGTH}
+          placeholder="Name the task"
+          className="rise-in mt-2"
+        />
+      )}
+      {hint && (
+        <p className="mt-1.5 text-xs font-normal normal-case tracking-normal text-muted-fg">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}

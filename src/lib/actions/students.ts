@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { notify, notificationHref } from "@/lib/notify";
 import {
+  ASSIGNMENT_PROGRESS,
   canActAsMentor,
   NOTIFICATION_TYPES,
   ROLES,
@@ -14,6 +15,8 @@ import {
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
 import { formatDate, formatHours, formatMoney } from "@/lib/format";
+import { syncGoalProgress } from "@/lib/goal-progress";
+import { parseTaskField } from "@/lib/tasks";
 import {
   EMAIL_RE,
   normalizeEmail,
@@ -426,6 +429,9 @@ export async function deleteStudent(
   await prisma.$transaction(async (tx) => {
     await tx.hourAllotmentChange.deleteMany({ where: { studentId: profile.id } });
     await tx.hourAllocation.deleteMany({ where: { studentId: profile.id } });
+    // The tasks their hours bought. Nothing was logged against them (no
+    // sessions, checked above), so no delivered hours are at stake.
+    await tx.assignment.deleteMany({ where: { studentId: profile.id } });
     await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.websiteFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.notification.deleteMany({ where: { userId: profile.userId } });
@@ -434,7 +440,7 @@ export async function deleteStudent(
   });
 
   revalidatePath("/", "layout");
-  redirect(`/admin/programs/${profile.programId}`);
+  redirect(`/admin/programs/${profile.programId}/students`);
 }
 
 /**
@@ -510,6 +516,7 @@ export async function rejectStudent(
   await prisma.$transaction(async (tx) => {
     await tx.hourAllotmentChange.deleteMany({ where: { studentId: profile.id } });
     await tx.hourAllocation.deleteMany({ where: { studentId: profile.id } });
+    await tx.assignment.deleteMany({ where: { studentId: profile.id } });
     await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.websiteFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.notification.deleteMany({ where: { userId: profile.userId } });
@@ -523,11 +530,17 @@ export async function rejectStudent(
 
 /**
  * Set the hours a student holds with ONE mentor (spec §3 key rule: admin
- * only, always audited, always notifies the student), with an optional
- * deadline the hours should be used by — shown to the student and the
- * mentor; passing it flags the balance but never blocks. The student's total
- * allotment is derived as the sum of these allocations; sessions logged by
- * the mentor draw the allocation down toward 0.
+ * only, always audited, always notifies the student), with the required
+ * deadline the hours must be used by — once it passes, unused hours are
+ * forfeited. The student's total allotment is derived as the sum of these
+ * allocations; sessions logged by the mentor draw the allocation down toward 0.
+ *
+ * GRANTING hours also names the TASK they are for, and that is not optional: it
+ * becomes the mentor's piece of work with these hours as its budget, and every
+ * session they log has to be logged against one of the student's tasks. Naming
+ * a task that is already open tops its budget up rather than adding a second row
+ * with the same name. Corrections — a mistyped total, a new deadline, an amount
+ * paid — need no task, since they grant nothing.
  */
 export async function setMentorAllocation(
   _prev: ActionState,
@@ -540,7 +553,8 @@ export async function setMentorAllocation(
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const mentorId = String(formData.get("mentorId") ?? "");
-  // "set" replaces the allocation; "add" tops it up by the entered amount.
+  // "set" replaces the allocation (a correction); "add" grants more hours on top
+  // of whatever the student already holds with this mentor.
   const mode = String(formData.get("mode") ?? "set");
   const parsed = parseHoursField(formData.get("hours"), {
     min: 0,
@@ -554,7 +568,7 @@ export async function setMentorAllocation(
   if ("error" in parsedDeadline) {
     return { ok: false, error: "Pick a deadline for these hours." };
   }
-  const deadline = parsedDeadline.value;
+  const enteredDeadline = parsedDeadline.value;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
@@ -564,7 +578,7 @@ export async function setMentorAllocation(
 
   // Master's Program allocations also record how much the student paid.
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
-  let amountPaid: number | null = null;
+  let enteredPaid: number | null = null;
   if (isMasters) {
     const raw = String(formData.get("amountPaid") ?? "").trim();
     const n = Number.parseFloat(raw);
@@ -574,7 +588,7 @@ export async function setMentorAllocation(
     if (n > 10_000_000) {
       return { ok: false, error: "Amount paid is implausibly large." };
     }
-    amountPaid = Number(n.toFixed(2));
+    enteredPaid = Number(n.toFixed(2));
   }
 
   const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
@@ -595,19 +609,49 @@ export async function setMentorAllocation(
   const oldHours = existing?.hours ?? 0;
   const newHours =
     mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
+  const granted = Number((newHours - oldHours).toFixed(2));
+
+  // Every grant from one mentor lands in the same pool, which has one use-by
+  // date, so topping up keeps whichever date is LATER: hours already granted
+  // must never be quietly shortened by a top-up aimed at nearer work. The task
+  // records the date this particular grant was aimed at.
+  const deadline =
+    mode === "add" && existing && existing.deadline > enteredDeadline
+      ? existing.deadline
+      : enteredDeadline;
   const oldDeadline = existing?.deadline ?? null;
   const sameDeadline = oldDeadline?.getTime() === deadline.getTime();
-  // amountPaid is an absolute total (not add/set): it's replaced with the
-  // entered value on either button. Non-Master's allocations never touch it.
-  const oldAmountPaid = existing?.amountPaid ?? null;
-  const sameAmount = !isMasters || oldAmountPaid === amountPaid;
+
+  // Money follows the hours: "add" records another payment on top of the total
+  // already banked, "set" states the total outright. Non-Master's never touch it.
+  const oldPaid = existing?.amountPaid ?? null;
+  const newPaid = !isMasters
+    ? null
+    : mode === "add" && existing
+      ? Number(((oldPaid ?? 0) + (enteredPaid ?? 0)).toFixed(2))
+      : enteredPaid;
+  const sameAmount = !isMasters || oldPaid === newPaid;
+
   if (newHours === oldHours && sameDeadline && sameAmount) {
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
+  // Hours arriving means work arriving, so the grant says what the work is.
+  let task: string | null = null;
+  if (granted > 0) {
+    const parsedTask = parseTaskField(
+      formData.get("task"),
+      formData.get("taskCustom")
+    );
+    if ("error" in parsedTask) return { ok: false, error: parsedTask.error };
+    task = parsedTask.value;
+  }
+
   const mentorLabel = mentor.name ?? mentor.email;
+  const studentName = profile.user.name ?? profile.user.email;
   const deadlineNote = ` They must be used by ${formatDate(deadline)}.`;
-  await prisma.$transaction(async (tx) => {
+
+  const taskOutcome = await prisma.$transaction(async (tx) => {
     // Bring the mentor into the program if they weren't already.
     if (!inProgram) {
       await tx.mentorAssignment.create({
@@ -628,23 +672,77 @@ export async function setMentorAllocation(
         deadline,
         // A new deadline restarts the reminder cycle.
         ...(sameDeadline ? {} : { deadlineStage: null }),
-        ...(isMasters ? { amountPaid } : {}),
+        ...(isMasters ? { amountPaid: newPaid } : {}),
       },
       create: {
         studentId: profile.id,
         mentorId,
         hours: newHours,
         deadline,
-        ...(isMasters ? { amountPaid } : {}),
+        ...(isMasters ? { amountPaid: newPaid } : {}),
       },
     });
+
+    // The task these hours bought. Topping up an open one keeps the plan honest:
+    // a second "Supplemental Essays" row would split the same work in two.
+    let outcome: { task: string; budget: number; created: boolean } | null = null;
+    if (task) {
+      const open = await tx.assignment.findFirst({
+        where: {
+          studentId: profile.id,
+          mentorId,
+          purpose: task,
+          progress: { not: ASSIGNMENT_PROGRESS.DONE },
+        },
+        orderBy: { position: "asc" },
+      });
+      if (open) {
+        const budget = Number(((open.hourLimit ?? 0) + granted).toFixed(2));
+        await tx.assignment.update({
+          where: { id: open.id },
+          data: { hourLimit: budget },
+        });
+        // A raised budget can reopen work the old limit had finished.
+        await syncGoalProgress(tx, open.id);
+        outcome = { task, budget, created: false };
+      } else {
+        const last = await tx.assignment.findFirst({
+          where: { studentId: profile.id },
+          orderBy: { position: "desc" },
+          select: { position: true },
+        });
+        await tx.assignment.create({
+          data: {
+            studentId: profile.id,
+            mentorId,
+            purpose: task,
+            hourLimit: granted,
+            // The date THIS grant was aimed at, which the pooled use-by date can
+            // outlive once other hours are added to the same mentor.
+            timeline: formatDate(enteredDeadline),
+            position: (last?.position ?? -1) + 1,
+            createdById: actor.id,
+          },
+        });
+        outcome = { task, budget: granted, created: true };
+        await notify(tx, {
+          to: [mentorId],
+          type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
+          actorId: actor.id,
+          href: notificationHref.mentorStudent(profile.id),
+          message: `New task for ${studentName}: "${task}", budgeted ${formatHours(granted)} hours to use by ${formatDate(enteredDeadline)}. Log your sessions against it.`,
+        });
+      }
+    }
+
     if (newHours !== oldHours) {
+      const forTask = task ? ` for "${task}"` : "";
       await notify(tx, {
         to: [mentorId],
         type: NOTIFICATION_TYPES.HOURS_GRANTED,
         actorId: actor.id,
         href: notificationHref.mentorStudent(profile.id),
-        message: `Your hours with ${profile.user.name ?? profile.user.email} are now ${formatHours(newHours)} (was ${formatHours(oldHours)}), to use by ${formatDate(deadline)}.`,
+        message: `Your hours with ${studentName} are now ${formatHours(newHours)} (was ${formatHours(oldHours)})${forTask}, to use by ${formatDate(deadline)}.`,
       });
       await tx.hourAllotmentChange.create({
         data: {
@@ -656,35 +754,43 @@ export async function setMentorAllocation(
         },
       });
     }
-    const delta = newHours - oldHours;
+
     await notify(tx, {
       to: [profile.userId],
       type: NOTIFICATION_TYPES.HOURS_GRANTED,
       actorId: actor.id,
       href: notificationHref.studentHome(),
       message:
-        delta > 0
-          ? `You were granted ${formatHours(delta)} more hours with ${mentorLabel} (now ${formatHours(newHours)} with them).${deadlineNote}`
-          : delta < 0
+        granted > 0
+          ? `You were granted ${formatHours(granted)} more hours with ${mentorLabel} for "${task}" (now ${formatHours(newHours)} with them).${deadlineNote}`
+          : granted < 0
             ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
             : `The deadline for your hours with ${mentorLabel} was updated to ${formatDate(deadline)}.`,
     });
+
+    return outcome;
   });
 
   revalidatePath("/", "layout");
   const paidNote =
-    isMasters && amountPaid !== null ? ` · ${formatMoney(amountPaid)} paid` : "";
+    isMasters && newPaid !== null ? ` · ${formatMoney(newPaid)} paid` : "";
+  const taskNote = taskOutcome
+    ? taskOutcome.created
+      ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
+      : ` "${taskOutcome.task}" is now budgeted ${formatHours(taskOutcome.budget)} hours.`
+    : "";
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.${taskNote}`,
   };
 }
 
 /**
- * Remove a mentor from a student — deletes that per-mentor allocation and its
- * audit rows (admin only, student notified). Blocked once a session has been
- * logged with the mentor: those hours were delivered and are history, not a
- * mistake to erase. The mentor keeps their program assignment.
+ * Remove a mentor from a student — deletes that per-mentor allocation, the tasks
+ * those hours bought, and the audit rows (admin only, student notified). Blocked
+ * once a session has been logged with the mentor: those hours were delivered and
+ * are history, not a mistake to erase. The mentor keeps their program
+ * assignment.
  */
 export async function removeMentorAllocation(
   _prev: ActionState,
@@ -722,6 +828,10 @@ export async function removeMentorAllocation(
     await tx.hourAllotmentChange.deleteMany({
       where: { studentId: profileId, mentorId },
     });
+    // Their tasks go with their hours: nothing was logged against them (no
+    // sessions, checked above), and a task nobody holds hours for is a line the
+    // mentor can't act on.
+    await tx.assignment.deleteMany({ where: { studentId: profileId, mentorId } });
     await tx.hourAllocation.delete({
       where: { studentId_mentorId: { studentId: profileId, mentorId } },
     });
@@ -735,5 +845,8 @@ export async function removeMentorAllocation(
   });
 
   revalidatePath("/", "layout");
-  return { ok: true, message: `${mentorLabel} removed from this student.` };
+  return {
+    ok: true,
+    message: `${mentorLabel} removed from this student, along with the tasks their hours were for.`,
+  };
 }

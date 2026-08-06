@@ -24,7 +24,7 @@ export function SessionRowActions({
     note: string | null;
     assignmentId: string | null;
   };
-  /** The mentor's goals for this session's student, so a mis-pick is fixable. */
+  /** The mentor's tasks for this session's student, so a mis-pick is fixable. */
   goals?: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
@@ -58,14 +58,14 @@ export function SessionRowActions({
             <input type="hidden" name="sessionId" value={session.id} />
             {goals.length > 0 && (
               <label className="block text-xs text-muted-fg">
-                Goal
+                Task
                 <select
                   name="assignmentId"
                   defaultValue={session.assignmentId ?? ""}
                   className={`${inputClass} block max-w-56`}
                 >
                   {/* Blank keeps whatever the session already has, so correcting
-                      the hours never forces a goal onto older history. */}
+                      the hours never forces a task onto older history. */}
                   <option value="">Leave unchanged</option>
                   {goals.map((g) => (
                     <option key={g.value} value={g.value}>
@@ -98,7 +98,7 @@ export function SessionRowActions({
               />
             </label>
             <label className="block flex-1 text-xs text-muted-fg">
-              Task focused on
+              What you covered
               <input
                 name="task"
                 type="text"

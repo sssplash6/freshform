@@ -23,7 +23,7 @@ export type LoggedMeeting = {
   mentor: { id: string; name: string | null; email: string };
   /** Present only on cross-student logs, where a Student column is needed. */
   student?: { id: string; user: { name: string | null; email: string } } | null;
-  /** The assigned goal this meeting went toward; null on pre-goals history. */
+  /** The task this meeting went toward; null on history from before tasks. */
   assignment?: { id: string; purpose: string } | null;
 };
 
@@ -72,7 +72,7 @@ export function MeetingsLog({
     ...(withStudent ? [{ label: "Student" } as Column] : []),
     { label: "Duration", align: "right" },
     { label: "Date" },
-    { label: "Goal" },
+    { label: "Task" },
     { label: "Notes" },
   ];
 

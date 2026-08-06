@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AddMentorForm } from "@/components/forms/add-mentor-form";
+import { AllocateHoursForm } from "@/components/forms/allocate-hours-form";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { Deadline } from "@/components/deadline";
 import { Chip } from "@/components/chip";
@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { ROLES, USER_STATUS } from "@/lib/constants";
+import { ASSIGNMENT_PROGRESS, ROLES, USER_STATUS } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatHours, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
@@ -27,10 +27,10 @@ import { prisma } from "@/lib/prisma";
 import { programOptions, studentLedger, toProgramOptions } from "@/lib/queries";
 
 /**
- * Admin detail page for one student: the full ledger (meetings log the mentors
- * filled in, plus the assignment plan the admin owns), then the hour
- * allocations behind it. This is the only place hours are granted and the only
- * place assignments are edited.
+ * Admin detail page for one student: the full ledger (the meetings log their
+ * mentors filled in, plus the tasks the admin owns), then the hours behind it,
+ * per mentor. This is the only place hours are granted and the only place tasks
+ * are edited — and granting hours here is what puts a task on a mentor's list.
  */
 export default async function AdminStudentDetailPage({
   params,
@@ -64,20 +64,47 @@ export default async function AdminStudentDetailPage({
     studentLedger(profile.id),
   ]);
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
-  // The student's mentors are those with an allocation; any other mentor can
-  // be added below (and pulled into this program if needed).
-  const allocatedIds = new Set(hours.perMentor.map((m) => m.mentor.id));
   const mentorOptions = allMentors.map((m) => ({
     value: m.id,
     label: m.name ?? m.email,
   }));
-  const eligibleMentors = mentorOptions.filter((m) => !allocatedIds.has(m.value));
+
+  // Allocating hours works for any mentor — one who already has hours here gets
+  // topped up, one who doesn't is pulled into the program by the same action —
+  // so the picker shows the whole bench and says who is already holding time.
+  const heldByMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
+  const allocateOptions = allMentors.map((m) => {
+    const held = heldByMentor.get(m.id);
+    return {
+      value: m.id,
+      label: held
+        ? `${m.name ?? m.email} · holds ${formatHours(held.allocated)}h, ${formatHours(held.remaining)}h left`
+        : (m.name ?? m.email),
+    };
+  });
+
+  // Their open tasks, so granting more hours for work already underway tops that
+  // budget up instead of starting a second row with the same name.
+  const openTasksByMentor: Record<
+    string,
+    { purpose: string; hint?: string }[]
+  > = {};
+  for (const task of ledger.assignments) {
+    if (task.progress === ASSIGNMENT_PROGRESS.DONE) continue;
+    (openTasksByMentor[task.mentorId] ??= []).push({
+      purpose: task.purpose,
+      hint:
+        task.hourLimit != null
+          ? `${formatHours(task.loggedHours)} of ${formatHours(task.hourLimit)}h`
+          : "no budget yet",
+    });
+  }
 
   return (
     <div className="space-y-8">
       <PageHeader
-        backHref={`/admin/programs/${profile.programId}`}
-        backLabel={profile.program.name}
+        backHref={`/admin/programs/${profile.programId}/students`}
+        backLabel={`${profile.program.name} students`}
         eyebrow={`Student · ${profile.program.name}`}
         monogram={initials(profile.user.name, profile.user.email)}
         title={
@@ -225,6 +252,7 @@ export default async function AdminStudentDetailPage({
                     mentorLabel={m.mentor.name ?? m.mentor.email}
                     currentHours={m.allocated}
                     currentDeadline={toDateInputValue(m.deadline)}
+                    openTasks={openTasksByMentor[m.mentor.id] ?? []}
                     showAmountPaid={isMasters}
                     currentAmountPaid={m.amountPaid}
                   />
@@ -233,15 +261,21 @@ export default async function AdminStudentDetailPage({
             ))}
           </Table>
         )}
-        {eligibleMentors.length > 0 && (
-          <div className="border-t border-line px-4 py-4 sm:px-5">
-            <AddMentorForm
+        <div className="border-t border-line px-4 py-4 sm:px-5">
+          {allocateOptions.length === 0 ? (
+            <p className="text-sm text-muted-fg">
+              No mentors exist yet — register one on the Mentors page, then come
+              back to allocate hours.
+            </p>
+          ) : (
+            <AllocateHoursForm
               studentProfileId={profile.id}
-              mentors={eligibleMentors}
+              mentors={allocateOptions}
+              openTasksByMentor={openTasksByMentor}
               showAmountPaid={isMasters}
             />
-          </div>
-        )}
+          )}
+        </div>
       </Panel>
 
       <StudentFolderForm

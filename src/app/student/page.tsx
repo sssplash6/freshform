@@ -93,7 +93,7 @@ export default async function StudentHomePage() {
     (s) => s.status === SESSION_STATUS.ACTIVE
   );
   const firstName = user.name?.split(" ")[0] ?? "there";
-  const goalsLeft = ledger.assignments.filter((a) => a.progress !== "DONE").length;
+  const tasksLeft = ledger.assignments.filter((a) => a.progress !== "DONE").length;
 
   return (
     <div className="space-y-6">
@@ -118,7 +118,7 @@ export default async function StudentHomePage() {
               </h1>
               <p className="mt-2 max-w-md text-[15px] text-muted-fg">
                 {hours.remaining > 0
-                  ? `You have ${formatHours(hours.remaining)} mentoring hours left to use${goalsLeft > 0 ? `, and ${goalsLeft} ${goalsLeft === 1 ? "goal" : "goals"} still in the works` : ""}.`
+                  ? `You have ${formatHours(hours.remaining)} mentoring hours left to use${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
                   : "Your mentoring hours are all used up. Talk to your program contact about topping up."}
               </p>
 
