@@ -162,6 +162,11 @@ model Assignment {
   purpose   String // what this work is: "Main essay", "Recommendation letters"
   hourLimit Float? // hours this piece of work should take; null = not budgeted
   timeline  String? // free text on purpose: the sheet holds both "Aug 7" and "Mar-May"
+  // What a person needs to say about this task that the state can't: "missed an
+  // hour, not excused", "GMAT prep but when?". The tracking spreadsheet wrote
+  // exactly this into its Progress cells next to the state, so a status word
+  // alone would have dropped the half that matters on import.
+  note String?
   // NOT_STARTED | IN_PROGRESS | DONE. Normally DERIVED from hours logged against
   // this goal (see lib/goal-progress.ts): the first session moves it to
   // IN_PROGRESS, reaching hourLimit moves it to DONE.

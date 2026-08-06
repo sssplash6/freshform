@@ -32,6 +32,7 @@ import { parseHoursField, type ActionState } from "@/lib/actions/shared";
 
 const PROGRESS_VALUES: string[] = Object.values(ASSIGNMENT_PROGRESS);
 const MAX_TIMELINE = 60;
+const MAX_NOTE = 500;
 
 /** Every field an assignment row holds, validated together. */
 function parseFields(
@@ -42,6 +43,7 @@ function parseFields(
       purpose: string;
       hourLimit: number | null;
       timeline: string | null;
+      note: string | null;
       progress: string;
     } {
   // Either a task off the shared list or one typed in its place — the same
@@ -69,12 +71,23 @@ function parseFields(
     return { error: `Keep the timeline under ${MAX_TIMELINE} characters.` };
   }
 
+  const note = String(formData.get("note") ?? "").trim();
+  if (note.length > MAX_NOTE) {
+    return { error: `Keep the note under ${MAX_NOTE} characters.` };
+  }
+
   const progress = String(formData.get("progress") ?? ASSIGNMENT_PROGRESS.NOT_STARTED);
   if (!PROGRESS_VALUES.includes(progress)) {
     return { error: "Pick a progress state." };
   }
 
-  return { purpose, hourLimit, timeline: timeline || null, progress };
+  return {
+    purpose,
+    hourLimit,
+    timeline: timeline || null,
+    note: note || null,
+    progress,
+  };
 }
 
 /** Add a task to a student's plan. */

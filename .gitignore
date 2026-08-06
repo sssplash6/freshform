@@ -47,3 +47,6 @@ prisma/*.db.backup*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Real student data pulled out of the tracking spreadsheet — never committed.
+/sheet-import/

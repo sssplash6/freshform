@@ -99,6 +99,13 @@ export function AssignmentsPanel({
                 >
                   <Td className="max-w-xs">
                     <span className="font-medium text-ink">{a.purpose}</span>
+                    {/* What a person said about this task that its state can't
+                        carry — a missed hour, an open question. */}
+                    {a.note && (
+                      <span className="mt-0.5 block text-xs text-muted-fg">
+                        {a.note}
+                      </span>
+                    )}
                   </Td>
                   <Td>
                     <PersonChip
@@ -156,6 +163,7 @@ export function AssignmentsPanel({
                           mentorId: a.mentorId,
                           hourLimit: a.hourLimit,
                           timeline: a.timeline,
+                          note: a.note,
                           progress: a.progress,
                           progressManual: a.progressManual,
                         }}

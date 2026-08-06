@@ -36,6 +36,7 @@ type AssignmentFields = {
   mentorId: string;
   hourLimit: number | null;
   timeline: string | null;
+  note: string | null;
   progress: string;
   /** True when an admin pinned the progress, so hours no longer move it. */
   progressManual: boolean;
@@ -264,6 +265,17 @@ export function AssignmentRowActions({
                       />
                     </label>
                   </div>
+                  <label className={labelClass}>
+                    Note
+                    <input
+                      name="note"
+                      type="text"
+                      maxLength={500}
+                      placeholder="Anything the state can't say"
+                      defaultValue={assignment.note ?? ""}
+                      className={inputClass}
+                    />
+                  </label>
                   <div className="flex gap-2">
                     <Button type="submit" size="sm" disabled={editPending}>
                       {editPending ? "Saving…" : "Save"}
