@@ -116,6 +116,18 @@ If the workbook has changed since the date above, rebuild this file first:
 
      npm run db:migrate:deploy
 
+   "No pending migrations to apply" is the RIGHT answer here: render.yaml's
+   startCommand already runs this on every boot, so a current deploy applied them
+   the moment it started. That message looks identical on a STALE deploy, though —
+   one whose code has no such migrations to be pending — so confirm which it is:
+
+     ls prisma/migrations | tail -4      # expect ...assignment_note and
+                                         # ...session_notes_late_task_deadline
+     npx prisma migrate status           # expect "Database schema is up to date!"
+
+   If those two folders aren't there, the box is running old code: Manual Deploy
+   and come back to this step.
+
    If tsx is missing (the build prunes devDependencies), first:
 
      npm i --no-save tsx
@@ -127,7 +139,18 @@ If the workbook has changed since the date above, rebuild this file first:
 {blob}
 B64
 
-   Check it landed:  wc -c sheet-import/masters-hours.json    (expect ~{len(raw) // 1000}KB)
+   The paste is one heredoc: everything between the base64 line and the closing
+   B64 line is data, so copy the whole block including that last line. Long pastes
+   into a web terminal do sometimes lose characters, so check what landed:
+
+     wc -c sheet-import/masters-hours.json     # expect exactly {len(raw)} bytes
+     node -e 'const d=require("./sheet-import/masters-hours.json"); \
+       console.log(d.source, d.parsedOn, d.students.length + " students", \
+       d.students.reduce((n,s)=>n+s.sessions.length,0) + " sessions")'
+
+   That second command both proves the JSON parses and prints what it holds —
+   expect: {parsed['source']} {parsed['parsedOn']} {len(students)} students {n_sessions} sessions
+   If gunzip errored or the numbers are off, just paste it again.
 
 5. Dry run. The first run writes a DRAFT consultant map from the mentor accounts
    that already exist in production, prints it, and stops:
