@@ -49,8 +49,11 @@ export function LogSessionForm({
       <h2 className="text-base font-semibold text-ink">
         Log a completed session
       </h2>
+      {/* min-w-0 on every cell: a grid item's automatic minimum size is its
+          content, so the longest option label was widening the column past the
+          screen on a phone — and the dropdown, anchored to it, went with it. */}
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="block text-sm">
+        <div className="block min-w-0 text-sm">
           <span className="text-muted-fg">Student *</span>
           <div className="mt-0.5">
             <Select
@@ -65,7 +68,7 @@ export function LogSessionForm({
             />
           </div>
         </div>
-        <div className="block text-sm">
+        <div className="block min-w-0 text-sm">
           <span className="text-muted-fg">Task worked on</span>
           <div className="mt-0.5">
             <Select
@@ -86,7 +89,7 @@ export function LogSessionForm({
             />
           </div>
         </div>
-        <label className="block text-sm">
+        <label className="block min-w-0 text-sm">
           <span className="text-muted-fg">Hours *</span>
           <input
             name="hours"
@@ -98,7 +101,7 @@ export function LogSessionForm({
             className={inputClass}
           />
         </label>
-        <label className="block text-sm">
+        <label className="block min-w-0 text-sm">
           <span className="text-muted-fg">Date *</span>
           <input
             name="date"
@@ -109,7 +112,7 @@ export function LogSessionForm({
             className={inputClass}
           />
         </label>
-        <label className="block text-sm sm:col-span-2 lg:col-span-3">
+        <label className="block min-w-0 text-sm sm:col-span-2 lg:col-span-3">
           <span className="text-muted-fg">Notes</span>
           <input
             name="note"

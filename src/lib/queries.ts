@@ -222,6 +222,55 @@ export async function programTasks(programId: string) {
 export type ProgramTask = Awaited<ReturnType<typeof programTasks>>[number];
 
 /**
+ * The tasks each logged session could be attached to: the ones its own mentor
+ * holds for its own student. Keyed by session id, because a log can span
+ * students and mentors — the dashboard's does — and a correction menu needs the
+ * right handful, not all of them.
+ *
+ * One query for the whole log, not one per row.
+ */
+export async function taskOptionsForSessions(
+  sessions: { id: string; studentId: string; mentorId: string }[]
+): Promise<Record<string, { value: string; label: string }[]>> {
+  if (sessions.length === 0) return {};
+
+  const tasks = await prisma.assignment.findMany({
+    where: { studentId: { in: [...new Set(sessions.map((s) => s.studentId))] } },
+    orderBy: { position: "asc" },
+    select: {
+      id: true,
+      studentId: true,
+      mentorId: true,
+      purpose: true,
+      progress: true,
+    },
+  });
+
+  const byPair = new Map<string, { value: string; label: string }[]>();
+  for (const task of tasks) {
+    const key = `${task.studentId}:${task.mentorId}`;
+    const list = byPair.get(key) ?? [];
+    // Done tasks stay pickable: a session may be the last one against work an
+    // admin has already ticked off, and hiding it would strand the correction.
+    list.push({
+      value: task.id,
+      label:
+        task.progress === ASSIGNMENT_PROGRESS.DONE
+          ? `${task.purpose} (done)`
+          : task.purpose,
+    });
+    byPair.set(key, list);
+  }
+
+  const bySession: Record<string, { value: string; label: string }[]> = {};
+  for (const session of sessions) {
+    const list = byPair.get(`${session.studentId}:${session.mentorId}`);
+    if (list) bySession[session.id] = list;
+  }
+  return bySession;
+}
+
+/**
  * The programs (and, for Global Admissions, cohorts) a mentor is assigned
  * to, with booking links. cohort is null for program-wide assignments.
  */

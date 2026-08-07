@@ -107,7 +107,13 @@ export function Select({
           selected ? "text-ink" : "text-muted-fg",
         )}
       >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
+        {/* min-w-0: a flex item's min-width defaults to its content, so without
+            this the longest option name makes the whole control wider than its
+            column — and on a phone, wider than the screen. truncate can only do
+            its job once the item is allowed to shrink. */}
+        <span className="min-w-0 truncate">
+          {selected ? selected.label : placeholder}
+        </span>
         <ChevronDownIcon
           className={cn(
             "h-4 w-4 shrink-0 text-muted-fg transition-transform",
@@ -130,7 +136,7 @@ export function Select({
               visibility: anchored ? "visible" : "hidden",
             }}
             className={cn(
-              "pop-in z-50 max-w-[calc(100vw-1rem)] overflow-auto rounded-xl border border-line bg-surface p-1 shadow-soft",
+              "pop-in z-50 max-w-[calc(100vw-1rem)] overflow-auto overscroll-contain rounded-xl border border-line bg-surface p-1 shadow-soft",
               anchored?.up ? "[--pop-origin:bottom]" : "[--pop-origin:top]",
             )}
           >
@@ -178,7 +184,7 @@ function SelectItem({
             : "text-ink hover:bg-canvas",
         )}
       >
-        <span className="truncate">{children}</span>
+        <span className="min-w-0 truncate">{children}</span>
         {selected && <CheckIcon className="h-4 w-4 shrink-0" />}
       </button>
     </li>

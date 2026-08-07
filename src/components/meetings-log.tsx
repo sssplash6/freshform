@@ -37,11 +37,11 @@ export type ManageMeetings = {
   actorId?: string;
   isAdmin?: boolean;
   /**
-   * mentorId → that mentor's tasks for THIS student, so a mis-picked task is
-   * fixable. Omitted on cross-student logs, where the edit form simply leaves
-   * the task alone.
+   * sessionId → the tasks THAT row could be attached to (its own mentor's, for
+   * its own student). Keyed per session because a log can span both — see
+   * queries.ts#taskOptionsForSessions.
    */
-  tasksByMentor?: Record<string, { value: string; label: string }[]>;
+  tasksBySession?: Record<string, { value: string; label: string }[]>;
 };
 
 /**
@@ -89,13 +89,17 @@ export function MeetingsLog({
   // repeat one name down the page. Drop it unless the log spans people.
   const withTeam = new Set(sessions.map((s) => s.mentor.id)).size > 1;
 
-  // A row is the reader's to change when it isn't voided and either they logged
-  // it or they're an admin.
-  const canChange = (s: LoggedMeeting) =>
+  // Correcting is for rows that still count and belong to the reader (any row,
+  // if they're an admin). Deleting is an admin's alone, and applies to a voided
+  // row too: those hours are already back, but the line is still in the log, and
+  // a line that should never have been there should be removable.
+  const canEdit = (s: LoggedMeeting) =>
     Boolean(manage) &&
     s.status !== SESSION_STATUS.VOIDED &&
     (manage?.isAdmin === true || s.mentor.id === manage?.actorId);
-  const withActions = sessions.some(canChange);
+  const canDelete = () => manage?.isAdmin === true;
+  const hasActions = (s: LoggedMeeting) => canEdit(s) || canDelete();
+  const withActions = sessions.some(hasActions);
 
   const columns: Column[] = [
     ...(withTeam ? [{ label: "Team" } as Column] : []),
@@ -203,7 +207,13 @@ export function MeetingsLog({
                 <Td className="max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>
                     {s.note ? (
-                      <div className="text-ink">{s.note}</div>
+                      // Clamped: a few of these notes are several paragraphs
+                      // long, and one of them turning a row forty lines tall
+                      // costs every other row its scanability. The whole note is
+                      // one hover away, and in the correction panel.
+                      <div className="line-clamp-3 text-ink" title={s.note}>
+                        {s.note}
+                      </div>
                     ) : (
                       <span className="text-muted-fg">—</span>
                     )}
@@ -224,7 +234,7 @@ export function MeetingsLog({
                 </Td>
                 {withActions && (
                   <Td align="right" className="align-top">
-                    {canChange(s) && (
+                    {hasActions(s) && (
                       <SessionRowActions
                         session={{
                           id: s.id,
@@ -234,8 +244,9 @@ export function MeetingsLog({
                           note: s.note,
                           assignmentId: s.assignment?.id ?? null,
                         }}
-                        goals={manage?.tasksByMentor?.[s.mentor.id] ?? []}
-                        canDelete={manage?.isAdmin === true}
+                        goals={manage?.tasksBySession?.[s.id] ?? []}
+                        canEdit={canEdit(s)}
+                        canDelete={canDelete()}
                       />
                     )}
                   </Td>

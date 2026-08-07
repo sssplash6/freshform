@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import {
   recentMeetings,
   studentsWithHours,
+  taskOptionsForSessions,
   type StudentWithHours,
 } from "@/lib/queries";
 
@@ -64,6 +65,7 @@ export default async function AdminHomePage() {
       .map((p, i) => [p.id, i] as const)
   );
 
+  const meetingTasks = await taskOptionsForSessions(meetings);
   const overall = totals(students);
   const pending = students.filter(
     (s) => s.user.status === USER_STATUS.PENDING
@@ -152,7 +154,7 @@ export default async function AdminHomePage() {
         eyebrow="Logged by mentors · every program"
         emptyBody="As mentors log sessions across the programs, the newest ones land here."
         mentorBase="/admin/mentors"
-        manage={{ isAdmin: true }}
+        manage={{ isAdmin: true, tasksBySession: meetingTasks }}
       />
 
       <section>

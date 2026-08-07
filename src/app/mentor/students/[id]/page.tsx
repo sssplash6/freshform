@@ -21,7 +21,7 @@ import { formatDate, formatHours } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { studentLedger } from "@/lib/queries";
+import { studentLedger, taskOptionsForSessions } from "@/lib/queries";
 
 /**
  * Mentor's view of one of their students. The numbers are scoped to THIS mentor
@@ -57,6 +57,7 @@ export default async function MentorStudentDetailPage({
   ]);
 
   const mySessions = ledger.sessions.filter((s) => s.mentorId === mentor.id);
+  const tasksBySession = await taskOptionsForSessions(ledger.sessions);
 
   // Not this mentor's student — nothing to see here.
   if (!allocation && mySessions.length === 0) notFound();
@@ -148,20 +149,7 @@ export default async function MentorStudentDetailPage({
 
       <MeetingsLog
         sessions={ledger.sessions}
-        manage={{
-          actorId: mentor.id,
-          tasksByMentor: {
-            [mentor.id]: ledger.assignments
-              .filter((a) => a.mentorId === mentor.id)
-              .map((a) => ({
-                value: a.id,
-                label:
-                  a.progress === ASSIGNMENT_PROGRESS.DONE
-                    ? `${a.purpose} (done)`
-                    : a.purpose,
-              })),
-          },
-        }}
+        manage={{ actorId: mentor.id, tasksBySession }}
       />
 
       <AssignmentsPanel

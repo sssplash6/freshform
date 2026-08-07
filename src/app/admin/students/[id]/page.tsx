@@ -23,7 +23,12 @@ import { formatDate, formatHours, formatMoney, toDateInputValue } from "@/lib/fo
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { programOptions, studentLedger, toProgramOptions } from "@/lib/queries";
+import {
+  programOptions,
+  studentLedger,
+  taskOptionsForSessions,
+  toProgramOptions,
+} from "@/lib/queries";
 
 /**
  * Admin detail page for one student: the full ledger (the meetings log their
@@ -62,6 +67,9 @@ export default async function AdminStudentDetailPage({
     programOptions(),
     studentLedger(profile.id),
   ]);
+  // What each logged session could be re-attached to, so a mis-picked task is
+  // fixable from the log itself.
+  const tasksBySession = await taskOptionsForSessions(ledger.sessions);
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
   const mentorOptions = allMentors.map((m) => ({
     value: m.id,
@@ -71,22 +79,6 @@ export default async function AdminStudentDetailPage({
   // Assigning a task works for any mentor: one who already holds hours here gets
   // topped up, one who doesn't is pulled into the program by the same action.
   // What they hold is right below in Hours by mentor, so the picker stays names.
-
-  // Every task per mentor, done ones included: correcting a session's task has
-  // to be able to point at any of them, not only the open ones.
-  const taskOptionsByMentor: Record<
-    string,
-    { value: string; label: string }[]
-  > = {};
-  for (const task of ledger.assignments) {
-    (taskOptionsByMentor[task.mentorId] ??= []).push({
-      value: task.id,
-      label:
-        task.progress === ASSIGNMENT_PROGRESS.DONE
-          ? `${task.purpose} (done)`
-          : task.purpose,
-    });
-  }
 
   // Their open tasks, so granting more hours for work already underway tops that
   // budget up instead of starting a second row with the same name.
@@ -167,7 +159,7 @@ export default async function AdminStudentDetailPage({
         openTasksByMentor={openTasksByMentor}
         showAmountPaid={isMasters}
         manage
-        manageSessions={{ isAdmin: true, tasksByMentor: taskOptionsByMentor }}
+        manageSessions={{ isAdmin: true, tasksBySession }}
         mentorBase="/admin/mentors"
         extraStats={
           <>

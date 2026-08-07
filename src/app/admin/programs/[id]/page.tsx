@@ -20,6 +20,7 @@ import {
   programTasks,
   recentMeetings,
   studentsWithHours,
+  taskOptionsForSessions,
   type ProgramTask,
   type StudentWithHours,
 } from "@/lib/queries";
@@ -112,6 +113,7 @@ export default async function AdminProgramOverviewPage({
       programTasks(program.id),
     ]);
 
+  const meetingTasks = await taskOptionsForSessions(recentSessions);
   const totals = students.reduce(
     (acc, s) => ({
       allotted: acc.allotted + s.allottedHours,
@@ -225,7 +227,7 @@ export default async function AdminProgramOverviewPage({
         eyebrow={`Logged by mentors · ${program.name}`}
         emptyBody={`No sessions logged in ${program.name} yet.`}
         mentorBase="/admin/mentors"
-        manage={{ isAdmin: true }}
+        manage={{ isAdmin: true, tasksBySession: meetingTasks }}
       />
 
       <Panel tone="plan">

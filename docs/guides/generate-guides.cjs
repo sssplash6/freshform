@@ -199,7 +199,7 @@ const mentor = {
       { tip: "After the deadline those hours expire — you can't log new sessions against them. Ask an admin to extend the deadline or allocate fresh hours." },
     ] },
     { n: 5, heading: "Fix or void a session", blocks: [
-      { p: 'Click "Correct" on any session you logged — on the "Sessions" page, or on the student\'s own meetings log — to change the task it counted toward, its hours, date, notes, or how it went. Voiding it there returns the hours to the student and keeps the row as history. The student is notified of every change.' },
+      { p: 'Click the pen on any session you logged — on the "Sessions" page, or on the student\'s own meetings log — to change the task it counted toward, its hours, date, notes, or how it went. Voiding it there returns the hours to the student and keeps the row as history. The student is notified of every change.' },
     ] },
     { n: 6, heading: "If a session has no task", blocks: [
       { p: "Log it anyway. An admin can attach it to a task later, and so can you with “Correct” once the task exists." },
@@ -279,11 +279,11 @@ const admin = {
       ] },
     ] },
     { n: 9, heading: "Correcting and removing logged sessions", blocks: [
-      { p: "Every meetings log — on the dashboard, on a program, on a student — has a “Correct” on each row for admins." },
+      { p: "Every meetings log — on the dashboard, on a program, on a student — has a pen on each row for admins. It says what it does when you hover it." },
       { bullets: [
         "Correct — change the task, hours, date, notes, or how the meeting went. The hours move with it.",
         "Void — keeps the row in the history and hands the hours back. This is what a mentor can do to their own sessions.",
-        "Delete — removes the row outright, hours included. For rows that should never have been there: a duplicate from the spreadsheet import, a meeting logged on the wrong student.",
+        "Delete — removes the row outright, hours included. For rows that should never have been there: a duplicate from the spreadsheet import, a meeting logged on the wrong student. Available on voided rows too, which is how an old voided line finally leaves the log.",
       ] },
       { tip: "Prefer voiding when the meeting really happened. The log is the record of what was delivered, and a deleted row leaves no trace of itself." },
     ] },

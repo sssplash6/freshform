@@ -6,7 +6,9 @@ import { createPortal } from "react-dom";
 import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
+import { PencilIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
 
 const inputClass =
@@ -31,6 +33,7 @@ const labelClass = "block text-xs font-medium text-muted-fg";
 export function SessionRowActions({
   session,
   goals = [],
+  canEdit = true,
   canDelete = false,
 }: {
   session: {
@@ -44,6 +47,8 @@ export function SessionRowActions({
   };
   /** The tasks of the mentor who ran this session, so a mis-pick is fixable. */
   goals?: { value: string; label: string }[];
+  /** False for a voided row: its hours are already back, so only delete is left. */
+  canEdit?: boolean;
   /** Admins only: remove the row outright rather than voiding it. */
   canDelete?: boolean;
 }) {
@@ -86,14 +91,34 @@ export function SessionRowActions({
 
   return (
     <div className="flex justify-end">
+      {/* A pen, which widens to say what it does on hover or keyboard focus. The
+          word is what teaches the icon; once learned, the icon is enough, and a
+          column of them is quieter than a column of buttons. */}
       <button
         ref={triggerRef}
         type="button"
         aria-expanded={open}
+        aria-label={canEdit ? "Correct this session" : "Manage this session"}
         onClick={() => setOpen((v) => !v)}
-        className="whitespace-nowrap text-[13px] font-medium text-ink transition-colors hover:text-accent-ink"
+        className={cn(
+          "group inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[13px] font-medium transition-colors",
+          open
+            ? "bg-canvas text-accent-ink"
+            : "text-muted-fg hover:bg-canvas hover:text-accent-ink",
+        )}
       >
-        Correct
+        <PencilIcon className="h-4 w-4 shrink-0" />
+        <span
+          aria-hidden="true"
+          className={cn(
+            "overflow-hidden transition-all duration-150 ease-out motion-reduce:transition-none",
+            open
+              ? "max-w-24 opacity-100"
+              : "max-w-0 opacity-0 group-hover:max-w-24 group-hover:opacity-100 group-focus-visible:max-w-24 group-focus-visible:opacity-100",
+          )}
+        >
+          {canEdit ? "Correct" : "Manage"}
+        </span>
       </button>
 
       {open &&
@@ -110,6 +135,15 @@ export function SessionRowActions({
                 : "[--pop-origin:top_right]"
             }`}
           >
+            {!canEdit && (
+              <p className="text-xs text-muted-fg">
+                This session is voided — its hours already went back, so there is
+                nothing left to correct. It can still be removed from the log.
+              </p>
+            )}
+
+            {canEdit && (
+            <>
             <form action={editAction} className="space-y-2.5">
               <input type="hidden" name="sessionId" value={session.id} />
               <p className="text-[11px] font-bold uppercase tracking-[0.09em] text-muted-fg">
@@ -215,9 +249,11 @@ export function SessionRowActions({
               </form>
               <ActionFeedback state={voidState} />
             </div>
+            </>
+            )}
 
             {canDelete && (
-              <div className="mt-2.5 border-t border-line pt-2.5">
+              <div className={canEdit ? "mt-2.5 border-t border-line pt-2.5" : "mt-2.5"}>
                 <form action={delAction}>
                   <input type="hidden" name="sessionId" value={session.id} />
                   {confirmingDelete ? (
