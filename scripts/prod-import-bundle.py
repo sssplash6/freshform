@@ -17,6 +17,7 @@ import base64
 import gzip
 import json
 import pathlib
+import subprocess
 import sys
 import textwrap
 
@@ -60,6 +61,16 @@ missing = [
 n_sessions = sum(len(s["sessions"]) for s in students)
 n_tasks = sum(len(s["tasks"]) for s in students)
 
+# Whatever is committed here is what production has to be running for the import
+# to exist on it — read it now rather than hardcoding a commit that goes stale.
+try:
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+except Exception:
+    head = "the latest commit on main"
+
 fallback_map = (
     MAP.read_text().strip()
     if MAP.exists()
@@ -99,7 +110,7 @@ If the workbook has changed since the date above, rebuild this file first:
      cp /data/app.db /data/app.db.backup-$(date +%F)
      ls -l /data/
 
-2. Check the live deploy carries the importer — commit 739d483 or later. Hit
+2. Check the live deploy carries the importer — commit {head} or later. Hit
    "Manual Deploy" in the Render dashboard if the live commit is older.
 
 3. Apply the migrations it brought with it:
