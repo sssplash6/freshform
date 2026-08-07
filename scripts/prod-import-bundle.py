@@ -24,6 +24,10 @@ import textwrap
 SHEET = pathlib.Path("sheet-import/masters-hours.json")
 MAP = pathlib.Path("sheet-import/mentor-map.prod.json")
 OUT = pathlib.Path("sheet-import/PROD-IMPORT.txt")
+CHUNKS = pathlib.Path("sheet-import/PROD-PASTE.txt")
+# Render's web shell drops big multi-line pastes, so the same payload is also
+# emitted as single-line appends small enough to go in one at a time.
+CHUNK = 800
 
 if not SHEET.exists():
     sys.exit(
@@ -199,6 +203,43 @@ JSON
      rm -rf sheet-import
 """)
 
+# ---- the same payload, as one-line pastes for a terminal that won't take a heredoc
+flat = base64.b64encode(gzip.compress(raw, 9)).decode()
+pieces = [flat[i : i + CHUNK] for i in range(0, len(flat), CHUNK)]
+lines = [
+    "IMPORTING THE MASTER'S SHEET — PASTE-BY-PASTE",
+    "=============================================",
+    f"Built {parsed['parsedOn']} from {parsed['source']}. Use this when the web shell",
+    "refuses the single big paste in PROD-IMPORT.txt step 4 — a heredoc is what it",
+    "usually chokes on. Each line below is one paste, one line, in order.",
+    "",
+    f"Start clean ({len(pieces)} pieces follow):",
+    "",
+    "    mkdir -p sheet-import && : > sheet-import/masters.b64",
+    "",
+]
+for i, piece in enumerate(pieces, 1):
+    lines += [f"--- {i} of {len(pieces)}", f"echo '{piece}' >> sheet-import/masters.b64", ""]
+lines += [
+    "Then decode it, and check what landed:",
+    "",
+    "    wc -c sheet-import/masters.b64            # expect " + str(len(flat) + len(pieces)) + " bytes",
+    "    base64 -d < sheet-import/masters.b64 | gunzip > sheet-import/masters-hours.json",
+    f"    wc -c sheet-import/masters-hours.json     # expect exactly {len(raw)} bytes",
+    "    node -e 'const d=require(\"./sheet-import/masters-hours.json\");"
+    " console.log(d.source, d.parsedOn, d.students.length+\" students\","
+    " d.students.reduce((n,s)=>n+s.sessions.length,0)+\" sessions\")'",
+    "",
+    f"    expect: {parsed['source']} {parsed['parsedOn']} {len(students)} students {n_sessions} sessions",
+    "",
+    "    rm sheet-import/masters.b64",
+    "",
+    "Then carry on from step 5 of PROD-IMPORT.txt.",
+    "",
+]
+CHUNKS.write_text("\n".join(lines))
+
 print(f"{OUT} — {len(OUT.read_text())} bytes, paste blob {len(blob)} chars")
+print(f"{CHUNKS} — {len(pieces)} single-line pastes of <= {CHUNK} chars")
 print(f"  {len(students)} students · {n_tasks} tasks · {n_sessions} sessions")
 print(f"  {emails_line}")
