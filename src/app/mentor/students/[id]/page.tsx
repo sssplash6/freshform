@@ -146,7 +146,23 @@ export default async function MentorStudentDetailPage({
         />
       </StatCardGrid>
 
-      <MeetingsLog sessions={ledger.sessions} />
+      <MeetingsLog
+        sessions={ledger.sessions}
+        manage={{
+          actorId: mentor.id,
+          tasksByMentor: {
+            [mentor.id]: ledger.assignments
+              .filter((a) => a.mentorId === mentor.id)
+              .map((a) => ({
+                value: a.id,
+                label:
+                  a.progress === ASSIGNMENT_PROGRESS.DONE
+                    ? `${a.purpose} (done)`
+                    : a.purpose,
+              })),
+          },
+        }}
+      />
 
       <AssignmentsPanel
         assignments={ledger.assignments}

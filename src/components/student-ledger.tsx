@@ -1,5 +1,5 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
-import { MeetingsLog } from "@/components/meetings-log";
+import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
@@ -32,6 +32,7 @@ export function StudentLedger({
   openTasksByMentor,
   showAmountPaid,
   manage = false,
+  manageSessions,
   extraStats,
   mentorBase,
 }: {
@@ -44,6 +45,8 @@ export function StudentLedger({
   openTasksByMentor?: Record<string, OpenTask[]>;
   showAmountPaid?: boolean;
   manage?: boolean;
+  /** Who may correct rows in the meetings log, if anyone. */
+  manageSessions?: ManageMeetings;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
   /** Base path (admin only) that makes every mentor chip link to their page. */
@@ -78,7 +81,11 @@ export function StudentLedger({
         {extraStats}
       </StatCardGrid>
 
-      <MeetingsLog sessions={sessions} mentorBase={mentorBase} />
+      <MeetingsLog
+        sessions={sessions}
+        mentorBase={mentorBase}
+        manage={manageSessions}
+      />
 
       <AssignmentsPanel
         assignments={assignments}

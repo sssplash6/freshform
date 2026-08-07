@@ -72,6 +72,22 @@ export default async function AdminStudentDetailPage({
   // topped up, one who doesn't is pulled into the program by the same action.
   // What they hold is right below in Hours by mentor, so the picker stays names.
 
+  // Every task per mentor, done ones included: correcting a session's task has
+  // to be able to point at any of them, not only the open ones.
+  const taskOptionsByMentor: Record<
+    string,
+    { value: string; label: string }[]
+  > = {};
+  for (const task of ledger.assignments) {
+    (taskOptionsByMentor[task.mentorId] ??= []).push({
+      value: task.id,
+      label:
+        task.progress === ASSIGNMENT_PROGRESS.DONE
+          ? `${task.purpose} (done)`
+          : task.purpose,
+    });
+  }
+
   // Their open tasks, so granting more hours for work already underway tops that
   // budget up instead of starting a second row with the same name.
   const openTasksByMentor: Record<
@@ -151,6 +167,7 @@ export default async function AdminStudentDetailPage({
         openTasksByMentor={openTasksByMentor}
         showAmountPaid={isMasters}
         manage
+        manageSessions={{ isAdmin: true, tasksByMentor: taskOptionsByMentor }}
         mentorBase="/admin/mentors"
         extraStats={
           <>

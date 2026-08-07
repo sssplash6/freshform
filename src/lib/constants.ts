@@ -135,6 +135,7 @@ export const NOTIFICATION_TYPES = {
   SESSION_LOGGED: "SESSION_LOGGED",
   SESSION_EDITED: "SESSION_EDITED",
   SESSION_VOIDED: "SESSION_VOIDED",
+  SESSION_DELETED: "SESSION_DELETED", // an admin removed a logged session outright
   STUDENT_SIGNUP: "STUDENT_SIGNUP", // to admins: a student finished onboarding
   ACCOUNT_APPROVED: "ACCOUNT_APPROVED", // to the student: admin approved them
   MENTOR_ASSIGNED: "MENTOR_ASSIGNED", // to the mentor: assigned to a program, set your booking link
@@ -161,6 +162,7 @@ export const NOTIFICATION_META: Record<
   SESSION_LOGGED: { label: "Session logged", tone: "brand" },
   SESSION_EDITED: { label: "Session corrected", tone: "warning" },
   SESSION_VOIDED: { label: "Session voided", tone: "warning" },
+  SESSION_DELETED: { label: "Session removed", tone: "warning" },
   STUDENT_SIGNUP: { label: "New signup", tone: "brand" },
   ACCOUNT_APPROVED: { label: "Approved", tone: "success" },
   MENTOR_ASSIGNED: { label: "Assigned", tone: "brand" },

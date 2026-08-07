@@ -181,7 +181,7 @@ const mentor = {
     { n: 3, heading: "Log a completed session", blocks: [
       { steps: [
         `Use the "Log a completed session" form on "My students" (or on a student's page).`,
-        'Pick the student, then pick the task the meeting went toward — required, and the list holds exactly the tasks an admin allocated your hours for.',
+        "Pick the student. Naming the task it went toward is optional — the list holds the tasks an admin allocated your hours for — but a meeting that fits none of them is still worth logging.",
         "Enter the hours and the date, and a note on what you covered.",
         'Say how it went: Attended, Came late, Absent, or Rescheduled.',
         'Click "Log session".',
@@ -199,9 +199,12 @@ const mentor = {
       { tip: "After the deadline those hours expire — you can't log new sessions against them. Ask an admin to extend the deadline or allocate fresh hours." },
     ] },
     { n: 5, heading: "Fix or void a session", blocks: [
-      { p: 'On the "Sessions" page, click "Correct" on any session you logged to change the task it counted toward, its hours, date, notes, or how it went — or to void it, which returns the hours to the student. The student is notified of every change.' },
+      { p: 'Click "Correct" on any session you logged — on the "Sessions" page, or on the student\'s own meetings log — to change the task it counted toward, its hours, date, notes, or how it went. Voiding it there returns the hours to the student and keeps the row as history. The student is notified of every change.' },
     ] },
-    { n: 6, heading: "Feedback & notifications", blocks: [
+    { n: 6, heading: "If a session has no task", blocks: [
+      { p: "Log it anyway. An admin can attach it to a task later, and so can you with “Correct” once the task exists." },
+    ] },
+    { n: 7, heading: "Feedback & notifications", blocks: [
       { p: '"My feedback" shows the ratings students left you. The bell icon (top-right) collects your updates.' },
     ] },
   ],
@@ -275,7 +278,16 @@ const admin = {
         "Remaining — hours still usable (allotted minus completed, missed, and expired).",
       ] },
     ] },
-    { n: 9, heading: "Nothing happens silently", blocks: [
+    { n: 9, heading: "Correcting and removing logged sessions", blocks: [
+      { p: "Every meetings log — on the dashboard, on a program, on a student — has a “Correct” on each row for admins." },
+      { bullets: [
+        "Correct — change the task, hours, date, notes, or how the meeting went. The hours move with it.",
+        "Void — keeps the row in the history and hands the hours back. This is what a mentor can do to their own sessions.",
+        "Delete — removes the row outright, hours included. For rows that should never have been there: a duplicate from the spreadsheet import, a meeting logged on the wrong student.",
+      ] },
+      { tip: "Prefer voiding when the meeting really happened. The log is the record of what was delivered, and a deleted row leaves no trace of itself." },
+    ] },
+    { n: 10, heading: "Nothing happens silently", blocks: [
       { p: "Every hour change, session, void, approval, and deadline event notifies the student (and the mentor where relevant) and lands in the bell. Allocation changes are also kept in an audit trail on the student's page." },
     ] },
   ],

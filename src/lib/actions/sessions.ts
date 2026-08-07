@@ -11,6 +11,7 @@ import {
   attendanceOf,
   canActAsMentor,
   NOTIFICATION_TYPES,
+  ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -58,24 +59,22 @@ async function remainingWith(
 }
 
 /**
- * Resolve the task a session is being logged against. Required: a mentor says
- * which piece of work the meeting went toward, so planned hours can be read
- * against delivered ones. It must be one of the tasks an admin gave THIS mentor
- * for THIS student — a mentor cannot log time against a colleague's task, or
- * against another student's.
+ * Resolve the task a session is being logged against. OPTIONAL: naming one is
+ * what lets planned hours be read against delivered ones, but a meeting that
+ * fits none of them still happened and still has to be loggable — a mentor
+ * shouldn't have to wait on an admin to record work they've already done.
+ *
+ * When one IS named it must be a task an admin gave THIS mentor for THIS
+ * student: nobody logs time against a colleague's task, or another student's.
  */
 async function resolveGoal(
   raw: FormDataEntryValue | null,
   studentProfileId: string,
   mentorId: string
-): Promise<{ id: string; purpose: string } | { error: string }> {
+): Promise<{ value: { id: string; purpose: string } | null } | { error: string }> {
   const id = String(raw ?? "").trim();
-  if (!id) {
-    return {
-      error:
-        "Pick the task this session worked on. If none of them fit, ask an admin to allocate hours for the right task.",
-    };
-  }
+  if (!id) return { value: null };
+
   const assignment = await prisma.assignment.findUnique({ where: { id } });
   if (
     !assignment ||
@@ -84,7 +83,7 @@ async function resolveGoal(
   ) {
     return { error: "That task isn't one of yours for this student." };
   }
-  return { id: assignment.id, purpose: assignment.purpose };
+  return { value: { id: assignment.id, purpose: assignment.purpose } };
 }
 
 /**
@@ -153,13 +152,18 @@ export async function logSession(
   }
 
   // Checked after the allocation, so a mentor with no hours for this student
-  // hears about that first rather than being asked to pick a task they can't use.
-  const goal = await resolveGoal(
+  // hears about that first rather than being told about a task they can't use.
+  const resolved = await resolveGoal(
     formData.get("assignmentId"),
     profile.id,
     mentor.id
   );
-  if ("error" in goal) return { ok: false, error: goal.error };
+  if ("error" in resolved) return { ok: false, error: resolved.error };
+  const goal = resolved.value;
+  // Reads "toward "Main essay"" when there is one, and nothing at all when there
+  // isn't, rather than an empty pair of quotes.
+  const toward = goal ? ` toward "${goal.purpose}"` : "";
+  const forTask = goal ? ` for "${goal.purpose}"` : "";
 
   const staff = await adminIds();
   const mentorLabel = mentor.name ?? mentor.email;
@@ -170,7 +174,7 @@ export async function logSession(
       data: {
         studentId: profile.id,
         mentorId: mentor.id,
-        assignmentId: goal.id,
+        assignmentId: goal?.id ?? null,
         hours: hoursParsed.value,
         date: dateParsed.value,
         note,
@@ -179,8 +183,9 @@ export async function logSession(
     });
 
     // Progress follows the hours: this may move the task to In progress, or
-    // finish it outright if the logged total reached its limit.
-    const synced = await syncGoalProgress(tx, goal.id);
+    // finish it outright if the logged total reached its limit. A session that
+    // names no task moves nothing.
+    const synced = goal ? await syncGoalProgress(tx, goal.id) : null;
 
     await notify(tx, {
       to: [profile.userId],
@@ -188,10 +193,10 @@ export async function logSession(
       actorId: mentor.id,
       href: notificationHref.studentHome(),
       message: rescheduled
-        ? `${mentorLabel} recorded that your ${formatHours(hoursParsed.value)}-hour meeting on ${formatDate(dateParsed.value)} for "${goal.purpose}" was rescheduled. No hours were charged.`
+        ? `${mentorLabel} recorded that your ${formatHours(hoursParsed.value)}-hour meeting on ${formatDate(dateParsed.value)}${forTask} was rescheduled. No hours were charged.`
         : state === ATTENDANCE.ABSENT
-          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)} for "${goal.purpose}". Those hours were still deducted.`
-          : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)} toward "${goal.purpose}"${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
+          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
+          : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
     });
 
     // Staff watch delivery across every program, so a logged session is news
@@ -202,10 +207,10 @@ export async function logSession(
       actorId: mentor.id,
       href: notificationHref.adminStudent(profile.id),
       message: rescheduled
-        ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}") — no hours charged.`
+        ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no hours charged.`
         : state === ATTENDANCE.ABSENT
-          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)} ("${goal.purpose}").`
-          : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)} toward "${goal.purpose}"${state === ATTENDANCE.LATE ? " (came late)" : ""}.`,
+          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
+          : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`,
     });
 
     if (synced?.becameDone) {
@@ -214,7 +219,7 @@ export async function logSession(
         type: NOTIFICATION_TYPES.GOAL_DONE,
         actorId: mentor.id,
         href: notificationHref.adminStudent(profile.id),
-        message: `"${goal.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
+        message: `"${synced.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
       });
     }
     return synced;
@@ -228,9 +233,9 @@ export async function logSession(
   // Tell the mentor what their own log just did to the task, so an automatic
   // status change is never a surprise they discover later.
   const goalNote = sync?.becameDone
-    ? ` "${goal.purpose}" hit its ${formatHours(sync.hourLimit ?? 0)}-hour limit and is now marked done.`
+    ? ` "${sync.purpose}" hit its ${formatHours(sync.hourLimit ?? 0)}-hour limit and is now marked done.`
     : sync?.changed
-      ? ` "${goal.purpose}" is now in progress.`
+      ? ` "${sync.purpose}" is now in progress.`
       : "";
   if (rescheduled) {
     return {
@@ -248,39 +253,65 @@ export async function logSession(
 }
 
 /**
- * Load a session and verify the acting mentor logged it and it can still be
- * corrected. Anything but a voided session can: a rescheduled one is a live
- * record, and correcting it back to attended is exactly how a mis-tick is fixed.
+ * Who may change a logged session: the mentor who logged it, and any admin.
+ *
+ * A mentor owns their own log — correcting yesterday's hours shouldn't need
+ * anyone's permission. An admin owns the ledger, and rows arrive in it that no
+ * mentor will ever fix: a duplicate from the spreadsheet import, a session
+ * logged against the wrong student, a test row. Without this, the only way to
+ * remove one was the database.
  */
-async function findOwnEditableSession(mentorId: string, sessionId: string) {
+async function requireSessionAuthority() {
+  const actor = await getCurrentUser();
+  if (!actor) return null;
+  if (actor.role === ROLES.ADMIN) return { actor, isAdmin: true };
+  if (!canActAsMentor(actor) || actor.status !== USER_STATUS.ACTIVE) return null;
+  return { actor, isAdmin: false };
+}
+
+/**
+ * Load a session the actor is allowed to change. Anything but a voided session
+ * can be corrected: a rescheduled one is a live record, and correcting it back
+ * to attended is exactly how a mis-tick is fixed.
+ */
+async function findEditableSession(
+  actorId: string,
+  isAdmin: boolean,
+  sessionId: string
+) {
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
-    include: { student: { include: { user: true } } },
+    include: { student: { include: { user: true } }, mentor: true },
   });
-  if (!session || session.mentorId !== mentorId) return null;
+  if (!session) return null;
+  if (!isAdmin && session.mentorId !== actorId) return null;
   if (session.status === SESSION_STATUS.VOIDED) return null;
   return session;
 }
 
 /**
- * Edit a session the mentor logged in error (task/hours/date/notes). The hour
- * delta flows through derived totals; the student is notified.
+ * Correct a logged session — its task, hours, date, notes, or how the meeting
+ * went. The hour delta flows through derived totals; the student is told, and so
+ * is the mentor when it wasn't them who made the change.
  */
 export async function editSession(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const mentor = await requireActiveMentor();
-  if (!mentor) {
-    return { ok: false, error: "Only mentors can edit their sessions." };
+  const auth = await requireSessionAuthority();
+  if (!auth) {
+    return { ok: false, error: "Only the mentor who logged a session, or an admin, can edit it." };
   }
+  const { actor, isAdmin } = auth;
 
   const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findOwnEditableSession(mentor.id, sessionId);
+  const session = await findEditableSession(actor.id, isAdmin, sessionId);
   if (!session) {
     return {
       ok: false,
-      error: "You can only edit sessions you logged yourself, and not voided ones.",
+      error: isAdmin
+        ? "That session is gone, or already voided."
+        : "You can only edit sessions you logged yourself, and not voided ones.",
     };
   }
 
@@ -297,21 +328,24 @@ export async function editSession(
 
   // The task can be corrected here, but is not forced: sessions logged before
   // tasks existed have none, and re-picking one to fix a typo in the hours
-  // would be a strange thing to demand.
+  // would be a strange thing to demand. It stays scoped to the mentor who ran
+  // the meeting, even when an admin is the one correcting it.
   const rawGoal = String(formData.get("assignmentId") ?? "").trim();
   let assignmentId = session.assignmentId;
   if (rawGoal && rawGoal !== session.assignmentId) {
-    const goal = await resolveGoal(rawGoal, session.studentId, mentor.id);
-    if ("error" in goal) return { ok: false, error: goal.error };
-    assignmentId = goal.id;
+    const resolved = await resolveGoal(rawGoal, session.studentId, session.mentorId);
+    if ("error" in resolved) return { ok: false, error: resolved.error };
+    assignmentId = resolved.value?.id ?? null;
   }
 
   const wasState = attendanceOf(session);
   const attendanceNote =
     state === wasState ? "" : ` Now marked as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
   const staff = await adminIds();
-  const mentorLabel = mentor.name ?? mentor.email;
+  const actorLabel = actor.name ?? actor.email;
+  const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
+  const whose = session.mentorId === actor.id ? "a session" : `${mentorLabel}'s session`;
   const change = `now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)})`;
 
   await prisma.$transaction(async (tx) => {
@@ -336,18 +370,20 @@ export async function editSession(
     }
 
     await notify(tx, {
-      to: [session.student.userId],
+      // notify() drops the actor, so the mentor only hears about it when someone
+      // else changed their log.
+      to: [session.student.userId, session.mentorId],
       type: NOTIFICATION_TYPES.SESSION_EDITED,
-      actorId: mentor.id,
+      actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `${mentorLabel} corrected a session: ${change}.${attendanceNote}`,
+      message: `${actorLabel} corrected ${whose}: ${change}.${attendanceNote}`,
     });
     await notify(tx, {
       to: staff,
       type: NOTIFICATION_TYPES.SESSION_EDITED,
-      actorId: mentor.id,
+      actorId: actor.id,
       href: notificationHref.adminStudent(session.studentId),
-      message: `${mentorLabel} corrected a session with ${studentName}: ${change}.${attendanceNote}`,
+      message: `${actorLabel} corrected ${whose} with ${studentName}: ${change}.${attendanceNote}`,
     });
   });
 
@@ -355,28 +391,33 @@ export async function editSession(
   return { ok: true, message: "Session updated." };
 }
 
-/** Void a session the mentor logged in error — returns the hours. */
+/** Void a session logged in error — the row stays, the hours go back. */
 export async function voidSession(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const mentor = await requireActiveMentor();
-  if (!mentor) {
-    return { ok: false, error: "Only mentors can void their sessions." };
+  const auth = await requireSessionAuthority();
+  if (!auth) {
+    return { ok: false, error: "Only the mentor who logged a session, or an admin, can void it." };
   }
+  const { actor, isAdmin } = auth;
 
   const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findOwnEditableSession(mentor.id, sessionId);
+  const session = await findEditableSession(actor.id, isAdmin, sessionId);
   if (!session) {
     return {
       ok: false,
-      error: "You can only void sessions you logged yourself, and not twice.",
+      error: isAdmin
+        ? "That session is gone, or already voided."
+        : "You can only void sessions you logged yourself, and not twice.",
     };
   }
 
   const staff = await adminIds();
-  const mentorLabel = mentor.name ?? mentor.email;
+  const actorLabel = actor.name ?? actor.email;
+  const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
+  const whose = session.mentorId === actor.id ? "the" : `${mentorLabel}'s`;
 
   await prisma.$transaction(async (tx) => {
     await tx.session.update({
@@ -390,21 +431,86 @@ export async function voidSession(
     }
 
     await notify(tx, {
-      to: [session.student.userId],
+      to: [session.student.userId, session.mentorId],
       type: NOTIFICATION_TYPES.SESSION_VOIDED,
-      actorId: mentor.id,
+      actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `${mentorLabel} voided the ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in your balance.`,
+      message: `${actorLabel} voided ${whose} ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in the balance.`,
     });
     await notify(tx, {
       to: staff,
       type: NOTIFICATION_TYPES.SESSION_VOIDED,
-      actorId: mentor.id,
+      actorId: actor.id,
       href: notificationHref.adminStudent(session.studentId),
-      message: `${mentorLabel} voided a ${formatHours(session.hours)}-hour session with ${studentName} from ${formatDate(session.date)}; the hours went back.`,
+      message: `${actorLabel} voided ${whose} ${formatHours(session.hours)}-hour session with ${studentName} from ${formatDate(session.date)}; the hours went back.`,
     });
   });
 
   revalidatePath("/", "layout");
   return { ok: true, message: "Session voided; hours returned." };
+}
+
+/**
+ * Remove a logged session outright (admin only). Voiding is the mentor's tool —
+ * it keeps the row as history and hands the hours back. Deleting is for rows
+ * that should never have been history at all: a duplicate the spreadsheet import
+ * brought in twice, a meeting logged against the wrong student, a test entry.
+ * The hours return the same way, and everyone who could see the row is told.
+ */
+export async function deleteSession(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor || actor.role !== ROLES.ADMIN) {
+    return {
+      ok: false,
+      error: "Only admins can delete a session. Mentors can void their own instead, which keeps the record.",
+    };
+  }
+
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { student: { include: { user: true } }, mentor: true },
+  });
+  if (!session) return { ok: false, error: "That session is already gone." };
+
+  const staff = await adminIds();
+  const actorLabel = actor.name ?? actor.email;
+  const mentorLabel = session.mentor.name ?? session.mentor.email;
+  const studentName = session.student.user.name ?? session.student.user.email;
+  const wasCharging = session.status === SESSION_STATUS.ACTIVE;
+  const what = `${formatHours(session.hours)}-hour session with ${mentorLabel} from ${formatDate(session.date)}`;
+  const hoursNote = wasCharging ? " Those hours are back in the balance." : "";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.session.delete({ where: { id: session.id } });
+
+    // The hours left with the row, so anything they had finished reopens.
+    if (session.assignmentId) {
+      await syncGoalProgress(tx, session.assignmentId);
+    }
+
+    await notify(tx, {
+      to: [session.student.userId, session.mentorId],
+      type: NOTIFICATION_TYPES.SESSION_DELETED,
+      actorId: actor.id,
+      href: notificationHref.studentHome(),
+      message: `${actorLabel} removed the ${what} from the log.${hoursNote}`,
+    });
+    await notify(tx, {
+      to: staff,
+      type: NOTIFICATION_TYPES.SESSION_DELETED,
+      actorId: actor.id,
+      href: notificationHref.adminStudent(session.studentId),
+      message: `${actorLabel} removed a ${what} for ${studentName}.${hoursNote}`,
+    });
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: `Session removed.${hoursNote}`,
+  };
 }

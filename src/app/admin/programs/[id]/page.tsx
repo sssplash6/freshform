@@ -225,6 +225,7 @@ export default async function AdminProgramOverviewPage({
         eyebrow={`Logged by mentors · ${program.name}`}
         emptyBody={`No sessions logged in ${program.name} yet.`}
         mentorBase="/admin/mentors"
+        manage={{ isAdmin: true }}
       />
 
       <Panel tone="plan">

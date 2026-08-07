@@ -19,12 +19,12 @@ export type LogSessionStudent = {
 };
 
 /**
- * Log a completed session. A task is required: the mentor says which of the
- * tasks the admin allocated hours for this meeting went toward, which is what
- * lets planned hours be read against delivered ones. Tasks belong to a student,
- * so the list is re-scoped whenever the student changes, and both selects are
- * keyed to that student so a stale task can't be left selected underneath a
- * new one.
+ * Log a completed session. Naming the task it went toward is what lets planned
+ * hours be read against delivered ones, but it is optional: a meeting that fits
+ * none of the tasks still happened, and waiting on an admin to invent one would
+ * mean the hours go unlogged. Tasks belong to a student, so the list is
+ * re-scoped whenever the student changes, and both selects are keyed to that
+ * student so a stale task can't be left selected underneath a new one.
  */
 export function LogSessionForm({
   students,
@@ -66,7 +66,7 @@ export function LogSessionForm({
           </div>
         </div>
         <div className="block text-sm">
-          <span className="text-muted-fg">Task worked on *</span>
+          <span className="text-muted-fg">Task worked on</span>
           <div className="mt-0.5">
             <Select
               // Remount per student so the previous student's goal is never
@@ -75,12 +75,13 @@ export function LogSessionForm({
               name="assignmentId"
               ariaLabel="Task worked on"
               options={goals}
+              required={false}
               placeholder={
                 !student
                   ? "Pick a student first…"
                   : noGoals
                     ? "No tasks assigned yet"
-                    : "Choose a task…"
+                    : "Optional — choose a task…"
               }
             />
           </div>
@@ -120,20 +121,15 @@ export function LogSessionForm({
       </div>
 
       {noGoals && (
-        <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          An admin hasn&apos;t assigned you any tasks for this student yet, so
-          there is nothing to log against. Tasks arrive with the hours an admin
-          allocates you — ask them to allocate hours for a task.
+        <p className="mt-3 text-xs text-muted-fg">
+          No tasks assigned to you for this student yet — log the session
+          anyway, and it can be attached to a task later with “Correct”.
         </p>
       )}
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <AttendancePicker />
-        <Button
-          type="submit"
-          disabled={pending || noGoals}
-          className="h-11 min-w-40"
-        >
+        <Button type="submit" disabled={pending} className="h-11 min-w-40">
           {pending ? "Logging…" : "Log session"}
         </Button>
       </div>

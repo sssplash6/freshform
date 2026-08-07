@@ -2,11 +2,12 @@ import Link from "next/link";
 
 import { Chip } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
+import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ATTENDANCE, ATTENDANCE_META, attendanceOf, SESSION_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
 
 /**
  * Structural, not Prisma-derived: the same table serves one student's ledger
@@ -23,8 +24,24 @@ export type LoggedMeeting = {
   mentor: { id: string; name: string | null; email: string };
   /** Present only on cross-student logs, where a Student column is needed. */
   student?: { id: string; user: { name: string | null; email: string } } | null;
-  /** The task this meeting went toward; null on history from before tasks. */
+  /** The task this meeting went toward; null when none was named. */
   assignment?: { id: string; purpose: string } | null;
+};
+
+/**
+ * Who is reading, and therefore which rows they may change. A mentor may correct
+ * and void their own; an admin may do both to anyone's, and is the only one who
+ * can delete a row outright.
+ */
+export type ManageMeetings = {
+  actorId?: string;
+  isAdmin?: boolean;
+  /**
+   * mentorId → that mentor's tasks for THIS student, so a mis-picked task is
+   * fixable. Omitted on cross-student logs, where the edit form simply leaves
+   * the task alone.
+   */
+  tasksByMentor?: Record<string, { value: string; label: string }[]>;
 };
 
 /**
@@ -42,6 +59,7 @@ export function MeetingsLog({
   emptyBody = "Every session a mentor logs shows up here, newest first.",
   caption,
   mentorBase,
+  manage,
   moreHref,
   moreLabel = "All sessions",
 }: {
@@ -56,6 +74,8 @@ export function MeetingsLog({
   caption?: React.ReactNode;
   /** Base path (admin only) that makes each Team chip link to its mentor. */
   mentorBase?: string;
+  /** Present when the reader may correct rows in this log. */
+  manage?: ManageMeetings;
   /** Shown in the header when the log is a truncated slice of a longer one. */
   moreHref?: string;
   moreLabel?: string;
@@ -69,6 +89,14 @@ export function MeetingsLog({
   // repeat one name down the page. Drop it unless the log spans people.
   const withTeam = new Set(sessions.map((s) => s.mentor.id)).size > 1;
 
+  // A row is the reader's to change when it isn't voided and either they logged
+  // it or they're an admin.
+  const canChange = (s: LoggedMeeting) =>
+    Boolean(manage) &&
+    s.status !== SESSION_STATUS.VOIDED &&
+    (manage?.isAdmin === true || s.mentor.id === manage?.actorId);
+  const withActions = sessions.some(canChange);
+
   const columns: Column[] = [
     ...(withTeam ? [{ label: "Team" } as Column] : []),
     ...(withStudent ? [{ label: "Student" } as Column] : []),
@@ -76,6 +104,7 @@ export function MeetingsLog({
     { label: "Date" },
     { label: "Task" },
     { label: "Notes" },
+    ...(withActions ? [{ label: "", align: "right" } as Column] : []),
   ];
 
   const tally =
@@ -193,6 +222,24 @@ export function MeetingsLog({
                     </div>
                   )}
                 </Td>
+                {withActions && (
+                  <Td align="right" className="align-top">
+                    {canChange(s) && (
+                      <SessionRowActions
+                        session={{
+                          id: s.id,
+                          hours: s.hours,
+                          date: toDateInputValue(s.date),
+                          attendance: state,
+                          note: s.note,
+                          assignmentId: s.assignment?.id ?? null,
+                        }}
+                        goals={manage?.tasksByMentor?.[s.mentor.id] ?? []}
+                        canDelete={manage?.isAdmin === true}
+                      />
+                    )}
+                  </Td>
+                )}
               </Tr>
             );
           })}
