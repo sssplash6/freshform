@@ -325,11 +325,37 @@ async function main() {
     log(`${fullName}  (tab "${student.tab}")`);
     log(`  ${email}${email.endsWith(PLACEHOLDER_DOMAIN) ? "   ← placeholder, replace with their real address" : ""}`);
 
+    // Find them by the address first. Failing that, by their name inside this
+    // program — which is what makes a SECOND run after the sheet's Emails column
+    // is filled in upgrade the placeholder rather than create a twin.
     let profile = await prisma.studentProfile.findFirst({
       where: { user: { email } },
       include: { user: true },
     });
+    let matchedByName = false;
     if (!profile) {
+      const byName = await prisma.studentProfile.findFirst({
+        where: { programId: program.id, user: { name: fullName } },
+        include: { user: true },
+      });
+      if (byName) {
+        profile = byName;
+        matchedByName = true;
+      }
+    }
+
+    if (!profile) {
+      // The address might already belong to somebody who isn't a student here —
+      // a mentor, a staff account, a test row. Creating would throw on the unique
+      // email and take the whole import down, so this student is reported and
+      // stepped over instead.
+      const taken = await prisma.user.findUnique({ where: { email } });
+      if (taken) {
+        log(`  ! ${email} already belongs to an existing ${taken.role} account — student SKIPPED`);
+        note(`${fullName}: ${email} already belongs to an existing ${taken.role} account, so nothing was imported for them. Give them a different address in the sheet, or sort the account out first.`);
+        log("");
+        continue;
+      }
       if (WRITE) {
         const user = await prisma.user.create({
           data: {
@@ -354,7 +380,39 @@ async function main() {
       addedStudents += 1;
       log(`  + new student`);
     } else {
-      log(`  · already on the platform`);
+      const stored = profile.user.email;
+      log(`  · already on the platform${matchedByName ? " (matched by name)" : ""}`);
+
+      // A placeholder giving way to a real address: the one edit worth making to
+      // a student who is already here, because until it happens they can't sign in.
+      if (
+        stored !== email &&
+        stored.endsWith(PLACEHOLDER_DOMAIN) &&
+        !email.endsWith(PLACEHOLDER_DOMAIN)
+      ) {
+        const clash = await prisma.user.findUnique({ where: { email } });
+        if (clash) {
+          log(`  ! ${email} is taken by an existing ${clash.role} account — their placeholder stays`);
+          note(`${fullName}: could not take ${email} (an existing ${clash.role} account has it), so they keep ${stored}.`);
+        } else {
+          if (WRITE) {
+            await prisma.user.update({
+              where: { id: profile.userId },
+              // A reachable address means the weekly hours email can find them,
+              // so it goes back to the app's default.
+              data: { email, weeklyDigest: true },
+            });
+          }
+          log(`  ↻ email ${stored} → ${email}`);
+          note(`${fullName}: placeholder replaced with ${email}; their weekly hours email is on.`);
+        }
+      } else if (stored !== email && !stored.endsWith(PLACEHOLDER_DOMAIN)) {
+        note(`${fullName}: the sheet says ${email}, the platform says ${stored} — left alone. Change it under Corrections if the sheet is right.`);
+      }
+
+      if (profile.programId !== program.id) {
+        note(`${fullName} is enrolled in another program, not ${program.name}. Their tasks and sessions still imported; move them with Corrections if that's wrong.`);
+      }
     }
 
     // ---- tasks (the plan half) ----
@@ -539,6 +597,21 @@ async function main() {
   );
   if (unimported > 0) {
     log(`${unimported} session${unimported === 1 ? "" : "s"} could NOT be imported — see below.`);
+  }
+  const placeholders = sheet.students
+    .map((student) => {
+      const first = student.tab.trim();
+      const roster = sheet.roster.find(
+        (r) => r.fullName.toLowerCase().split(" ")[0] === first.toLowerCase()
+      );
+      return roster?.email?.trim() ? null : (roster?.fullName ?? first);
+    })
+    .filter(Boolean);
+  if (placeholders.length > 0) {
+    log(
+      `\n${placeholders.length} student${placeholders.length === 1 ? "" : "s"} still on a placeholder address (no email in the sheet's Student List): ${placeholders.join(", ")}.`
+    );
+    log("They cannot sign in until it's replaced — fill the sheet in and re-run, or fix it under Corrections.");
   }
   if (notes.length > 0) {
     log(`\n${notes.length} things to know:`);
