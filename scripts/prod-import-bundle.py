@@ -37,26 +37,25 @@ blob = "\n".join(textwrap.wrap(base64.b64encode(gzip.compress(raw, 9)).decode(),
 
 students = parsed["students"]
 roster = parsed.get("roster", [])
-with_email = [r for r in roster if (r.get("email") or "").strip()]
-no_email = [
-    (
-        next(
-            (
-                r["fullName"]
-                for r in roster
-                if r["fullName"].lower().split(" ")[0] == s["tab"].strip().lower()
-                and (r.get("email") or "").strip()
-            ),
-            None,
-        )
-        or s["tab"].strip()
+
+
+def roster_row(tab: str):
+    """The Student List row for a data tab, matched the way the importer does."""
+    return next(
+        (r for r in roster if r["fullName"].lower().split(" ")[0] == tab.lower()),
+        None,
     )
-    for s in students
-]
+
+
+# Who would arrive with a real address, and who would land on a placeholder. Asked
+# per student TAB, not per roster row: a tab with no row at all is exactly the case
+# worth catching, and a one-word name is not evidence of anything.
+named = [(s["tab"].strip(), roster_row(s["tab"].strip())) for s in students]
+with_email = [tab for tab, row in named if row and (row.get("email") or "").strip()]
 missing = [
-    name
-    for name, s in zip(no_email, students)
-    if name == s["tab"].strip()
+    (row["fullName"] if row else tab)
+    for tab, row in named
+    if not (row and (row.get("email") or "").strip())
 ]
 n_sessions = sum(len(s["sessions"]) for s in students)
 n_tasks = sum(len(s["tasks"]) for s in students)
