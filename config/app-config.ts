@@ -108,6 +108,6 @@ export const STAFF_SEED: {
     name: "Khusanboy",
     role: "ADMIN",
     program: null,
-    // Admin only until told otherwise — add isMentor: true if he also mentors.
+    isMentor: true,
   },
 ];
