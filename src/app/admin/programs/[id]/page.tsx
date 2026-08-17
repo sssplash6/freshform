@@ -282,13 +282,13 @@ export default async function AdminProgramOverviewPage({
                         : "text-muted-fg"
                   }`}
                 >
-                  {task.loggedHours > 0 ? formatHours(task.loggedHours) : "—"}
+                  {task.loggedHours > 0 ? `${formatHours(task.loggedHours)}h` : "—"}
                 </Td>
                 <Td align="right" className="font-semibold tabular-nums text-ink">
                   {task.hourLimit == null ? (
                     <span className="font-normal text-muted-fg">—</span>
                   ) : (
-                    formatHours(task.hourLimit)
+                    `${formatHours(task.hourLimit)}h`
                   )}
                 </Td>
                 <Td>

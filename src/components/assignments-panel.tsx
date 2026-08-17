@@ -133,13 +133,13 @@ export function AssignmentsPanel({
                           : "text-muted-fg"
                     }`}
                   >
-                    {a.loggedHours > 0 ? formatHours(a.loggedHours) : "—"}
+                    {a.loggedHours > 0 ? `${formatHours(a.loggedHours)}h` : "—"}
                   </Td>
                   <Td align="right" className="font-semibold tabular-nums text-ink">
                     {a.hourLimit == null ? (
                       <span className="font-normal text-muted-fg">—</span>
                     ) : (
-                      formatHours(a.hourLimit)
+                      `${formatHours(a.hourLimit)}h`
                     )}
                   </Td>
                   <Td className="whitespace-nowrap">
