@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Chip } from "@/components/chip";
+import { ExpandableNote } from "@/components/expandable-note";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -207,13 +208,7 @@ export function MeetingsLog({
                 <Td className="max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>
                     {s.note ? (
-                      // Clamped: a few of these notes are several paragraphs
-                      // long, and one of them turning a row forty lines tall
-                      // costs every other row its scanability. The whole note is
-                      // one hover away, and in the correction panel.
-                      <div className="line-clamp-3 text-ink" title={s.note}>
-                        {s.note}
-                      </div>
+                      <ExpandableNote text={s.note} />
                     ) : (
                       <span className="text-muted-fg">—</span>
                     )}
