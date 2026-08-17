@@ -103,4 +103,11 @@ export const STAFF_SEED: {
     program: null,
     // Admin only — does not mentor students.
   },
+  {
+    email: "khusanboy@freshman.academy",
+    name: "Khusanboy",
+    role: "ADMIN",
+    program: null,
+    // Admin only until told otherwise — add isMentor: true if he also mentors.
+  },
 ];
