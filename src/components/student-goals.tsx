@@ -44,7 +44,13 @@ function GoalCard({
       </div>
 
       <div className="mt-3">
-        <PersonChip person={goal.mentor} size="sm" />
+        {goal.mentor ? (
+          <PersonChip person={goal.mentor} size="sm" />
+        ) : (
+          <span className="text-xs font-medium text-muted-fg">
+            Mentor to be confirmed
+          </span>
+        )}
       </div>
 
       {limit > 0 ? (
@@ -160,7 +166,7 @@ export function StudentGoals({
                     <span className="min-w-0 flex-1 truncate text-sm text-ink">
                       {g.purpose}
                     </span>
-                    <PersonChip person={g.mentor} size="sm" />
+                    {g.mentor && <PersonChip person={g.mentor} size="sm" />}
                     <span className="text-xs tabular-nums text-muted-fg">
                       {formatHours(g.loggedHours)}h
                     </span>

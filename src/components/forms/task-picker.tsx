@@ -24,6 +24,7 @@ export function TaskPicker({
   name = "task",
   customName = "taskCustom",
   compact = false,
+  optional = false,
   className,
   hint,
 }: {
@@ -33,6 +34,9 @@ export function TaskPicker({
   customName?: string;
   /** Tighter labels, for the narrow row-action popovers. */
   compact?: boolean;
+  /** Hours may be granted before the work has a name; this drops the asterisk
+   *  and lets the picker be cleared back to nothing. */
+  optional?: boolean;
   className?: string;
   hint?: React.ReactNode;
 }) {
@@ -64,14 +68,17 @@ export function TaskPicker({
             : "text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg",
         )}
       >
-        Task <span className="text-accent-ink">*</span>
+        Task{!optional && <span className="text-accent-ink"> *</span>}
       </span>
       <div className="mt-1">
         <Select
           name={name}
           ariaLabel="Task these hours are for"
           options={options}
-          placeholder="What are these hours for?"
+          placeholder={
+            optional ? "Nothing named yet — decide later" : "What are these hours for?"
+          }
+          required={!optional}
           onChange={setPicked}
         />
       </div>

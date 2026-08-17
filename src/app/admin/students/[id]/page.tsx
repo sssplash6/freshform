@@ -88,7 +88,8 @@ export default async function AdminStudentDetailPage({
   > = {};
   for (const task of ledger.assignments) {
     if (task.progress === ASSIGNMENT_PROGRESS.DONE) continue;
-    (openTasksByMentor[task.mentorId] ??= []).push({
+    // "" keys the unassigned pool's own open tasks.
+    (openTasksByMentor[task.mentorId ?? ""] ??= []).push({
       purpose: task.purpose,
       hint:
         task.hourLimit != null
@@ -165,7 +166,7 @@ export default async function AdminStudentDetailPage({
           <>
             <StatCard
               label="Mentors"
-              value={String(hours.perMentor.length)}
+              value={String(hours.perMentor.filter((m) => m.mentor).length)}
               tone="muted"
             />
             {isMasters && (
@@ -183,9 +184,9 @@ export default async function AdminStudentDetailPage({
           caption="What sessions draw down, and the date each pool expires"
         />
         {hours.perMentor.length === 0 ? (
-          <EmptyState framed={false} title="No mentors yet">
-            A mentor appears here once they&apos;re given a task with hours, in
-            the panel above.
+          <EmptyState framed={false} title="No hours yet">
+            Hours appear here as they&apos;re granted in the panel above — under
+            their consultant, or unassigned until one is chosen.
           </EmptyState>
         ) : (
           <Table
@@ -205,16 +206,22 @@ export default async function AdminStudentDetailPage({
           >
             {hours.perMentor.map((m, i) => (
               <Tr
-                key={m.mentor.id}
+                key={m.mentor?.id ?? "unassigned"}
                 className="deal-in"
                 style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
               >
                 <Td>
-                  <PersonChip
-                    person={m.mentor}
-                    size="sm"
-                    href={`/admin/mentors/${m.mentor.id}`}
-                  />
+                  {m.mentor ? (
+                    <PersonChip
+                      person={m.mentor}
+                      size="sm"
+                      href={`/admin/mentors/${m.mentor.id}`}
+                    />
+                  ) : (
+                    // The pool: granted before a consultant was chosen. Its ⋮
+                    // corrects or removes it like any other allocation.
+                    <Chip tone="gray">Unassigned</Chip>
+                  )}
                 </Td>
                 <Td align="right" className="tabular-nums">
                   {formatHours(m.allocated)}
@@ -249,11 +256,15 @@ export default async function AdminStudentDetailPage({
                 <Td align="right">
                   <AllocationRowActions
                     studentProfileId={profile.id}
-                    mentorId={m.mentor.id}
-                    mentorLabel={m.mentor.name ?? m.mentor.email}
+                    mentorId={m.mentor?.id ?? ""}
+                    mentorLabel={
+                      m.mentor
+                        ? (m.mentor.name ?? m.mentor.email)
+                        : "the unassigned hours"
+                    }
                     currentHours={m.allocated}
                     currentDeadline={toDateInputValue(m.deadline)}
-                    openTasks={openTasksByMentor[m.mentor.id] ?? []}
+                    openTasks={openTasksByMentor[m.mentor?.id ?? ""] ?? []}
                     showAmountPaid={isMasters}
                     currentAmountPaid={m.amountPaid}
                   />
@@ -294,13 +305,20 @@ export default async function AdminStudentDetailPage({
                   {formatDate(c.createdAt)}
                 </span>
                 <span>
-                  {c.changedBy.name ?? c.changedBy.email} set hours with{" "}
-                  <Link
-                    href={`/admin/mentors/${c.mentor.id}`}
-                    className="font-medium text-ink hover:text-brand"
-                  >
-                    {c.mentor.name ?? c.mentor.email}
-                  </Link>
+                  {c.changedBy.name ?? c.changedBy.email} set{" "}
+                  {c.mentor ? (
+                    <>
+                      hours with{" "}
+                      <Link
+                        href={`/admin/mentors/${c.mentor.id}`}
+                        className="font-medium text-ink hover:text-brand"
+                      >
+                        {c.mentor.name ?? c.mentor.email}
+                      </Link>
+                    </>
+                  ) : (
+                    "unassigned hours"
+                  )}
                   :{" "}
                   <span className="tabular-nums">
                     {formatHours(c.oldHours)} → {formatHours(c.newHours)}

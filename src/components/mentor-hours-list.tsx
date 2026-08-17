@@ -7,7 +7,8 @@ import { formatHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 type MentorHours = {
-  mentor: { id: string; name: string | null; email: string };
+  /** Null = hours granted before a consultant was chosen. */
+  mentor: { id: string; name: string | null; email: string } | null;
   allocated: number;
   completed: number;
   missed: number;
@@ -25,6 +26,9 @@ type MentorHours = {
  * without turning hours into a game.
  */
 export function MentorHoursList({ items }: { items: MentorHours[] }) {
+  // The student's team is the people on it; pooled hours awaiting a mentor
+  // show as their own row but aren't a mentor to count.
+  const mentorCount = items.filter((m) => m.mentor).length;
   return (
     <Panel tone="total">
       <PanelHeader
@@ -32,9 +36,9 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
         eyebrow="Your team"
         title="Hours with each mentor"
         caption={
-          items.length === 0
+          mentorCount === 0
             ? undefined
-            : `${items.length} mentor${items.length === 1 ? "" : "s"} working with you`
+            : `${mentorCount} mentor${mentorCount === 1 ? "" : "s"} working with you`
         }
       />
       {items.length === 0 ? (
@@ -54,9 +58,15 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
               ? Math.min(100, Math.round((gone / m.allocated) * 100))
               : 0;
           return (
-            <li key={m.mentor.id} className="px-4 py-4 sm:px-5">
+            <li key={m.mentor?.id ?? "unassigned"} className="px-4 py-4 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <PersonChip person={m.mentor} size="sm" />
+                {m.mentor ? (
+                  <PersonChip person={m.mentor} size="sm" />
+                ) : (
+                  <span className="text-sm font-medium text-muted-fg">
+                    Mentor to be confirmed
+                  </span>
+                )}
                 <span className="whitespace-nowrap text-sm text-muted-fg">
                   <span
                     className={cn(
@@ -75,7 +85,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                 tone={overdrawn || m.expired ? "danger" : "accent"}
                 ariaValueNow={used}
                 ariaValueMax={m.allocated}
-                ariaLabel={`Hours used with ${m.mentor.name ?? m.mentor.email}`}
+                ariaLabel={`Hours used with ${m.mentor ? (m.mentor.name ?? m.mentor.email) : "your unassigned pool"}`}
               />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
                 <span className="tabular-nums">

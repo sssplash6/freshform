@@ -33,7 +33,8 @@ const PROGRESS_ORDER = [
 type AssignmentFields = {
   id: string;
   purpose: string;
-  mentorId: string;
+  /** Null = no consultant chosen yet; the edit below is where one is picked. */
+  mentorId: string | null;
   hourLimit: number | null;
   deadline: string | null;
   note: string | null;
@@ -237,7 +238,9 @@ export function AssignmentRowActions({
                         name="mentorId"
                         ariaLabel="Consultant"
                         options={mentors}
-                        defaultValue={assignment.mentorId}
+                        defaultValue={assignment.mentorId ?? ""}
+                        placeholder="No one yet"
+                        required={false}
                       />
                     </div>
                   </div>

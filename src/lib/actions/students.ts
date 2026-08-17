@@ -16,7 +16,7 @@ import {
 import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
 import { formatDate, formatHours, formatMoney } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
-import { parseTaskField } from "@/lib/tasks";
+import { parseOptionalTaskField } from "@/lib/tasks";
 import {
   EMAIL_RE,
   normalizeEmail,
@@ -590,12 +590,14 @@ export async function rejectStudent(
  * forfeited. The student's total allotment is derived as the sum of these
  * allocations; sessions logged by the mentor draw the allocation down toward 0.
  *
- * GRANTING hours also names the TASK they are for, and that is not optional: it
- * becomes the mentor's piece of work with these hours as its budget, and every
- * session they log has to be logged against one of the student's tasks. Naming
- * a task that is already open tops its budget up rather than adding a second row
- * with the same name. Corrections — a mistyped total, a new deadline, an amount
- * paid — need no task, since they grant nothing.
+ * The mentor is OPTIONAL: with none named, the hours land in the student's
+ * unassigned pool (the mentorId-null allocation) until an admin decides who
+ * does the work. The task is optional too — a grant may name the piece of work
+ * it's for, which becomes that consultant's task with these hours as its
+ * budget (or, unassigned, a task waiting for a consultant). Naming a task that
+ * is already open tops its budget up rather than adding a second row with the
+ * same name. Corrections — a mistyped total, a new deadline, an amount paid —
+ * need no task, since they grant nothing.
  */
 export async function setMentorAllocation(
   _prev: ActionState,
@@ -607,7 +609,8 @@ export async function setMentorAllocation(
   }
 
   const profileId = String(formData.get("studentProfileId") ?? "");
-  const mentorId = String(formData.get("mentorId") ?? "");
+  // Empty = the unassigned pool: hours granted before a consultant is chosen.
+  const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
   // "set" replaces the allocation (a correction); "add" grants more hours on top
   // of whatever the student already holds with this mentor.
   const mode = String(formData.get("mode") ?? "set");
@@ -646,21 +649,31 @@ export async function setMentorAllocation(
     enteredPaid = Number(n.toFixed(2));
   }
 
-  const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
-  if (!mentor || !canActAsMentor(mentor)) {
+  const mentor = mentorId
+    ? await prisma.user.findUnique({ where: { id: mentorId } })
+    : null;
+  if (mentorId && (!mentor || !canActAsMentor(mentor))) {
     return { ok: false, error: "Pick a mentor." };
   }
 
   // Hours are granted from mentors within the student's program. If the
   // mentor isn't in the program yet (admin adding a fresh mentor to the
   // student), assign them program-wide as part of this action.
-  const inProgram = await prisma.mentorAssignment.findFirst({
-    where: { mentorId, programId: profile.programId },
-  });
+  const inProgram = mentorId
+    ? await prisma.mentorAssignment.findFirst({
+        where: { mentorId, programId: profile.programId },
+      })
+    : null;
 
-  const existing = await prisma.hourAllocation.findUnique({
-    where: { studentId_mentorId: { studentId: profile.id, mentorId } },
-  });
+  // The compound unique can't address the pool row (SQLite NULLs are distinct
+  // there), so the pool is found by filter and kept single here.
+  const existing = mentorId
+    ? await prisma.hourAllocation.findUnique({
+        where: { studentId_mentorId: { studentId: profile.id, mentorId } },
+      })
+    : await prisma.hourAllocation.findFirst({
+        where: { studentId: profile.id, mentorId: null },
+      });
   const oldHours = existing?.hours ?? 0;
   const newHours =
     mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
@@ -691,12 +704,13 @@ export async function setMentorAllocation(
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
-  // Hours arriving means work arriving, so the grant says what the work is —
-  // and, if there is anything to say about how to do it, what that is too.
+  // A grant may say what the work is — and, if there is anything to say about
+  // how to do it, what that is too. Hours with no task yet are fine: naming
+  // the work can wait, just like naming the consultant.
   let task: string | null = null;
   let taskNote: string | null = null;
   if (granted > 0) {
-    const parsedTask = parseTaskField(
+    const parsedTask = parseOptionalTaskField(
       formData.get("task"),
       formData.get("taskCustom")
     );
@@ -710,13 +724,13 @@ export async function setMentorAllocation(
     taskNote = rawNote || null;
   }
 
-  const mentorLabel = mentor.name ?? mentor.email;
+  const mentorLabel = mentor ? (mentor.name ?? mentor.email) : null;
   const studentName = profile.user.name ?? profile.user.email;
   const deadlineNote = ` They must be used by ${formatDate(deadline)}.`;
 
   const taskOutcome = await prisma.$transaction(async (tx) => {
     // Bring the mentor into the program if they weren't already.
-    if (!inProgram) {
+    if (mentorId && !inProgram) {
       await tx.mentorAssignment.create({
         data: { mentorId, programId: profile.programId, cohortId: null },
       });
@@ -728,23 +742,30 @@ export async function setMentorAllocation(
         message: `You were assigned to ${profile.program.name}. Set your booking link on your mentor page so students there can book you.`,
       });
     }
-    await tx.hourAllocation.upsert({
-      where: { studentId_mentorId: { studentId: profile.id, mentorId } },
-      update: {
-        hours: newHours,
-        deadline,
-        // A new deadline restarts the reminder cycle.
-        ...(sameDeadline ? {} : { deadlineStage: null }),
-        ...(isMasters ? { amountPaid: newPaid } : {}),
-      },
-      create: {
-        studentId: profile.id,
-        mentorId,
-        hours: newHours,
-        deadline,
-        ...(isMasters ? { amountPaid: newPaid } : {}),
-      },
-    });
+    // Update-by-id rather than upsert: the pool row (mentor null) can't be
+    // addressed through the compound unique.
+    if (existing) {
+      await tx.hourAllocation.update({
+        where: { id: existing.id },
+        data: {
+          hours: newHours,
+          deadline,
+          // A new deadline restarts the reminder cycle.
+          ...(sameDeadline ? {} : { deadlineStage: null }),
+          ...(isMasters ? { amountPaid: newPaid } : {}),
+        },
+      });
+    } else {
+      await tx.hourAllocation.create({
+        data: {
+          studentId: profile.id,
+          mentorId,
+          hours: newHours,
+          deadline,
+          ...(isMasters ? { amountPaid: newPaid } : {}),
+        },
+      });
+    }
 
     // The task these hours bought. Topping up an open one keeps the plan honest:
     // a second "Supplemental Essays" row would split the same work in two.
@@ -795,25 +816,29 @@ export async function setMentorAllocation(
           },
         });
         outcome = { task, budget: granted, created: true };
-        await notify(tx, {
-          to: [mentorId],
-          type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
-          actorId: actor.id,
-          href: notificationHref.mentorStudent(profile.id),
-          message: `New task for ${studentName}: "${task}", budgeted ${formatHours(granted)} hours to use by ${formatDate(enteredDeadline)}. Log your sessions against it.`,
-        });
+        if (mentorId) {
+          await notify(tx, {
+            to: [mentorId],
+            type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
+            actorId: actor.id,
+            href: notificationHref.mentorStudent(profile.id),
+            message: `New task for ${studentName}: "${task}", budgeted ${formatHours(granted)} hours to use by ${formatDate(enteredDeadline)}. Log your sessions against it.`,
+          });
+        }
       }
     }
 
     if (newHours !== oldHours) {
       const forTask = task ? ` for "${task}"` : "";
-      await notify(tx, {
-        to: [mentorId],
-        type: NOTIFICATION_TYPES.HOURS_GRANTED,
-        actorId: actor.id,
-        href: notificationHref.mentorStudent(profile.id),
-        message: `Your hours with ${studentName} are now ${formatHours(newHours)} (was ${formatHours(oldHours)})${forTask}, to use by ${formatDate(deadline)}.`,
-      });
+      if (mentorId) {
+        await notify(tx, {
+          to: [mentorId],
+          type: NOTIFICATION_TYPES.HOURS_GRANTED,
+          actorId: actor.id,
+          href: notificationHref.mentorStudent(profile.id),
+          message: `Your hours with ${studentName} are now ${formatHours(newHours)} (was ${formatHours(oldHours)})${forTask}, to use by ${formatDate(deadline)}.`,
+        });
+      }
       await tx.hourAllotmentChange.create({
         data: {
           studentId: profile.id,
@@ -825,6 +850,9 @@ export async function setMentorAllocation(
       });
     }
 
+    // "with Valera" when a consultant holds the hours; plain hours otherwise —
+    // the student shouldn't have to know the pool exists.
+    const withMentor = mentorLabel ? ` with ${mentorLabel}` : "";
     await notify(tx, {
       to: [profile.userId],
       type: NOTIFICATION_TYPES.HOURS_GRANTED,
@@ -832,10 +860,10 @@ export async function setMentorAllocation(
       href: notificationHref.studentHome(),
       message:
         granted > 0
-          ? `You were granted ${formatHours(granted)} more hours with ${mentorLabel} for "${task}" (now ${formatHours(newHours)} with them).${deadlineNote}`
+          ? `You were granted ${formatHours(granted)} more hours${withMentor}${task ? ` for "${task}"` : ""} (now ${formatHours(newHours)}${mentorLabel ? " with them" : ""}).${deadlineNote}`
           : granted < 0
-            ? `Your hours with ${mentorLabel} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
-            : `The deadline for your hours with ${mentorLabel} was updated to ${formatDate(deadline)}.`,
+            ? `Your hours${withMentor} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
+            : `The deadline for your hours${withMentor} was updated to ${formatDate(deadline)}.`,
     });
 
     return outcome;
@@ -846,12 +874,14 @@ export async function setMentorAllocation(
     isMasters && newPaid !== null ? ` · ${formatMoney(newPaid)} paid` : "";
   const taskSummary = taskOutcome
     ? taskOutcome.created
-      ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
+      ? mentorLabel
+        ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
+        : ` "${taskOutcome.task}" is planned, budgeted ${formatHours(taskOutcome.budget)} hours — pick its consultant from the task's ⋮ menu.`
       : ` "${taskOutcome.task}" is now budgeted ${formatHours(taskOutcome.budget)} hours.`
     : "";
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours with ${mentorLabel}, to use by ${formatDate(deadline)}${paidNote}.${taskSummary}`,
+    message: `${profile.user.email} now has ${formatHours(newHours)} hours ${mentorLabel ? `with ${mentorLabel}` : "unassigned"}, to use by ${formatDate(deadline)}${paidNote}.${taskSummary}`,
   };
 }
 
@@ -872,28 +902,44 @@ export async function removeMentorAllocation(
   }
 
   const profileId = String(formData.get("studentProfileId") ?? "");
-  const mentorId = String(formData.get("mentorId") ?? "");
+  // Empty = the unassigned pool, which is removable the same way.
+  const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
 
-  const allocation = await prisma.hourAllocation.findUnique({
-    where: { studentId_mentorId: { studentId: profileId, mentorId } },
-    include: { student: { include: { user: true } }, mentor: true },
-  });
+  const allocation = mentorId
+    ? await prisma.hourAllocation.findUnique({
+        where: { studentId_mentorId: { studentId: profileId, mentorId } },
+        include: { student: { include: { user: true } }, mentor: true },
+      })
+    : await prisma.hourAllocation.findFirst({
+        where: { studentId: profileId, mentorId: null },
+        include: { student: { include: { user: true } }, mentor: true },
+      });
   if (!allocation) {
-    return { ok: false, error: "That mentor isn't allocated to this student." };
-  }
-
-  const sessionCount = await prisma.session.count({
-    where: { studentId: profileId, mentorId },
-  });
-  if (sessionCount > 0) {
     return {
       ok: false,
-      error:
-        "This mentor has logged sessions with the student, so their hours can't be removed. Void the sessions first if it must go.",
+      error: mentorId
+        ? "That mentor isn't allocated to this student."
+        : "This student has no unassigned hours.",
     };
   }
 
-  const mentorLabel = allocation.mentor.name ?? allocation.mentor.email;
+  // The pool has no sessions by construction — only mentors log them.
+  if (mentorId) {
+    const sessionCount = await prisma.session.count({
+      where: { studentId: profileId, mentorId },
+    });
+    if (sessionCount > 0) {
+      return {
+        ok: false,
+        error:
+          "This mentor has logged sessions with the student, so their hours can't be removed. Void the sessions first if it must go.",
+      };
+    }
+  }
+
+  const mentorLabel = allocation.mentor
+    ? (allocation.mentor.name ?? allocation.mentor.email)
+    : null;
   await prisma.$transaction(async (tx) => {
     await tx.hourAllotmentChange.deleteMany({
       where: { studentId: profileId, mentorId },
@@ -902,21 +948,23 @@ export async function removeMentorAllocation(
     // sessions, checked above), and a task nobody holds hours for is a line the
     // mentor can't act on.
     await tx.assignment.deleteMany({ where: { studentId: profileId, mentorId } });
-    await tx.hourAllocation.delete({
-      where: { studentId_mentorId: { studentId: profileId, mentorId } },
-    });
+    await tx.hourAllocation.delete({ where: { id: allocation.id } });
     await notify(tx, {
       to: [allocation.student.userId],
       type: NOTIFICATION_TYPES.HOURS_GRANTED,
       actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`,
+      message: mentorLabel
+        ? `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`
+        : `Your unassigned hours were removed.`,
     });
   });
 
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${mentorLabel} removed from this student, along with the tasks their hours were for.`,
+    message: mentorLabel
+      ? `${mentorLabel} removed from this student, along with the tasks their hours were for.`
+      : `The unassigned hours were removed, along with the tasks they were for.`,
   };
 }

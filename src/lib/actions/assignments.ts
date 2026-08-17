@@ -106,10 +106,14 @@ export async function updateAssignment(
   const existing = await prisma.assignment.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "That task no longer exists." };
 
-  const mentorId = String(formData.get("mentorId") ?? "");
-  const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
-  if (!mentor || !canActAsMentor(mentor)) {
-    return { ok: false, error: "Pick a consultant." };
+  // Empty = no consultant (yet): a task can be planned before anyone owns it,
+  // and this same edit is how an unassigned task finally gets its consultant.
+  const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
+  if (mentorId) {
+    const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+    if (!mentor || !canActAsMentor(mentor)) {
+      return { ok: false, error: "Pick a consultant." };
+    }
   }
 
   const fields = parseFields(formData);
@@ -134,9 +138,10 @@ export async function updateAssignment(
     await syncGoalProgress(tx, id);
 
     // Both consultants hear about a hand-off; notify() drops the actor, so an
-    // admin reassigning to themselves isn't told about their own change.
+    // admin reassigning to themselves isn't told about their own change. An
+    // unassigned end of the hand-off is simply nobody to tell.
     await notify(tx, {
-      to: [mentorId, existing.mentorId],
+      to: [mentorId, existing.mentorId].filter((x): x is string => Boolean(x)),
       type: NOTIFICATION_TYPES.GOAL_CHANGED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(existing.studentId),
@@ -207,7 +212,7 @@ export async function setAssignmentProgress(
       data: { progress, progressManual: true },
     });
     await notify(tx, {
-      to: [existing.mentorId],
+      to: existing.mentorId ? [existing.mentorId] : [],
       type: NOTIFICATION_TYPES.GOAL_CHANGED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(existing.studentId),
@@ -243,7 +248,7 @@ export async function deleteAssignment(
   await prisma.$transaction(async (tx) => {
     await tx.assignment.delete({ where: { id } });
     await notify(tx, {
-      to: [existing.mentorId],
+      to: existing.mentorId ? [existing.mentorId] : [],
       type: NOTIFICATION_TYPES.GOAL_CHANGED,
       actorId: actor.id,
       href: notificationHref.mentorStudent(existing.studentId),

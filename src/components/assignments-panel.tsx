@@ -90,7 +90,7 @@ export function AssignmentsPanel({
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="No tasks yet">
           {manage
-            ? "Assign the first piece of work below, with the hours the consultant has to do it in."
+            ? "Allocate the first hours below — naming the consultant and the task can wait until you know them."
             : "An admin sets out the work planned for this student here."}
         </EmptyState>
       ) : (
@@ -115,11 +115,17 @@ export function AssignmentsPanel({
                     )}
                   </Td>
                   <Td>
-                    <PersonChip
-                      person={a.mentor}
-                      size="sm"
-                      href={mentorBase && `${mentorBase}/${a.mentor.id}`}
-                    />
+                    {a.mentor ? (
+                      <PersonChip
+                        person={a.mentor}
+                        size="sm"
+                        href={mentorBase && `${mentorBase}/${a.mentor.id}`}
+                      />
+                    ) : (
+                      // No consultant yet: the work is planned and budgeted,
+                      // waiting for the ⋮ edit to say whose it is.
+                      <Chip tone="gray">Unassigned</Chip>
+                    )}
                   </Td>
                   {/* Hours mentors actually logged against this task. Amber once
                       they pass the budget: overspend is warned, never blocked. */}

@@ -29,18 +29,31 @@ export function parseTaskField(
   raw: FormDataEntryValue | null,
   rawCustom: FormDataEntryValue | null
 ): { value: string } | { error: string } {
-  const picked = String(raw ?? "").trim();
-  const typed = String(rawCustom ?? "").trim();
-  const value = !picked || picked === TASK_OTHER ? typed : picked;
-
-  if (!value) {
+  const parsed = parseOptionalTaskField(raw, rawCustom);
+  if ("error" in parsed) return parsed;
+  if (!parsed.value) {
     return {
       error:
         "Say which task these hours are for — pick one from the list or type your own.",
     };
   }
+  return { value: parsed.value };
+}
+
+/**
+ * Same field, but a blank one is fine: hours can be allocated before the work
+ * they're for has a name. Null means no task was named.
+ */
+export function parseOptionalTaskField(
+  raw: FormDataEntryValue | null,
+  rawCustom: FormDataEntryValue | null
+): { value: string | null } | { error: string } {
+  const picked = String(raw ?? "").trim();
+  const typed = String(rawCustom ?? "").trim();
+  const value = !picked || picked === TASK_OTHER ? typed : picked;
+
   if (value.length > MAX_TASK_LENGTH) {
     return { error: `Keep the task under ${MAX_TASK_LENGTH} characters.` };
   }
-  return { value };
+  return { value: value || null };
 }

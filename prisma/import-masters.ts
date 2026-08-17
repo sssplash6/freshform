@@ -146,7 +146,7 @@ function isNoShow(note: string | null): boolean {
 /** Which of this mentor's tasks a logged session most likely went toward. */
 function matchTask(
   session: SheetSession,
-  tasks: { id: string; purpose: string; mentorId: string }[],
+  tasks: { id: string; purpose: string; mentorId: string | null }[],
   mentorId: string
 ): { id: string; purpose: string } | null {
   const mine = tasks.filter((t) => t.mentorId === mentorId);
@@ -421,7 +421,7 @@ async function main() {
       : [];
     let position =
       existingTasks.reduce((max, t) => Math.max(max, t.position), -1) + 1;
-    const importedTasks: { id: string; purpose: string; mentorId: string }[] =
+    const importedTasks: { id: string; purpose: string; mentorId: string | null }[] =
       existingTasks.map((t) => ({ id: t.id, purpose: t.purpose, mentorId: t.mentorId }));
 
     for (const task of student.tasks) {

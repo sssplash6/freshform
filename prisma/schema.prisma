@@ -158,7 +158,9 @@ model StudentProfile {
 model Assignment {
   id        String  @id @default(cuid())
   studentId String
-  mentorId  String
+  // Null = no consultant chosen yet: the work is planned and budgeted but not
+  // on anyone's list. An admin picks the consultant later via the row's edit.
+  mentorId  String?
   purpose   String // what this work is: "Main essay", "Recommendation letters"
   hourLimit Float? // hours this piece of work should take; null = not budgeted
   // When the work is due, as free text on purpose: the tracking sheet holds both
@@ -186,7 +188,7 @@ model Assignment {
   updatedAt   DateTime @updatedAt
 
   student   StudentProfile @relation(fields: [studentId], references: [id])
-  mentor    User           @relation("AssignmentMentor", fields: [mentorId], references: [id])
+  mentor    User?          @relation("AssignmentMentor", fields: [mentorId], references: [id])
   createdBy User           @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
   sessions  Session[]
 
@@ -197,10 +199,16 @@ model Assignment {
 // change this, audited via HourAllotmentChange). A student's total allotment
 // is the sum of their allocations; sessions logged by a mentor draw down
 // that mentor's allocation.
+//
+// mentorId null = the student's UNASSIGNED pool: hours granted before a
+// consultant was chosen. They count toward the allotment and expire like any
+// other allocation, but nobody can log against them until they're moved to a
+// mentor. NOTE: SQLite treats NULLs as distinct in unique indexes, so "one
+// pool row per student" is enforced in setMentorAllocation, not here.
 model HourAllocation {
   id        String    @id @default(cuid())
   studentId String
-  mentorId  String
+  mentorId  String?
   hours     Float
   amountPaid Float? // total the student paid for these hours; collected only for Master's Program allocations (null elsewhere)
   deadline  DateTime // required date the hours must be used by; shown to student and mentor. Once it passes, unused hours are FORFEITED and no new sessions may be logged against the allocation.
@@ -209,7 +217,7 @@ model HourAllocation {
   updatedAt DateTime  @updatedAt
 
   student StudentProfile @relation(fields: [studentId], references: [id])
-  mentor  User           @relation("AllocationMentor", fields: [mentorId], references: [id])
+  mentor  User?          @relation("AllocationMentor", fields: [mentorId], references: [id])
 
   @@unique([studentId, mentorId])
 }
@@ -250,14 +258,14 @@ model Session {
 model HourAllotmentChange {
   id          String   @id @default(cuid())
   studentId   String
-  mentorId    String // the mentor whose allocation was changed
+  mentorId    String? // the mentor whose allocation was changed; null = the unassigned pool
   changedById String
   oldHours    Float
   newHours    Float
   createdAt   DateTime @default(now())
 
   student   StudentProfile @relation(fields: [studentId], references: [id])
-  mentor    User           @relation("ChangeMentor", fields: [mentorId], references: [id])
+  mentor    User?          @relation("ChangeMentor", fields: [mentorId], references: [id])
   changedBy User           @relation("ChangedBy", fields: [changedById], references: [id])
 }
 

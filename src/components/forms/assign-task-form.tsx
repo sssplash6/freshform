@@ -13,16 +13,16 @@ const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
 
 /**
- * The one way work reaches a mentor: a task, and the hours to do it in. They are
- * the same act — a task nobody has hours for can't be worked on, and hours that
- * name no task can't be logged against — so there is one form rather than two
- * that each did half of it.
+ * The one way hours reach a student: a grant, with the consultant and task
+ * optionally named on it. Hours alone land in the student's unassigned pool
+ * until an admin decides who does what; naming a consultant puts them on that
+ * consultant's ledger, and naming a task makes it that piece of work's budget.
  *
  * Always ADDS: these hours go on top of whatever the student already holds with
- * this mentor, and the task is created — or, if they already have one by that
- * name, its budget grows. Correcting a total is the ⋮ menu's job on the row
- * itself. Picking a mentor who isn't in the student's program yet assigns them
- * to it as part of the same action.
+ * this consultant (or unassigned), and a named task is created — or, if one by
+ * that name is already open, its budget grows. Correcting a total is the ⋮
+ * menu's job on the row itself. Picking a mentor who isn't in the student's
+ * program yet assigns them to it as part of the same action.
  */
 export function AssignTaskForm({
   studentProfileId,
@@ -43,36 +43,37 @@ export function AssignTaskForm({
 
   return (
     <form action={action}>
-      <h3 className="text-sm font-semibold text-ink">Assign a task</h3>
+      <h3 className="text-sm font-semibold text-ink">Allocate hours</h3>
       <p className="mt-1 text-xs text-muted-fg">
-        The hours are granted to this mentor for this task, and become its
-        budget. Every session they log names one of the student&apos;s tasks; the
-        note is where you say what doing it well looks like.
+        The hours go to the student. Name a consultant to put them on their
+        ledger, and a task to make these hours its budget — or leave either for
+        later and the hours wait, unassigned.
       </p>
       <input type="hidden" name="studentProfileId" value={studentProfileId} />
       <input type="hidden" name="mode" value="add" />
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="min-w-0">
-          <span className={labelClass}>
-            Consultant <span className="text-accent-ink">*</span>
-          </span>
+          <span className={labelClass}>Consultant</span>
           <div className="mt-1">
             <Select
               name="mentorId"
               ariaLabel="Consultant"
               options={mentors}
-              placeholder="Choose a mentor…"
+              placeholder="No one yet — decide later"
+              required={false}
               onChange={setMentorId}
             />
           </div>
         </div>
 
         {/* Remounted per mentor: their open tasks lead the list, and a task
-            picked for one mentor must never be left selected under another's. */}
+            picked for one mentor must never be left selected under another's.
+            The "" key is the unassigned pool's own open tasks. */}
         <TaskPicker
           key={mentorId}
           className="lg:col-span-2"
+          optional
           openTasks={openTasksByMentor[mentorId] ?? []}
           hint={
             (openTasksByMentor[mentorId]?.length ?? 0) > 0
@@ -140,7 +141,7 @@ export function AssignTaskForm({
 
       <div className="mt-3.5">
         <Button type="submit" disabled={pending}>
-          {pending ? "Assigning…" : "Assign task & hours"}
+          {pending ? "Allocating…" : "Allocate hours"}
         </Button>
       </div>
       <ActionFeedback state={state} />

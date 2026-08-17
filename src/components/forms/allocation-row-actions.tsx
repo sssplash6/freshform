@@ -14,14 +14,13 @@ const inputClass =
   "mt-1 w-full rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand focus:outline-none";
 
 /**
- * Per-row allocation actions for one mentor, tucked behind a ⋮ menu: correct the
- * total hours, the use-by date and (for Master's) the amount paid, or remove the
- * mentor from the student entirely.
+ * Per-row allocation actions for one mentor — or for the unassigned pool, which
+ * rides the same row shape with an empty mentorId — tucked behind a ⋮ menu:
+ * correct the total hours, the use-by date and (for Master's) the amount paid,
+ * or remove the allocation from the student entirely.
  *
- * Granting hours lives in the Allocate hours form, not here, because a grant has
- * to name the task it is for. A correction that happens to raise the total is
- * still a grant, so the task picker appears the moment the typed hours go above
- * what the student already holds.
+ * A correction that raises the total is still a grant, so the task picker
+ * appears the moment the typed hours go above what the student already holds.
  */
 export function AllocationRowActions({
   studentProfileId,
@@ -158,9 +157,9 @@ export function AllocationRowActions({
             )}
             {granting && (
               <div className="rise-in">
-                <TaskPicker compact openTasks={openTasks} />
+                <TaskPicker compact optional openTasks={openTasks} />
                 <p className="mt-1.5 text-[11px] text-muted-fg">
-                  These extra hours need a task — they become its budget.
+                  Name a task and these extra hours become its budget.
                 </p>
               </div>
             )}
@@ -176,7 +175,9 @@ export function AllocationRowActions({
               <input type="hidden" name="mentorId" value={mentorId} />
               {confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-muted-fg">Remove this mentor?</span>
+                  <span className="text-muted-fg">
+                    {mentorId ? "Remove this mentor?" : "Remove these hours?"}
+                  </span>
                   <button
                     type="submit"
                     disabled={delPending}
@@ -198,7 +199,7 @@ export function AllocationRowActions({
                   onClick={() => setConfirmDelete(true)}
                   className="text-xs font-medium text-red-700 transition-colors hover:underline"
                 >
-                  Remove mentor
+                  {mentorId ? "Remove mentor" : "Remove hours"}
                 </button>
               )}
             </form>

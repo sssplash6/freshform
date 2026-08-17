@@ -134,7 +134,7 @@ export default async function StudentHomePage() {
                   tone="muted"
                 />
                 <Fact
-                  value={String(hours.perMentor.length)}
+                  value={String(hours.perMentor.filter((m) => m.mentor).length)}
                   label="Mentors"
                   tone="muted"
                 />

@@ -51,8 +51,10 @@ export async function allocationSummary(studentProfileId: string) {
   // stop counting toward "remaining" and surface as "expired".
   const now = Date.now();
   const perMentor = allocations.map((a) => {
-    const used = usedByMentor.get(a.mentorId) ?? 0;
-    const missed = missedByMentor.get(a.mentorId) ?? 0;
+    // The unassigned pool (mentor null) can never have sessions against it —
+    // sessions are logged by a mentor — so its used/missed are always 0.
+    const used = (a.mentorId && usedByMentor.get(a.mentorId)) || 0;
+    const missed = (a.mentorId && missedByMentor.get(a.mentorId)) || 0;
     const expired = a.deadline.getTime() < now;
     const forfeited = expired ? Math.max(0, a.hours - used) : 0;
     return {

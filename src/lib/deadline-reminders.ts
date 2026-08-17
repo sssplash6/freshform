@@ -35,14 +35,19 @@ export async function ensureDeadlineReminders() {
   if (due.length === 0) return { checked: 0, remindersSent: 0 };
   let remindersSent = 0;
 
-  const sums = await prisma.session.groupBy({
-    by: ["studentId", "mentorId"],
-    where: {
-      status: SESSION_STATUS.ACTIVE,
-      OR: due.map((a) => ({ studentId: a.studentId, mentorId: a.mentorId })),
-    },
-    _sum: { hours: true },
-  });
+  // Only mentor-held allocations can have sessions drawing them down; the
+  // unassigned pool never does.
+  const pairs = due
+    .filter((a) => a.mentorId)
+    .map((a) => ({ studentId: a.studentId, mentorId: a.mentorId as string }));
+  const sums =
+    pairs.length === 0
+      ? []
+      : await prisma.session.groupBy({
+          by: ["studentId", "mentorId"],
+          where: { status: SESSION_STATUS.ACTIVE, OR: pairs },
+          _sum: { hours: true },
+        });
   const usedBy = new Map(
     sums.map((s) => [`${s.studentId}:${s.mentorId}`, s._sum.hours ?? 0])
   );
@@ -51,7 +56,9 @@ export async function ensureDeadlineReminders() {
     const deadline = a.deadline;
     const passed = deadline.getTime() < now.getTime();
     const remaining = a.hours - (usedBy.get(`${a.studentId}:${a.mentorId}`) ?? 0);
-    const mentorLabel = a.mentor.name ?? a.mentor.email;
+    // Unassigned pool: nothing draws it down and there is no mentor to tell,
+    // but the student's reminder still has to go out — those hours expire too.
+    const mentorLabel = a.mentor ? (a.mentor.name ?? a.mentor.email) : null;
     const studentLabel = a.student.user.name ?? a.student.user.email;
     const date = formatDate(deadline);
 
@@ -75,22 +82,25 @@ export async function ensureDeadlineReminders() {
       remindersSent += 1;
       // No actorId: these are the clock talking, not a person. Each side gets
       // the destination that is theirs to act on.
+      const withMentor = mentorLabel ? ` with ${mentorLabel}` : "";
       await notify(tx, {
         to: [a.student.userId],
         type: NOTIFICATION_TYPES.HOURS_DEADLINE,
         href: notificationHref.studentHome(),
         message: passed
-          ? `Your ${date} deadline for hours with ${mentorLabel} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
-          : `Reminder: use your ${formatHours(remaining)} remaining hours with ${mentorLabel} by ${date}, or they expire.`,
+          ? `Your ${date} deadline for hours${withMentor} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
+          : `Reminder: use your ${formatHours(remaining)} remaining hours${withMentor} by ${date}, or they expire.`,
       });
-      await notify(tx, {
-        to: [a.mentorId],
-        type: NOTIFICATION_TYPES.HOURS_DEADLINE,
-        href: notificationHref.mentorStudent(a.studentId),
-        message: passed
-          ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
-          : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
-      });
+      if (a.mentorId) {
+        await notify(tx, {
+          to: [a.mentorId],
+          type: NOTIFICATION_TYPES.HOURS_DEADLINE,
+          href: notificationHref.mentorStudent(a.studentId),
+          message: passed
+            ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
+            : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
+        });
+      }
     });
   }
   return { checked: due.length, remindersSent };

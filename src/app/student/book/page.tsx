@@ -42,7 +42,10 @@ export default async function StudentBookPage() {
     }),
     allocationSummary(profile.id),
   ]);
-  const hoursByMentor = new Map(hours.perMentor.map((m) => [m.mentor.id, m]));
+  // Pooled hours (no mentor yet) aren't bookable, so they don't map to a card.
+  const hoursByMentor = new Map(
+    hours.perMentor.flatMap((m) => (m.mentor ? [[m.mentor.id, m] as const] : []))
+  );
 
   const cards = [...assignments].sort(
     (a, b) =>

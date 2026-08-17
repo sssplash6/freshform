@@ -41,7 +41,8 @@ type Pairing = {
   studentUserId: string;
   studentLabel: string;
   studentActive: boolean;
-  mentorId: string;
+  /** Null = the student's unassigned pool: hours with no consultant yet. */
+  mentorId: string | null;
   mentorLabel: string;
   programName: string;
   allocated: number;
@@ -86,7 +87,8 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
     }),
   ]);
 
-  const key = (studentId: string, mentorId: string) => `${studentId}:${mentorId}`;
+  const key = (studentId: string, mentorId: string | null) =>
+    `${studentId}:${mentorId}`;
   const used = new Map<string, number>();
   const deliveredWeek = new Map<string, number>();
   const missedWeek = new Map<string, number>();
@@ -112,7 +114,9 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
       studentLabel: a.student.user.name ?? a.student.user.email,
       studentActive: a.student.user.status === USER_STATUS.ACTIVE,
       mentorId: a.mentorId,
-      mentorLabel: a.mentor.name ?? a.mentor.email,
+      mentorLabel: a.mentor
+        ? (a.mentor.name ?? a.mentor.email)
+        : "no consultant yet",
       programName: a.student.program.name,
       allocated: a.hours,
       deadline: a.deadline,
@@ -261,6 +265,10 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
 
 /** The mentor's digest: what they delivered, and who is still waiting. */
 function mentorDigest(mine: Pairing[], now: Date): Mail | null {
+  // `mine` is one mentor's pairings, so the id is never actually null — the
+  // unassigned pool belongs to no mentor and can't be in anyone's `mine`.
+  const mentorId = mine[0]?.mentorId;
+  if (!mentorId) return null;
   const live = mine.filter((p) => !p.expired && p.remaining > 0);
   const logged = mine.filter(
     (p) => p.deliveredThisWeek > 0 || p.missedThisWeek > 0
@@ -353,7 +361,7 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     intro: `Your mentoring week, as of ${formatDate(now)}.`,
     sections,
     cta: { label: "Open your dashboard", url: `${appUrl()}/mentor` },
-    unsubscribeUrl: unsubscribeUrl(mine[0].mentorId),
+    unsubscribeUrl: unsubscribeUrl(mentorId),
     footerNote: "You're getting this because you mentor students at Freshman Academy.",
   });
 
@@ -362,7 +370,7 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     subject,
     html,
     text,
-    unsubscribeUrl: unsubscribeUrl(mine[0].mentorId),
+    unsubscribeUrl: unsubscribeUrl(mentorId),
   };
 }
 

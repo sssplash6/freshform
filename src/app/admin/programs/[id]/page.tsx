@@ -266,11 +266,15 @@ export default async function AdminProgramOverviewPage({
                   </Link>
                 </Td>
                 <Td>
-                  <PersonChip
-                    person={task.mentor}
-                    size="sm"
-                    href={`/admin/mentors/${task.mentor.id}`}
-                  />
+                  {task.mentor ? (
+                    <PersonChip
+                      person={task.mentor}
+                      size="sm"
+                      href={`/admin/mentors/${task.mentor.id}`}
+                    />
+                  ) : (
+                    <Chip tone="gray">Unassigned</Chip>
+                  )}
                 </Td>
                 <Td
                   align="right"
