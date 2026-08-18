@@ -30,7 +30,9 @@ import { studentLedger, taskOptionsForSessions } from "@/lib/queries";
  * mentor picking up an essay needs to know what the last three meetings covered
  * and who else is working on what. Read-only on the plan, which only admins set.
  *
- * Only reachable for students the mentor has an allocation or a session with.
+ * Only reachable for students the mentor has an allocation or a session with —
+ * or ones holding live unassigned hours, which any mentor may log against
+ * (the logged hours become theirs).
  */
 export default async function MentorStudentDetailPage({
   params,
@@ -46,11 +48,14 @@ export default async function MentorStudentDetailPage({
   });
   if (!profile) notFound();
 
-  const [allocation, ledger, hours] = await Promise.all([
+  const [allocation, poolRow, ledger, hours] = await Promise.all([
     prisma.hourAllocation.findUnique({
       where: {
         studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
       },
+    }),
+    prisma.hourAllocation.findFirst({
+      where: { studentId: profile.id, mentorId: null },
     }),
     studentLedger(profile.id),
     allocationSummary(profile.id),
@@ -59,8 +64,16 @@ export default async function MentorStudentDetailPage({
   const mySessions = ledger.sessions.filter((s) => s.mentorId === mentor.id);
   const tasksBySession = await taskOptionsForSessions(ledger.sessions);
 
-  // Not this mentor's student — nothing to see here.
-  if (!allocation && mySessions.length === 0) notFound();
+  // The pool matters here only while it's live, and only until the mentor has
+  // hours of their own — their sessions then draw those, not the pool.
+  const pool =
+    !allocation && poolRow && poolRow.hours > 0 && !deadlinePassed(poolRow.deadline)
+      ? poolRow
+      : null;
+
+  // Not this mentor's student — no hours together, no history together, and no
+  // unassigned hours a session could claim.
+  if (!allocation && mySessions.length === 0 && !pool) notFound();
 
   const allocated = allocation?.hours ?? 0;
   const myActive = mySessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
@@ -170,23 +183,38 @@ export default async function MentorStudentDetailPage({
           hours.
         </Callout>
       ) : (
-        <LogSessionForm
-          students={[
-            {
-              profileId: profile.id,
-              label: `${profile.user.name ?? profile.user.email} · ${formatHours(remaining)}h left with you`,
-              goals: ledger.assignments
-                .filter((a) => a.mentorId === mentor.id)
-                .map((a) => ({
-                  value: a.id,
-                  label:
-                    a.progress === ASSIGNMENT_PROGRESS.DONE
-                      ? `${a.purpose} (done)`
-                      : a.purpose,
-                })),
-            },
-          ]}
-        />
+        <>
+          {pool && (
+            <Callout tone="brand" title="Unassigned hours available">
+              This student holds {formatHours(pool.hours)} hours no consultant
+              was named for, usable until {formatDate(pool.deadline)}. Log a
+              session below and the hours you log become yours.
+            </Callout>
+          )}
+          <LogSessionForm
+            students={[
+              {
+                profileId: profile.id,
+                label: pool
+                  ? `${profile.user.name ?? profile.user.email} · ${formatHours(pool.hours)}h unassigned — logging makes them yours`
+                  : `${profile.user.name ?? profile.user.email} · ${formatHours(remaining)}h left with you`,
+                goals: ledger.assignments
+                  .filter(
+                    (a) => a.mentorId === mentor.id || a.mentorId === null
+                  )
+                  .map((a) => ({
+                    value: a.id,
+                    label:
+                      a.progress === ASSIGNMENT_PROGRESS.DONE
+                        ? `${a.purpose} (done)`
+                        : a.mentorId === null
+                          ? `${a.purpose} (unassigned)`
+                          : a.purpose,
+                  })),
+              },
+            ]}
+          />
+        </>
       )}
     </div>
   );

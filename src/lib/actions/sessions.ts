@@ -65,13 +65,17 @@ async function remainingWith(
  * shouldn't have to wait on an admin to record work they've already done.
  *
  * When one IS named it must be a task an admin gave THIS mentor for THIS
- * student: nobody logs time against a colleague's task, or another student's.
+ * student — nobody logs time against a colleague's task, or another student's —
+ * or one with no consultant yet, which logging against claims.
  */
 async function resolveGoal(
   raw: FormDataEntryValue | null,
   studentProfileId: string,
   mentorId: string
-): Promise<{ value: { id: string; purpose: string } | null } | { error: string }> {
+): Promise<
+  | { value: { id: string; purpose: string; unassigned: boolean } | null }
+  | { error: string }
+> {
   const id = String(raw ?? "").trim();
   if (!id) return { value: null };
 
@@ -79,17 +83,25 @@ async function resolveGoal(
   if (
     !assignment ||
     assignment.studentId !== studentProfileId ||
-    assignment.mentorId !== mentorId
+    (assignment.mentorId !== null && assignment.mentorId !== mentorId)
   ) {
     return { error: "That task isn't one of yours for this student." };
   }
-  return { value: { id: assignment.id, purpose: assignment.purpose } };
+  return {
+    value: {
+      id: assignment.id,
+      purpose: assignment.purpose,
+      unassigned: assignment.mentorId === null,
+    },
+  };
 }
 
 /**
  * Log a completed session against one of the mentor's open tasks for the
- * student. Draws down the hours the student holds with THIS mentor (derived) and
- * notifies them. Overdraw is allowed but flagged back to the mentor.
+ * student. Draws down the hours the student holds with THIS mentor (derived) —
+ * or, when the mentor holds none, carves what the session charges out of the
+ * student's unassigned pool into a new allocation of their own — and notifies
+ * them. Overdraw is allowed but flagged back to the mentor.
  */
 export async function logSession(
   _prev: ActionState,
@@ -125,18 +137,27 @@ export async function logSession(
     };
   }
 
-  // Sessions can only be logged against hours an admin allocated to THIS
-  // mentor for this student.
+  // Sessions draw down hours an admin allocated to THIS mentor — or, when the
+  // mentor holds none, the student's unassigned pool: those hours deliberately
+  // named no consultant yet, and logging is the act that decides one. The
+  // logged hours are carved out of the pool into this mentor's own allocation
+  // inside the transaction below, so every number afterwards reads the same as
+  // if an admin had granted them directly.
   const allocation = await prisma.hourAllocation.findUnique({
     where: {
       studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
     },
   });
-  if (!allocation) {
+  const pool = allocation
+    ? null
+    : await prisma.hourAllocation.findFirst({
+        where: { studentId: profile.id, mentorId: null },
+      });
+  if (!allocation && !pool) {
     return {
       ok: false,
       error:
-        "No hours were allocated to you for that student. Ask an admin to allocate hours first.",
+        "No hours were allocated to you for that student, and they hold no unassigned hours. Ask an admin to allocate hours first.",
     };
   }
 
@@ -144,10 +165,11 @@ export async function logSession(
   // further sessions can be logged against this allocation. A rescheduled
   // meeting charges nothing, but recording one against expired hours would still
   // be recording work on a pool that is closed.
-  if (allocation.deadline.getTime() < Date.now()) {
+  const source = allocation ?? pool!;
+  if (source.deadline.getTime() < Date.now()) {
     return {
       ok: false,
-      error: `These hours expired on ${formatDate(allocation.deadline)} and can no longer be logged against. Ask an admin to extend the deadline or allocate new hours.`,
+      error: `These hours expired on ${formatDate(source.deadline)} and can no longer be logged against. Ask an admin to extend the deadline or allocate new hours.`,
     };
   }
 
@@ -169,6 +191,17 @@ export async function logSession(
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = profile.user.name ?? profile.user.email;
 
+  // The carve, when logging from the pool: what the session charges becomes
+  // this mentor's own allocation, and the pool shrinks by the same amount. A
+  // rescheduled meeting charges nothing, so it moves nothing. min() because
+  // overdraw is warned, never blocked — logging past what the pool holds is
+  // allowed, and the shortfall shows as overdraw on the mentor's new row.
+  const carved =
+    pool && !rescheduled
+      ? Math.max(0, Math.min(pool.hours, hoursParsed.value))
+      : 0;
+  const poolAfter = pool ? Number((pool.hours - carved).toFixed(2)) : 0;
+
   const sync = await prisma.$transaction(async (tx) => {
     await tx.session.create({
       data: {
@@ -181,6 +214,51 @@ export async function logSession(
         ...fields,
       },
     });
+
+    if (pool && !rescheduled) {
+      // Money stays banked on the pool row: amountPaid records what was paid
+      // for the original grant, not who ended up delivering it.
+      await tx.hourAllocation.update({
+        where: { id: pool.id },
+        data: { hours: poolAfter },
+      });
+      await tx.hourAllocation.create({
+        data: {
+          studentId: profile.id,
+          mentorId: mentor.id,
+          hours: carved,
+          deadline: pool.deadline,
+        },
+      });
+      // Both sides of the hand-off audited, so the allocation history reads
+      // where the pool's hours went.
+      await tx.hourAllotmentChange.createMany({
+        data: [
+          {
+            studentId: profile.id,
+            mentorId: null,
+            changedById: mentor.id,
+            oldHours: pool.hours,
+            newHours: poolAfter,
+          },
+          {
+            studentId: profile.id,
+            mentorId: mentor.id,
+            changedById: mentor.id,
+            oldHours: 0,
+            newHours: carved,
+          },
+        ],
+      });
+    }
+
+    // A named task that had no consultant yet: logging against it claims it.
+    if (goal?.unassigned) {
+      await tx.assignment.update({
+        where: { id: goal.id },
+        data: { mentorId: mentor.id },
+      });
+    }
 
     // Progress follows the hours: this may move the task to In progress, or
     // finish it outright if the logged total reached its limit. A session that
@@ -206,11 +284,17 @@ export async function logSession(
       type: NOTIFICATION_TYPES.SESSION_LOGGED,
       actorId: mentor.id,
       href: notificationHref.adminStudent(profile.id),
-      message: rescheduled
-        ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no hours charged.`
-        : state === ATTENDANCE.ABSENT
-          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
-          : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`,
+      message:
+        (rescheduled
+          ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no hours charged.`
+          : state === ATTENDANCE.ABSENT
+            ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
+            : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
+        // The hand-off is news an admin would otherwise reconstruct from the
+        // allocation history: the pool chose its consultant.
+        (carved > 0
+          ? ` The hours came out of the unassigned pool (${formatHours(poolAfter)} left in it).`
+          : ""),
     });
 
     if (synced?.becameDone) {
@@ -227,7 +311,6 @@ export async function logSession(
 
   revalidatePath("/", "layout");
 
-  const remaining = await remainingWith(profile.id, mentor.id, allocation.hours);
   const stateNote =
     state === ATTENDANCE.ATTENDED ? "" : ` Recorded as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
   // Tell the mentor what their own log just did to the task, so an automatic
@@ -240,9 +323,24 @@ export async function logSession(
   if (rescheduled) {
     return {
       ok: true,
-      message: `Rescheduled meeting recorded — no hours charged. ${studentName} still has ${formatHours(remaining)} hours left with you.`,
+      message: pool
+        ? `Rescheduled meeting recorded — no hours charged, and ${studentName}'s unassigned pool is untouched.`
+        : `Rescheduled meeting recorded — no hours charged. ${studentName} still has ${formatHours(await remainingWith(profile.id, mentor.id, allocation!.hours))} hours left with you.`,
     };
   }
+  if (pool) {
+    // What the carve just did, in the mentor's terms: these hours are theirs
+    // now, and here is what the pool still holds for whoever meets them next.
+    const short = Number((hoursParsed.value - carved).toFixed(2));
+    return {
+      ok: true,
+      message:
+        short > 0
+          ? `Session logged.${stateNote}${goalNote} ${formatHours(carved)} unassigned hours moved to you — the pool came up ${formatHours(short)} short, so ${studentName} is overdrawn with you.`
+          : `Session logged.${stateNote}${goalNote} ${formatHours(carved)} of ${studentName}'s unassigned hours moved to you; ${formatHours(poolAfter)} remain in the pool.`,
+    };
+  }
+  const remaining = await remainingWith(profile.id, mentor.id, allocation!.hours);
   return {
     ok: true,
     message:

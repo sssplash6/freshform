@@ -41,6 +41,9 @@ type MentorStudent = {
   deadline: Date | null;
   expired: boolean;
   approved: boolean;
+  /** Unassigned hours the student holds — loggable by any mentor; set only on
+   *  students this mentor has no allocation of their own with. */
+  pool?: number;
 };
 
 /** Island that toggles the students view between all programs and one. */
@@ -129,12 +132,30 @@ export default async function MentorHomePage({
   }
 
   // A mentor's students are the ones an admin allocated hours to FROM this
-  // mentor; sessions the mentor logs draw those allocations down.
-  const [assignments, allocations, mySessionSums, delivered, myMeetings, myGoals] =
-    await Promise.all([
+  // mentor — plus, further down, students in their programs holding unassigned
+  // hours, which any mentor may log against (logging carves them to whoever
+  // did the meeting).
+  const [
+    assignments,
+    allocations,
+    poolAllocations,
+    mySessionSums,
+    delivered,
+    myMeetings,
+    myGoals,
+  ] = await Promise.all([
       mentorAssignments(user.id),
       prisma.hourAllocation.findMany({
         where: { mentorId: user.id },
+        include: {
+          student: {
+            include: { user: true, program: true, cohort: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.hourAllocation.findMany({
+        where: { mentorId: null },
         include: {
           student: {
             include: { user: true, program: true, cohort: true },
@@ -154,11 +175,18 @@ export default async function MentorHomePage({
         _count: true,
       }),
       recentMeetings({ mentorId: user.id, take: 8 }),
-      // Goals an admin assigned to THIS mentor; a session must name one.
+      // Goals an admin gave THIS mentor, plus goals with no consultant yet —
+      // logging against an unassigned one is how it becomes theirs.
       prisma.assignment.findMany({
-        where: { mentorId: user.id },
+        where: { OR: [{ mentorId: user.id }, { mentorId: null }] },
         orderBy: [{ studentId: "asc" }, { position: "asc" }],
-        select: { id: true, studentId: true, purpose: true, progress: true },
+        select: {
+          id: true,
+          studentId: true,
+          mentorId: true,
+          purpose: true,
+          progress: true,
+        },
       }),
     ]);
 
@@ -172,7 +200,9 @@ export default async function MentorHomePage({
       label:
         g.progress === ASSIGNMENT_PROGRESS.DONE
           ? `${g.purpose} (done)`
-          : g.purpose,
+          : g.mentorId === null
+            ? `${g.purpose} (unassigned)`
+            : g.purpose,
     });
     goalsByStudent.set(g.studentId, list);
   }
@@ -205,6 +235,35 @@ export default async function MentorHomePage({
       approved: a.student.user.status === USER_STATUS.ACTIVE,
     };
   });
+
+  // Students in this mentor's programs holding live unassigned hours: loggable
+  // by any mentor there, so they belong on the list before any are theirs.
+  // Skipped once the mentor holds their own allocation (their row already
+  // exists — their sessions draw their own hours, not the pool), and once the
+  // pool is empty or expired (nothing left to log against).
+  const inScope = (s: { programId: string; cohortId: string | null }) =>
+    assignments.some(
+      (a) =>
+        a.programId === s.programId &&
+        (!a.cohortId || a.cohortId === s.cohortId)
+    );
+  const mine = new Set(allocations.map((a) => a.studentId));
+  for (const p of poolAllocations) {
+    if (mine.has(p.studentId)) continue;
+    if (p.hours <= 0 || deadlinePassed(p.deadline)) continue;
+    if (!inScope(p.student)) continue;
+    students.push({
+      profile: p.student,
+      allocated: 0,
+      completed: 0,
+      missed: 0,
+      remaining: 0,
+      deadline: p.deadline,
+      expired: false,
+      approved: p.student.user.status === USER_STATUS.ACTIVE,
+      pool: p.hours,
+    });
+  }
 
   // Mentor-wide delivered vs. missed hours and total session count.
   const deliveredHours = delivered
@@ -356,6 +415,11 @@ export default async function MentorHomePage({
                             {!s.approved && (
                               <Chip tone="amber">Pending approval</Chip>
                             )}
+                            {s.pool != null && (
+                              <Chip tone="gray">
+                                {formatHours(s.pool)}h unassigned
+                              </Chip>
+                            )}
                           </span>
                           <span className="block text-xs text-muted-fg">
                             {s.profile.user.email}
@@ -435,7 +499,10 @@ export default async function MentorHomePage({
           .filter((s) => s.approved && !s.expired)
           .map((s) => ({
             profileId: s.profile.id,
-            label: `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
+            label:
+              s.pool != null
+                ? `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.pool)}h unassigned — logging makes them yours (${s.profile.program.name})`
+                : `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
             goals: goalsByStudent.get(s.profile.id) ?? [],
           }))}
       />
