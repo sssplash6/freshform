@@ -48,7 +48,7 @@ export default async function MentorStudentDetailPage({
   });
   if (!profile) notFound();
 
-  const [allocation, poolRow, ledger, hours] = await Promise.all([
+  const [allocation, poolRow, poolScope, ledger, hours] = await Promise.all([
     prisma.hourAllocation.findUnique({
       where: {
         studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
@@ -56,6 +56,20 @@ export default async function MentorStudentDetailPage({
     }),
     prisma.hourAllocation.findFirst({
       where: { studentId: profile.id, mentorId: null },
+    }),
+    // The pool only opens this page to mentors actually working in the
+    // student's program (and cohort, where the assignment is cohort-scoped) —
+    // the same rule logSession enforces. Without it, a live pool would show
+    // any mentor anywhere this student's whole ledger.
+    prisma.mentorAssignment.findFirst({
+      where: {
+        mentorId: mentor.id,
+        programId: profile.programId,
+        OR: [
+          { cohortId: null },
+          ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+        ],
+      },
     }),
     studentLedger(profile.id),
     allocationSummary(profile.id),
@@ -67,7 +81,11 @@ export default async function MentorStudentDetailPage({
   // The pool matters here only while it's live, and only until the mentor has
   // hours of their own — their sessions then draw those, not the pool.
   const pool =
-    !allocation && poolRow && poolRow.hours > 0 && !deadlinePassed(poolRow.deadline)
+    !allocation &&
+    poolScope &&
+    poolRow &&
+    poolRow.hours > 0 &&
+    !deadlinePassed(poolRow.deadline)
       ? poolRow
       : null;
 

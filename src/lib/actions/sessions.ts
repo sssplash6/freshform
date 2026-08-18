@@ -153,11 +153,28 @@ export async function logSession(
     : await prisma.hourAllocation.findFirst({
         where: { studentId: profile.id, mentorId: null },
       });
-  if (!allocation && !pool) {
+  // An allocation of their own IS authorization — an admin granted it. The
+  // pool has no such grant, so claiming from it requires actually working in
+  // the student's program (and cohort, where the assignment is cohort-scoped):
+  // without this, any mentor anywhere could log against any student's pool and
+  // carve its hours to themselves.
+  const poolScope = pool
+    ? await prisma.mentorAssignment.findFirst({
+        where: {
+          mentorId: mentor.id,
+          programId: profile.programId,
+          OR: [
+            { cohortId: null },
+            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+          ],
+        },
+      })
+    : null;
+  if (!allocation && !(pool && poolScope)) {
     return {
       ok: false,
       error:
-        "No hours were allocated to you for that student, and they hold no unassigned hours. Ask an admin to allocate hours first.",
+        "No hours were allocated to you for that student, and they hold no unassigned hours you can log against. Ask an admin to allocate hours first.",
     };
   }
 
@@ -191,18 +208,7 @@ export async function logSession(
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = profile.user.name ?? profile.user.email;
 
-  // The carve, when logging from the pool: what the session charges becomes
-  // this mentor's own allocation, and the pool shrinks by the same amount. A
-  // rescheduled meeting charges nothing, so it moves nothing. min() because
-  // overdraw is warned, never blocked — logging past what the pool holds is
-  // allowed, and the shortfall shows as overdraw on the mentor's new row.
-  const carved =
-    pool && !rescheduled
-      ? Math.max(0, Math.min(pool.hours, hoursParsed.value))
-      : 0;
-  const poolAfter = pool ? Number((pool.hours - carved).toFixed(2)) : 0;
-
-  const sync = await prisma.$transaction(async (tx) => {
+  const { sync, carved, poolAfter } = await prisma.$transaction(async (tx) => {
     await tx.session.create({
       data: {
         studentId: profile.id,
@@ -215,41 +221,78 @@ export async function logSession(
       },
     });
 
+    // The carve, when logging from the pool: what the session charges becomes
+    // this mentor's own allocation, and the pool shrinks by the same amount. A
+    // rescheduled meeting charges nothing, so it moves nothing. min() because
+    // overdraw is warned, never blocked — logging past what the pool holds is
+    // allowed, and the shortfall shows as overdraw on the mentor's new row.
+    //
+    // The amounts come from a re-read INSIDE the transaction: the gate's pool
+    // read is stale by now if two mentors log at once, and computing from it
+    // would let both carve the same hours. A pool an admin removed mid-flight
+    // reads as empty — the session still logs, nothing moves.
+    let carved = 0;
+    let poolAfter = 0;
     if (pool && !rescheduled) {
-      // Money stays banked on the pool row: amountPaid records what was paid
-      // for the original grant, not who ended up delivering it.
-      await tx.hourAllocation.update({
+      const freshPool = await tx.hourAllocation.findUnique({
         where: { id: pool.id },
-        data: { hours: poolAfter },
       });
-      await tx.hourAllocation.create({
-        data: {
-          studentId: profile.id,
-          mentorId: mentor.id,
-          hours: carved,
-          deadline: pool.deadline,
-        },
-      });
-      // Both sides of the hand-off audited, so the allocation history reads
-      // where the pool's hours went.
-      await tx.hourAllotmentChange.createMany({
-        data: [
-          {
-            studentId: profile.id,
-            mentorId: null,
-            changedById: mentor.id,
-            oldHours: pool.hours,
-            newHours: poolAfter,
+      const available = freshPool?.hours ?? 0;
+      carved = Math.max(0, Math.min(available, hoursParsed.value));
+      poolAfter = Number((available - carved).toFixed(2));
+      if (freshPool && carved > 0) {
+        // Money stays banked on the pool row: amountPaid records what was paid
+        // for the original grant, not who ended up delivering it.
+        await tx.hourAllocation.update({
+          where: { id: freshPool.id },
+          data: { hours: poolAfter },
+        });
+        // A double-submit can land here with the first carve's allocation
+        // already created; the second tops it up instead of violating the
+        // (student, mentor) unique index.
+        const mine = await tx.hourAllocation.findUnique({
+          where: {
+            studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
           },
-          {
-            studentId: profile.id,
-            mentorId: mentor.id,
-            changedById: mentor.id,
-            oldHours: 0,
-            newHours: carved,
-          },
-        ],
-      });
+        });
+        const mineBefore = mine?.hours ?? 0;
+        const mineAfter = Number((mineBefore + carved).toFixed(2));
+        if (mine) {
+          await tx.hourAllocation.update({
+            where: { id: mine.id },
+            data: { hours: mineAfter },
+          });
+        } else {
+          await tx.hourAllocation.create({
+            data: {
+              studentId: profile.id,
+              mentorId: mentor.id,
+              hours: carved,
+              deadline: freshPool.deadline,
+            },
+          });
+        }
+        // Both sides of the hand-off audited, so the allocation history reads
+        // where the pool's hours went.
+        await tx.hourAllotmentChange.createMany({
+          data: [
+            {
+              studentId: profile.id,
+              mentorId: null,
+              changedById: mentor.id,
+              oldHours: available,
+              newHours: poolAfter,
+            },
+            {
+              studentId: profile.id,
+              mentorId: mentor.id,
+              changedById: mentor.id,
+              oldHours: mineBefore,
+              newHours: mineAfter,
+            },
+          ],
+        });
+      }
     }
 
     // A named task that had no consultant yet: logging against it claims it.
@@ -306,7 +349,7 @@ export async function logSession(
         message: `"${synced.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
       });
     }
-    return synced;
+    return { sync: synced, carved, poolAfter };
   });
 
   revalidatePath("/", "layout");
