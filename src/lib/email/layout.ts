@@ -64,7 +64,12 @@ export function renderEmail({
    * orange one students already press on /student/book.
    */
   cta?: { label: string; url: string; tone?: "brand" | "accent" };
-  unsubscribeUrl: string;
+  /**
+   * Omitted for one-time transactional mail (a welcome, an approval): only a
+   * recurring email has a series to opt out of, and a lone notice wearing a
+   * "turn off these weekly emails" link would promise a cadence it doesn't have.
+   */
+  unsubscribeUrl?: string;
   footerNote: string;
 }): { html: string; text: string } {
   const sectionHtml = sections
@@ -127,7 +132,7 @@ export function renderEmail({
     <tr><td style="padding:26px 28px 24px 28px;">
       <div style="border-top:1px solid #e5e6e8;padding-top:14px;font-size:12px;line-height:1.5;color:#6b7480;">
         ${escapeHtml(footerNote)}
-        <br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7480;text-decoration:underline;">Turn off these weekly emails</a>
+        ${unsubscribeUrl ? `<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7480;text-decoration:underline;">Turn off these weekly emails</a>` : ""}
       </div>
     </td></tr>
   </table>
@@ -153,7 +158,7 @@ export function renderEmail({
     "",
     "—",
     footerNote,
-    `Turn off these weekly emails: ${unsubscribeUrl}`,
+    ...(unsubscribeUrl ? [`Turn off these weekly emails: ${unsubscribeUrl}`] : []),
   ].join("\n");
 
   return { html, text };

@@ -25,6 +25,8 @@ import {
   parseLinkField,
   type ActionState,
 } from "@/lib/actions/shared";
+import { emailConfigured } from "@/lib/email/send";
+import { sendWelcomeEmails, welcomeMail } from "@/lib/email/welcome";
 import type { Cohort, Program } from "@/generated/prisma/client";
 
 const STAFF_ROLES: string[] = [ROLES.ADMIN, ROLES.DEPT_LEADER, ROLES.SALES];
@@ -87,7 +89,9 @@ async function resolveEnrollment(
  * student confirms their full name and Telegram username on first sign-in;
  * hours are NOT granted here — an admin allocates them per mentor afterwards.
  * An optional student-folder link per row is stored for their mentors to open.
- * Already-registered and malformed entries are skipped and reported.
+ * Already-registered and malformed entries are skipped and reported. Each
+ * student created here is emailed a welcome with a sign-in link — staff
+ * registration is the one door into a program the student can't see happen.
  */
 export async function createStudents(
   _prev: ActionState,
@@ -170,6 +174,19 @@ export async function createStudents(
     }
   });
 
+  // Queued only now, with the accounts committed: a welcome for a student the
+  // rollback erased must never leave (see the warning in lib/email/send.ts).
+  sendWelcomeEmails(
+    fresh.map(({ email, name }) =>
+      welcomeMail({
+        to: email,
+        name,
+        programLabel: enrollmentLabel(program.name, cohort?.name),
+        occasion: "enrolled",
+      })
+    )
+  );
+
   const skipped = [
     ...[...taken].map((e) => `${e} (already registered)`),
     ...invalid,
@@ -188,6 +205,9 @@ export async function createStudents(
     message:
       `${fresh.length} student${fresh.length === 1 ? "" : "s"} added to ${enrollmentLabel(program.name, cohort?.name)}. ` +
       `They'll confirm their Telegram username when they first sign in.` +
+      (emailConfigured()
+        ? ` A welcome email is on its way to ${fresh.length === 1 ? "them" : "each of them"}.`
+        : "") +
       (skipped.length > 0 ? ` Skipped: ${skipped.join(", ")}.` : ""),
   };
 }
@@ -351,7 +371,10 @@ export async function completeOnboarding(
  * and history all stay put — only the address changes. This is what makes an
  * imported student real: the tracking spreadsheet held no emails, so students
  * brought over from it carry a placeholder until someone fills the real one in,
- * and until then they cannot sign in at all.
+ * and until then they cannot sign in at all. Replacing a placeholder also sends
+ * the welcome email — this is the first moment the student can be told the
+ * program tracks them here. A correction to an already-real address doesn't:
+ * they were welcomed once.
  */
 export async function setStudentEmail(
   _prev: ActionState,
@@ -365,7 +388,7 @@ export async function setStudentEmail(
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
     where: { id: profileId },
-    include: { user: true },
+    include: { user: true, program: true, cohort: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
 
@@ -384,15 +407,32 @@ export async function setStudentEmail(
   // A real address means the weekly hours email can reach them, so it goes back
   // to the app's default. A placeholder had it switched off on the way in.
   const reachable = !email.endsWith("@import.invalid");
+  const firstRealAddress =
+    reachable && profile.user.email.endsWith("@import.invalid");
   await prisma.user.update({
     where: { id: profile.userId },
     data: { email, ...(reachable ? { weeklyDigest: true } : {}) },
   });
 
+  if (firstRealAddress) {
+    sendWelcomeEmails([
+      welcomeMail({
+        to: email,
+        name: profile.user.name,
+        programLabel: enrollmentLabel(profile.program.name, profile.cohort?.name),
+        occasion: "enrolled",
+      }),
+    ]);
+  }
+
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${profile.user.name ?? "This student"} now signs in with ${email}.`,
+    message:
+      `${profile.user.name ?? "This student"} now signs in with ${email}.` +
+      (firstRealAddress && emailConfigured()
+        ? " A welcome email is on its way to them."
+        : ""),
   };
 }
 
@@ -500,7 +540,9 @@ export async function deleteStudent(
 
 /**
  * Approve a self-signed-up student (admin only). Activates the account;
- * hours are allocated separately, per mentor.
+ * hours are allocated separately, per mentor. Approval is their admission
+ * into the program, so the welcome email goes out here — the in-app notice
+ * alone reaches only students who happen to come back and check.
  */
 export async function approveStudent(
   _prev: ActionState,
@@ -535,10 +577,21 @@ export async function approveStudent(
     });
   });
 
+  sendWelcomeEmails([
+    welcomeMail({
+      to: profile.user.email,
+      name: profile.user.name,
+      programLabel: enrollmentLabel(profile.program.name, profile.cohort?.name),
+      occasion: "approved",
+    }),
+  ]);
+
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `${profile.user.name ?? profile.user.email} approved. Now allocate their mentor hours.`,
+    message:
+      `${profile.user.name ?? profile.user.email} approved. Now allocate their mentor hours.` +
+      (emailConfigured() ? " A welcome email is on its way to them." : ""),
   };
 }
 
