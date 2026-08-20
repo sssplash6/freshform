@@ -117,4 +117,11 @@ export const STAFF_SEED: {
     program: null,
     isMentor: true,
   },
+  {
+    email: "assistant@freshman.academy",
+    name: "Assistant",
+    role: "ADMIN",
+    program: null,
+    // Office assistant account — admin only, does not mentor students.
+  },
 ];
