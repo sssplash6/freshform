@@ -122,6 +122,6 @@ export const STAFF_SEED: {
     name: "Assistant",
     role: "ADMIN",
     program: null,
-    // Office assistant account — admin only, does not mentor students.
+    isMentor: true,
   },
 ];
