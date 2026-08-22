@@ -497,12 +497,16 @@ export default async function MentorHomePage({
       <LogSessionForm
         students={visible
           .filter((s) => s.approved && !s.expired)
+          // Name on the first line, the numbers on the second: the picker is
+          // scanned by who, then confirmed by how much. Both lines are
+          // searchable, so the email is there to be typed at, not read.
           .map((s) => ({
             profileId: s.profile.id,
-            label:
+            label: s.profile.user.name ?? s.profile.user.email,
+            hint:
               s.pool != null
-                ? `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.pool)}h unassigned — logging makes them yours (${s.profile.program.name})`
-                : `${s.profile.user.name ?? s.profile.user.email} · ${formatHours(s.remaining)}h left with you (${s.profile.program.name})`,
+                ? `${formatHours(s.pool)}h unassigned — logging makes them yours · ${s.profile.program.name} · ${s.profile.user.email}`
+                : `${formatHours(s.remaining)}h left with you · ${s.profile.program.name} · ${s.profile.user.email}`,
             goals: goalsByStudent.get(s.profile.id) ?? [],
           }))}
       />

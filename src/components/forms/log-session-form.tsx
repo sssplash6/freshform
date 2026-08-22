@@ -6,14 +6,17 @@ import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { Select } from "@/components/select";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const inputClass =
   "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 export type LogSessionStudent = {
   profileId: string;
+  /** The student's name — the only thing the picker is scanned by. */
   label: string;
+  /** Balance, program, email: searchable metadata, shown under the name. */
+  hint: string;
   /** The mentor's own open tasks for this student, in the admin's order. */
   goals: { value: string; label: string }[];
 };
@@ -31,7 +34,7 @@ export function LogSessionForm({
 }: {
   students: LogSessionStudent[];
 }) {
-  const [state, action, pending] = useActionState(logSession, null);
+  const [state, action] = useActionState(logSession, null);
   const [studentId, setStudentId] = useState(
     students.length === 1 ? students[0].profileId : "",
   );
@@ -61,9 +64,14 @@ export function LogSessionForm({
               ariaLabel="Student"
               defaultValue={studentId}
               onChange={setStudentId}
+              // A mentor logs for the same few students week after week, and a
+              // full caseload is far too long to scan: last picks lead, and the
+              // rest is filtered by name, email, or program.
+              recentKey="log-session-student"
               options={students.map((s) => ({
                 value: s.profileId,
                 label: s.label,
+                hint: s.hint,
               }))}
             />
           </div>
@@ -132,9 +140,9 @@ export function LogSessionForm({
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <AttendancePicker />
-        <Button type="submit" disabled={pending} className="h-11 min-w-40">
-          {pending ? "Logging…" : "Log session"}
-        </Button>
+        <SubmitButton pendingText="Logging…" className="h-11 min-w-40">
+          Log session
+        </SubmitButton>
       </div>
       <ActionFeedback state={state} />
     </form>

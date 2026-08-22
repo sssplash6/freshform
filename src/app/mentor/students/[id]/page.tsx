@@ -213,9 +213,10 @@ export default async function MentorStudentDetailPage({
             students={[
               {
                 profileId: profile.id,
-                label: pool
-                  ? `${profile.user.name ?? profile.user.email} · ${formatHours(pool.hours)}h unassigned — logging makes them yours`
-                  : `${profile.user.name ?? profile.user.email} · ${formatHours(remaining)}h left with you`,
+                label: profile.user.name ?? profile.user.email,
+                hint: pool
+                  ? `${formatHours(pool.hours)}h unassigned — logging makes them yours`
+                  : `${formatHours(remaining)}h left with you`,
                 goals: ledger.assignments
                   .filter(
                     (a) => a.mentorId === mentor.id || a.mentorId === null
