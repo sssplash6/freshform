@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
-import { targetOptions } from "@/components/forms/create-mentor-form";
+import { ProgramTargetsPicker } from "@/components/forms/program-targets-picker";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { updateMentor } from "@/lib/actions/mentors";
 import { USER_STATUS } from "@/lib/constants";
 import type { ProgramOption } from "@/lib/queries";
@@ -34,10 +35,8 @@ function MentorRow({
   mentor: MentorListRow;
   programs: ProgramOption[];
 }) {
-  const [state, action, pending] = useActionState(updateMentor, null);
+  const [state, action] = useActionState(updateMentor, null);
   const [editing, setEditing] = useState(false);
-  const targets = targetOptions(programs);
-  const checked = new Set(mentor.assignments.map((a) => a.checkedValue));
 
   return (
     <li className="rounded-xl border border-line bg-surface p-4">
@@ -113,35 +112,19 @@ function MentorRow({
               />
             </Field>
           </div>
-          <fieldset className="mt-3">
-            <legend className="text-sm font-medium text-ink">
-              Programs / cohorts
-            </legend>
-            <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-2">
-              {targets.map((t) => (
-                <label
-                  key={t.value}
-                  className="flex items-center gap-2 text-sm text-ink"
-                >
-                  <input
-                    type="checkbox"
-                    name="targets"
-                    value={t.value}
-                    defaultChecked={checked.has(t.value)}
-                    className="h-4 w-4 accent-brand"
-                  />
-                  {t.label}
-                </label>
-              ))}
-            </div>
-            <p className="mt-1.5 text-xs text-muted-fg">
-              Unchecking everything parks the mentor as unassigned again.
-            </p>
-          </fieldset>
+          <ProgramTargetsPicker
+            programs={programs}
+            defaultTargets={mentor.assignments.map((a) => a.checkedValue)}
+            legend="Programs / cohorts"
+            // Unticking everything is a real choice here — it parks the mentor
+            // as unassigned — so the group is not required on edit.
+            required={false}
+          />
+          <p className="mt-1.5 text-xs text-muted-fg">
+            Unselecting everything parks the mentor as unassigned again.
+          </p>
           <div className="mt-3 flex items-center gap-2">
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Save changes"}
-            </Button>
+            <SubmitButton pendingText="Saving…">Save changes</SubmitButton>
             <button
               type="button"
               onClick={() => setEditing(false)}

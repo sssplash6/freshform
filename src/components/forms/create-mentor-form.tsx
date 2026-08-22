@@ -3,24 +3,11 @@
 import { useActionState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
-import { Button } from "@/components/ui/button";
+import { ProgramTargetsPicker } from "@/components/forms/program-targets-picker";
 import { Field, Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createMentor } from "@/lib/actions/mentors";
 import type { ProgramOption } from "@/lib/queries";
-
-/** The assignment targets a program + its cohorts offer, as checkbox rows. */
-export function targetOptions(programs: ProgramOption[]) {
-  return programs.flatMap((p) => [
-    {
-      value: `p:${p.id}`,
-      label: p.cohorts.length > 0 ? `${p.name} (all cohorts)` : p.name,
-    },
-    ...p.cohorts.map((c) => ({
-      value: `c:${c.id}`,
-      label: `${p.name} / ${c.name}`,
-    })),
-  ]);
-}
 
 /**
  * Admin registers a mentor directly: email, full name, and every program
@@ -28,8 +15,7 @@ export function targetOptions(programs: ProgramOption[]) {
  * sets their own booking links — no self-signup step needed.
  */
 export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
-  const [state, action, pending] = useActionState(createMentor, null);
-  const targets = targetOptions(programs);
+  const [state, action] = useActionState(createMentor, null);
 
   return (
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
@@ -51,32 +37,10 @@ export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
           <Input name="name" type="text" required />
         </Field>
       </div>
-      <fieldset className="mt-3">
-        <legend className="text-sm font-medium text-ink">
-          Programs / cohorts <span className="text-accent-ink">*</span>
-        </legend>
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {targets.map((t) => (
-              <label
-                key={t.value}
-                className="flex items-center gap-2 text-sm text-ink"
-              >
-                <input
-                  type="checkbox"
-                  name="targets"
-                  value={t.value}
-                  className="h-4 w-4 accent-brand"
-                />
-                {t.label}
-              </label>
-            ))}
-          </div>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Registering…" : "Register mentor"}
-          </Button>
-        </div>
-      </fieldset>
+      <ProgramTargetsPicker programs={programs} legend="Programs / cohorts" />
+      <div className="mt-3 flex justify-end">
+        <SubmitButton pendingText="Registering…">Register mentor</SubmitButton>
+      </div>
       <ActionFeedback state={state} />
     </form>
   );
