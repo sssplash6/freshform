@@ -49,15 +49,32 @@ into a card. Use horizontal rules and whitespace before adding a container.
 ## Components
 
 Use native controls unless a custom interaction offers a demonstrated benefit.
-Interactive controls need visible keyboard focus and a minimum 44px touch
-target. Forms show an inline, announced success or error result. Tables may
-scroll horizontally when necessary, but page navigation must remain structural
-and usable at phone widths.
+A custom control owes the keyboard everything the native one gave: `Select` is a
+full ARIA combobox (arrows, Home/End, typeahead, Escape restoring focus) with one
+tab stop, and a required one is caught in the BROWSER — its value rides a
+validatable input, not a hidden one, so "pick a mentor" is answered at the
+control instead of by a server error a second later. Interactive controls need
+visible keyboard focus and a minimum 44px touch target. Forms show an inline,
+announced success or error result, and submit through `SubmitButton`, which reads
+its own form's pending state.
+
+Below `sm` a table row is a stack of labelled lines, not a sideways swipe: nine
+columns do not fit a phone, and a swipe nothing on screen suggests is not
+navigation. Any list that can grow without bound is paged, and the narrowing —
+search, filter, date range — belongs in the query, never in a `.filter()` over
+everything.
+
+Every role section has an error boundary offering a retry and a way back. One
+vocabulary throughout: mentor, student, task, program.
 
 - `PageHeader` is the page banner: eyebrow, large title, subtitle, actions, and
   an optional oversized ghost monogram watermarked into the corner.
 - `Panel` / `PanelHeader` is a titled region carrying a panel tone.
 - `PersonChip` / `PersonBadge` render a person in their identity color.
+- `Table` / `Tr` / `Td` is the one table chrome; give every `Td` a `label` so its
+  stacked form still says what the value means.
+- `Pagination` states the slice in words and pages with links, so a page is
+  shareable and the back button behaves.
 
 ## Motion
 
