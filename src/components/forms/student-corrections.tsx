@@ -8,9 +8,9 @@ import {
   setStudentEmail,
 } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { ProgramOption } from "@/lib/queries";
 
 const selectClass =
@@ -36,8 +36,8 @@ export function StudentCorrections({
   currentCohortId: string | null;
   hasSessions: boolean;
 }) {
-  const [emailState, emailAction, emailPending] = useActionState(setStudentEmail, null);
-  const [moveState, moveAction, movePending] = useActionState(moveStudent, null);
+  const [emailState, emailAction] = useActionState(setStudentEmail, null);
+  const [moveState, moveAction] = useActionState(moveStudent, null);
   const [deleteState, deleteAction, deletePending] = useActionState(deleteStudent, null);
   const [programId, setProgramId] = useState(currentProgramId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -63,9 +63,9 @@ export function StudentCorrections({
             aria-label="Student email"
           />
         </div>
-        <Button type="submit" variant="secondary" disabled={emailPending}>
-          {emailPending ? "Saving…" : "Save email"}
-        </Button>
+        <SubmitButton variant="secondary" pendingText="Saving…">
+          Save email
+        </SubmitButton>
       </form>
       <ActionFeedback state={emailState} />
 
@@ -107,13 +107,13 @@ export function StudentCorrections({
             ))}
           </select>
         )}
-        <button
-          type="submit"
-          disabled={movePending}
-          className="min-h-11 rounded-lg border border-brand px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50"
+        <SubmitButton
+          variant="secondary"
+          pendingText="Moving…"
+          className="min-h-11"
         >
-          {movePending ? "Moving…" : "Move student"}
-        </button>
+          Move student
+        </SubmitButton>
       </form>
       <ActionFeedback state={moveState} />
 
@@ -131,13 +131,13 @@ export function StudentCorrections({
                 Removes the account, enrollment, and any allocations. This
                 can&apos;t be undone.
               </span>
-              <button
-                type="submit"
-                disabled={deletePending}
-                className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+              <SubmitButton
+                variant="dangerSolid"
+                size="xs"
+                pendingText="Removing…"
               >
-                {deletePending ? "Removing…" : "Yes, remove them"}
-              </button>
+                Yes, remove them
+              </SubmitButton>
               <button
                 type="button"
                 disabled={deletePending}

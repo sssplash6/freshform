@@ -186,7 +186,7 @@ export default async function AdminStudentDetailPage({
         {hours.perMentor.length === 0 ? (
           <EmptyState framed={false} title="No hours yet">
             Hours appear here as they&apos;re granted in the panel above — under
-            their consultant, or unassigned until one is chosen.
+            their mentor, or unassigned until one is chosen.
           </EmptyState>
         ) : (
           <Table
@@ -218,7 +218,7 @@ export default async function AdminStudentDetailPage({
                       href={`/admin/mentors/${m.mentor.id}`}
                     />
                   ) : (
-                    // The pool: granted before a consultant was chosen. Its ⋮
+                    // The pool: granted before a mentor was chosen. Its ⋮
                     // corrects or removes it like any other allocation.
                     <Chip tone="gray">Unassigned</Chip>
                   )}

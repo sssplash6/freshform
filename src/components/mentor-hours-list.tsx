@@ -7,7 +7,7 @@ import { formatHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 type MentorHours = {
-  /** Null = hours granted before a consultant was chosen. */
+  /** Null = hours granted before a mentor was chosen. */
   mentor: { id: string; name: string | null; email: string } | null;
   allocated: number;
   completed: number;

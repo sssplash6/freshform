@@ -176,7 +176,7 @@ export default async function MentorHomePage({
         _count: true,
       }),
       recentMeetings({ mentorId: user.id, take: 8 }),
-      // Goals an admin gave THIS mentor, plus goals with no consultant yet —
+      // Goals an admin gave THIS mentor, plus goals with no mentor yet —
       // logging against an unassigned one is how it becomes theirs.
       prisma.assignment.findMany({
         where: { OR: [{ mentorId: user.id }, { mentorId: null }] },

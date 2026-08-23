@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { removeAssignment } from "@/lib/actions/mentors";
 
 /**
@@ -15,7 +16,7 @@ export function RemoveAssignmentButton({
 }: {
   assignmentId: string;
 }) {
-  const [state, action, pending] = useActionState(removeAssignment, null);
+  const [state, action] = useActionState(removeAssignment, null);
   const [confirming, setConfirming] = useState(false);
 
   if (!confirming) {
@@ -37,9 +38,9 @@ export function RemoveAssignmentButton({
     <form action={action} className="rise-in inline-flex items-center gap-2">
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <span className="text-xs text-muted-fg">Remove assignment?</span>
-      <Button type="submit" variant="danger" size="sm" disabled={pending}>
-        {pending ? "Removing…" : "Yes, remove"}
-      </Button>
+      <SubmitButton variant="danger" size="sm" pendingText="Removing…">
+        Yes, remove
+      </SubmitButton>
       <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
         Cancel
       </Button>

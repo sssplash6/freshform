@@ -157,7 +157,7 @@ export default async function AdminProgramOverviewPage({
   const taskColumns: Column[] = [
     { label: "Task" },
     { label: "Student" },
-    { label: "Consultant" },
+    { label: "Mentor" },
     { label: "Logged", align: "right" },
     { label: "Budget", align: "right" },
     { label: "Progress" },

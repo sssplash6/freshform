@@ -6,6 +6,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { Input } from "@/components/ui/field";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { setStudentFolder } from "@/lib/actions/students";
 
 /**
@@ -20,7 +21,7 @@ export function StudentFolderForm({
   studentProfileId: string;
   currentFolderUrl: string | null;
 }) {
-  const [state, action, pending] = useActionState(setStudentFolder, null);
+  const [state, action] = useActionState(setStudentFolder, null);
 
   return (
     <Panel>
@@ -49,13 +50,9 @@ export function StudentFolderForm({
           aria-label="Student folder link"
           className="min-w-64 flex-1"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-11 rounded-lg border border-brand px-3.5 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50"
-        >
-          {pending ? "Saving…" : "Save folder link"}
-        </button>
+        <SubmitButton variant="secondary" pendingText="Saving…" className="min-h-11">
+          Save folder link
+        </SubmitButton>
       </form>
       <ActionFeedback state={state} />
       </div>

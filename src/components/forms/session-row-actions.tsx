@@ -7,7 +7,7 @@ import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions"
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { PencilIcon } from "@/components/icons";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
 
@@ -55,9 +55,9 @@ export function SessionRowActions({
   const [open, setOpen] = useState(false);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [editState, editAction, editPending] = useActionState(editSession, null);
-  const [voidState, voidAction, voidPending] = useActionState(voidSession, null);
-  const [delState, delAction, delPending] = useActionState(deleteSession, null);
+  const [editState, editAction] = useActionState(editSession, null);
+  const [voidState, voidAction] = useActionState(voidSession, null);
+  const [delState, delAction] = useActionState(deleteSession, null);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -208,9 +208,9 @@ export function SessionRowActions({
 
               <AttendancePicker defaultValue={session.attendance} compact />
 
-              <Button type="submit" size="sm" disabled={editPending}>
-                {editPending ? "Saving…" : "Save changes"}
-              </Button>
+              <SubmitButton size="sm" pendingText="Saving…">
+                Save changes
+              </SubmitButton>
             </form>
             <ActionFeedback state={editState} />
 
@@ -222,13 +222,13 @@ export function SessionRowActions({
                     <span className="text-muted-fg">
                       The hours return to the student&apos;s balance.
                     </span>
-                    <button
-                      type="submit"
-                      disabled={voidPending}
-                      className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                    <SubmitButton
+                      variant="dangerSolid"
+                      size="xs"
+                      pendingText="Voiding…"
                     >
-                      {voidPending ? "…" : "Yes, void it"}
-                    </button>
+                      Yes, void it
+                    </SubmitButton>
                     <button
                       type="button"
                       onClick={() => setConfirmingVoid(false)}
@@ -262,13 +262,13 @@ export function SessionRowActions({
                         Removes the row entirely. Void it instead if the meeting
                         really happened.
                       </span>
-                      <button
-                        type="submit"
-                        disabled={delPending}
-                        className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                      <SubmitButton
+                        variant="dangerSolid"
+                        size="xs"
+                        pendingText="Deleting…"
                       >
-                        {delPending ? "…" : "Yes, delete it"}
-                      </button>
+                        Yes, delete it
+                      </SubmitButton>
                       <button
                         type="button"
                         onClick={() => setConfirmingDelete(false)}

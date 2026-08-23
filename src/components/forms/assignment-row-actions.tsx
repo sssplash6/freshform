@@ -7,6 +7,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { MoreVerticalIcon } from "@/components/icons";
 import { Select, type SelectOption } from "@/components/select";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
 import {
   deleteAssignment,
@@ -33,7 +34,7 @@ const PROGRESS_ORDER = [
 type AssignmentFields = {
   id: string;
   purpose: string;
-  /** Null = no consultant chosen yet; the edit below is where one is picked. */
+  /** Null = no mentor chosen yet; the edit below is where one is picked. */
   mentorId: string | null;
   hourLimit: number | null;
   deadline: string | null;
@@ -67,8 +68,8 @@ export function AssignmentRowActions({
     setAssignmentProgress,
     null,
   );
-  const [editState, editAction, editPending] = useActionState(updateAssignment, null);
-  const [delState, delAction, delPending] = useActionState(deleteAssignment, null);
+  const [editState, editAction] = useActionState(updateAssignment, null);
+  const [delState, delAction] = useActionState(deleteAssignment, null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const anchored = useAnchoredPosition(open, triggerRef, menuRef, {
@@ -136,7 +137,11 @@ export function AssignmentRowActions({
                     ? "Set by hand, so logged hours no longer move it."
                     : "Following the logged hours. Setting it here pins it."}
                 </p>
-                <form action={progressAction} className="mt-2 flex flex-wrap gap-1.5">
+                <form
+                  action={progressAction}
+                  aria-busy={progressPending}
+                  className="mt-2 flex flex-wrap gap-1.5"
+                >
                   <input type="hidden" name="assignmentId" value={assignment.id} />
                   {PROGRESS_ORDER.map((p) => {
                     // "Current" only disables when pinned there: on an automatic
@@ -187,13 +192,13 @@ export function AssignmentRowActions({
                     <input type="hidden" name="assignmentId" value={assignment.id} />
                     {confirmDelete ? (
                       <span className="flex items-center gap-1.5">
-                        <button
-                          type="submit"
-                          disabled={delPending}
-                          className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                        <SubmitButton
+                          variant="dangerSolid"
+                          size="xs"
+                          pendingText="Removing…"
                         >
-                          {delPending ? "…" : "Yes, remove"}
-                        </button>
+                          Yes, remove
+                        </SubmitButton>
                         <button
                           type="button"
                           onClick={() => setConfirmDelete(false)}
@@ -232,11 +237,11 @@ export function AssignmentRowActions({
                     />
                   </label>
                   <div className={labelClass}>
-                    Consultant
+                    Mentor
                     <div className="mt-1">
                       <Select
                         name="mentorId"
-                        ariaLabel="Consultant"
+                        ariaLabel="Mentor"
                         options={mentors}
                         defaultValue={assignment.mentorId ?? ""}
                         placeholder="No one yet"
@@ -280,9 +285,9 @@ export function AssignmentRowActions({
                     />
                   </label>
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm" disabled={editPending}>
-                      {editPending ? "Saving…" : "Save"}
-                    </Button>
+                    <SubmitButton size="sm" pendingText="Saving…">
+                      Save
+                    </SubmitButton>
                     <Button
                       type="button"
                       size="sm"

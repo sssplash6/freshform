@@ -9,6 +9,7 @@ import {
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { StarIcon } from "@/components/icons";
 import { Select } from "@/components/select";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const inputClass =
   "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
@@ -72,7 +73,7 @@ export function MentorFeedbackForm({
 }: {
   mentors: { id: string; label: string }[];
 }) {
-  const [state, action, pending] = useActionState(submitMentorFeedback, null);
+  const [state, action] = useActionState(submitMentorFeedback, null);
 
   return (
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
@@ -102,20 +103,16 @@ export function MentorFeedbackForm({
           />
         </label>
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-3 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-      >
-        {pending ? "Sending…" : "Submit mentor feedback"}
-      </button>
+      <SubmitButton pendingText="Sending…" className="mt-3">
+        Submit mentor feedback
+      </SubmitButton>
       <ActionFeedback state={state} />
     </form>
   );
 }
 
 export function WebsiteFeedbackForm() {
-  const [state, action, pending] = useActionState(submitWebsiteFeedback, null);
+  const [state, action] = useActionState(submitWebsiteFeedback, null);
 
   return (
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
@@ -132,13 +129,9 @@ export function WebsiteFeedbackForm() {
           />
         </label>
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-3 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-      >
-        {pending ? "Sending…" : "Submit website feedback"}
-      </button>
+      <SubmitButton pendingText="Sending…" className="mt-3">
+        Submit website feedback
+      </SubmitButton>
       <ActionFeedback state={state} />
     </form>
   );

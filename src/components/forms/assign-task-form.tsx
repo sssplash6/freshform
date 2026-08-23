@@ -5,21 +5,21 @@ import { useActionState, useState } from "react";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { TaskPicker, type OpenTask } from "@/components/forms/task-picker";
 import { Select, type SelectOption } from "@/components/select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { setMentorAllocation } from "@/lib/actions/students";
 
 const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
 
 /**
- * The one way hours reach a student: a grant, with the consultant and task
+ * The one way hours reach a student: a grant, with the mentor and task
  * optionally named on it. Hours alone land in the student's unassigned pool
- * until an admin decides who does what; naming a consultant puts them on that
- * consultant's ledger, and naming a task makes it that piece of work's budget.
+ * until an admin decides who does what; naming a mentor puts them on that
+ * mentor's ledger, and naming a task makes it that piece of work's budget.
  *
  * Always ADDS: these hours go on top of whatever the student already holds with
- * this consultant (or unassigned), and a named task is created — or, if one by
+ * this mentor (or unassigned), and a named task is created — or, if one by
  * that name is already open, its budget grows. Correcting a total is the ⋮
  * menu's job on the row itself. Picking a mentor who isn't in the student's
  * program yet assigns them to it as part of the same action.
@@ -37,7 +37,7 @@ export function AssignTaskForm({
   openTasksByMentor?: Record<string, OpenTask[]>;
   showAmountPaid?: boolean;
 }) {
-  const [state, action, pending] = useActionState(setMentorAllocation, null);
+  const [state, action] = useActionState(setMentorAllocation, null);
   const [mentorId, setMentorId] = useState("");
   const today = new Date().toISOString().slice(0, 10);
 
@@ -45,7 +45,7 @@ export function AssignTaskForm({
     <form action={action}>
       <h3 className="text-sm font-semibold text-ink">Allocate hours</h3>
       <p className="mt-1 text-xs text-muted-fg">
-        The hours go to the student. Name a consultant to put them on their
+        The hours go to the student. Name a mentor to put them on their
         ledger, and a task to make these hours its budget — or leave either for
         later and the hours wait, unassigned.
       </p>
@@ -54,11 +54,11 @@ export function AssignTaskForm({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="min-w-0">
-          <span className={labelClass}>Consultant</span>
+          <span className={labelClass}>Mentor</span>
           <div className="mt-1">
             <Select
               name="mentorId"
-              ariaLabel="Consultant"
+              ariaLabel="Mentor"
               options={mentors}
               placeholder="No one yet — decide later"
               required={false}
@@ -140,9 +140,7 @@ export function AssignTaskForm({
       </div>
 
       <div className="mt-3.5">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Allocating…" : "Allocate hours"}
-        </Button>
+        <SubmitButton pendingText="Allocating…">Allocate hours</SubmitButton>
       </div>
       <ActionFeedback state={state} />
     </form>

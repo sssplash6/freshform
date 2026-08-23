@@ -3,8 +3,13 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "dangerSolid";
+export type ButtonSize = "xs" | "sm" | "md";
 
 /** Brand (blue) = actions (DESIGN.md). No accent-colored buttons — orange is
  * reserved for hours/progress. Red only for destructive. */
@@ -13,12 +18,17 @@ const VARIANTS: Record<ButtonVariant, string> = {
   secondary: "border border-brand/80 text-brand hover:bg-brand hover:text-white",
   ghost: "text-brand hover:bg-brand-soft",
   danger: "border border-red-300 text-red-700 hover:bg-red-50",
+  // The second half of a two-step confirm: by then the destructive choice IS
+  // the primary action, so it is filled, not outlined.
+  dangerSolid: "bg-red-700 text-white hover:bg-red-800",
 };
 
 /** Fixed, proportionate heights — sm for inline/table actions, md for the
  * primary actions on a view. Height is set here, not forced globally, so a
  * small label never sits in an oversized box. */
 const SIZES: Record<ButtonSize, string> = {
+  // xs is for controls inside a popover menu, where sm is already too tall.
+  xs: "h-7 gap-1 px-2.5 text-xs font-semibold",
   sm: "h-8 gap-1.5 px-3 text-[13px]",
   md: "h-10 gap-2 px-4 text-sm",
 };

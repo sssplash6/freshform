@@ -42,7 +42,7 @@ export function deriveProgress(
 export type GoalSyncResult = {
   assignmentId: string;
   purpose: string;
-  /** Null when the task has no consultant yet. */
+  /** Null when the task has no mentor yet. */
   mentorId: string | null;
   studentId: string;
   loggedHours: number;

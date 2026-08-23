@@ -4,8 +4,8 @@ import { useActionState, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select, type SelectOption } from "@/components/select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { assignMentorToProgram } from "@/lib/actions/mentors";
 import { deleteCohort, deleteProgram, renameProgram } from "@/lib/actions/programs";
 import { deleteStudent } from "@/lib/actions/students";
@@ -21,7 +21,7 @@ export function RenameProgramForm({
   programId: string;
   currentName: string;
 }) {
-  const [state, action, pending] = useActionState(renameProgram, null);
+  const [state, action] = useActionState(renameProgram, null);
 
   return (
     <form action={action}>
@@ -39,9 +39,7 @@ export function RenameProgramForm({
             className="mt-1"
           />
         </label>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save name"}
-        </Button>
+        <SubmitButton pendingText="Saving…">Save name</SubmitButton>
       </div>
       <ActionFeedback state={state} />
     </form>
@@ -61,7 +59,7 @@ export function AssignMentorForm({
   mentors: SelectOption[];
   cohorts: SelectOption[];
 }) {
-  const [state, action, pending] = useActionState(assignMentorToProgram, null);
+  const [state, action] = useActionState(assignMentorToProgram, null);
 
   return (
     <form action={action}>
@@ -97,9 +95,7 @@ export function AssignMentorForm({
             </div>
           </div>
         )}
-        <Button type="submit" disabled={pending}>
-          {pending ? "Assigning…" : "Assign"}
-        </Button>
+        <SubmitButton pendingText="Assigning…">Assign</SubmitButton>
       </div>
       <ActionFeedback state={state} />
     </form>
@@ -130,13 +126,9 @@ function DangerButton({
       {confirming ? (
         <span className="rise-in flex flex-wrap items-center justify-end gap-2 text-xs">
           <span className="text-muted-fg">{question}</span>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
-          >
-            {pending ? "Removing…" : confirmLabel}
-          </button>
+          <SubmitButton variant="dangerSolid" size="xs" pendingText="Removing…">
+            {confirmLabel}
+          </SubmitButton>
           <button
             type="button"
             disabled={pending}

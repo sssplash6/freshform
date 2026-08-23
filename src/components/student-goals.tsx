@@ -9,7 +9,7 @@ import type { LedgerAssignment } from "@/lib/queries";
 
 /**
  * The student's plan, in their language. The admin sees the same rows as a
- * spreadsheet with an hour budget and a consultant column; a student wants to
+ * spreadsheet with an hour budget and a mentor column; a student wants to
  * know what is being worked on for them, by whom, and how far along it is.
  *
  * So: cards grouped by state rather than a table sorted by position, each with a

@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { TaskPicker, type OpenTask } from "@/components/forms/task-picker";
 import { MoreVerticalIcon } from "@/components/icons";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { removeMentorAllocation, setMentorAllocation } from "@/lib/actions/students";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
 
@@ -47,8 +47,8 @@ export function AllocationRowActions({
   const [hours, setHours] = useState(String(currentHours));
   // A raise grants hours, and hours arriving name the work they are for.
   const granting = Number(hours) > currentHours;
-  const [setState, setAction, setPending] = useActionState(setMentorAllocation, null);
-  const [delState, delAction, delPending] = useActionState(
+  const [setState, setAction] = useActionState(setMentorAllocation, null);
+  const [delState, delAction] = useActionState(
     removeMentorAllocation,
     null,
   );
@@ -163,9 +163,9 @@ export function AllocationRowActions({
                 </p>
               </div>
             )}
-            <Button type="submit" size="sm" disabled={setPending}>
-              {setPending ? "Saving…" : "Save"}
-            </Button>
+            <SubmitButton size="sm" pendingText="Saving…">
+              Save
+            </SubmitButton>
           </form>
           <ActionFeedback state={setState} />
 
@@ -178,13 +178,13 @@ export function AllocationRowActions({
                   <span className="text-muted-fg">
                     {mentorId ? "Remove this mentor?" : "Remove these hours?"}
                   </span>
-                  <button
-                    type="submit"
-                    disabled={delPending}
-                    className="rounded-lg bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-800 disabled:opacity-50"
+                  <SubmitButton
+                    variant="dangerSolid"
+                    size="xs"
+                    pendingText="Removing…"
                   >
-                    {delPending ? "…" : "Yes, remove"}
-                  </button>
+                    Yes, remove
+                  </SubmitButton>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}

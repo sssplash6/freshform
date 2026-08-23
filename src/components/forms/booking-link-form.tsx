@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { setBookingLink } from "@/lib/actions/mentors";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const inputClass =
   "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
@@ -15,7 +16,7 @@ function BookingLinkRow({
 }: {
   assignment: { id: string; label: string; calendlyUrl: string | null };
 }) {
-  const [state, action, pending] = useActionState(setBookingLink, null);
+  const [state, action] = useActionState(setBookingLink, null);
 
   return (
     <div>
@@ -32,13 +33,7 @@ function BookingLinkRow({
             className={inputClass}
           />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-        >
-          {pending ? "Saving…" : "Save"}
-        </button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
       </form>
       <ActionFeedback state={state} />
     </div>

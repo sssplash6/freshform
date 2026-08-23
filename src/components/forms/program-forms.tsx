@@ -5,12 +5,13 @@ import { useActionState, useState } from "react";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createCohort, createProgram } from "@/lib/actions/programs";
 
 /** Inline "open a new program" control on the admin dashboard. */
 export function CreateProgramForm() {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(createProgram, null);
+  const [state, action] = useActionState(createProgram, null);
 
   if (!open) {
     return (
@@ -35,9 +36,7 @@ export function CreateProgramForm() {
             placeholder="Program name"
           />
         </div>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Creating…" : "Create program"}
-        </Button>
+        <SubmitButton pendingText="Creating…">Create program</SubmitButton>
         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>
@@ -54,7 +53,7 @@ export function CreateProgramForm() {
  */
 export function CreateCohortForm({ programId }: { programId: string }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(createCohort, null);
+  const [state, action] = useActionState(createCohort, null);
 
   if (!open) {
     return (
@@ -84,9 +83,7 @@ export function CreateCohortForm({ programId }: { programId: string }) {
             placeholder="e.g. Cohort 1"
           />
         </div>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Adding…" : "Add cohort"}
-        </Button>
+        <SubmitButton pendingText="Adding…">Add cohort</SubmitButton>
         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>

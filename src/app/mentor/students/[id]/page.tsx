@@ -204,7 +204,7 @@ export default async function MentorStudentDetailPage({
         <>
           {pool && (
             <Callout tone="brand" title="Unassigned hours available">
-              This student holds {formatHours(pool.hours)} hours no consultant
+              This student holds {formatHours(pool.hours)} hours no mentor
               was named for, usable until {formatDate(pool.deadline)}. Log a
               session below and the hours you log become yours.
             </Callout>

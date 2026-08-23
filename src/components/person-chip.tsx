@@ -16,7 +16,7 @@ type Person = {
 };
 
 /**
- * A person as a colored chip with their initials — the "Team" and "Consultant"
+ * A person as a colored chip with their initials — the "Team" and "Mentor"
  * cells of the ledger. Everyone keeps one color across the whole app, so a
  * column of sessions can be read by who ran them without reading any names.
  * Once someone sets a profile picture it replaces the initials here.

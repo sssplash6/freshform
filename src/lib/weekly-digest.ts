@@ -41,7 +41,7 @@ type Pairing = {
   studentUserId: string;
   studentLabel: string;
   studentActive: boolean;
-  /** Null = the student's unassigned pool: hours with no consultant yet. */
+  /** Null = the student's unassigned pool: hours with no mentor yet. */
   mentorId: string | null;
   mentorLabel: string;
   programName: string;
@@ -116,7 +116,7 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
       mentorId: a.mentorId,
       mentorLabel: a.mentor
         ? (a.mentor.name ?? a.mentor.email)
-        : "no consultant yet",
+        : "no mentor yet",
       programName: a.student.program.name,
       allocated: a.hours,
       deadline: a.deadline,

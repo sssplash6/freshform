@@ -18,7 +18,7 @@ const PROGRESS_TONE: Record<string, ChipTone> = {
 };
 
 /**
- * The right half of the tracking spreadsheet: the tasks each consultant is doing
+ * The right half of the tracking spreadsheet: the tasks each mentor is doing
  * for this student, each with its hour budget, its timeline and how far along it
  * is. Tasks are born with the hours an admin allocates for them, and every
  * session a mentor logs names one — so this panel is the plan the meetings log
@@ -54,7 +54,7 @@ export function AssignmentsPanel({
   showAmountPaid?: boolean;
   hoursAllotted: number;
   manage?: boolean;
-  /** Base path (admin only) that makes each Consultant chip link to them. */
+  /** Base path (admin only) that makes each Mentor chip link to them. */
   mentorBase?: string;
 }) {
   const planned = assignments.reduce((sum, a) => sum + (a.hourLimit ?? 0), 0);
@@ -66,7 +66,7 @@ export function AssignmentsPanel({
 
   const columns: Column[] = [
     { label: "Task" },
-    { label: "Consultant" },
+    { label: "Mentor" },
     { label: "Logged", align: "right" },
     { label: "Budget", align: "right" },
     { label: "Deadline" },
@@ -90,7 +90,7 @@ export function AssignmentsPanel({
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="No tasks yet">
           {manage
-            ? "Allocate the first hours below — naming the consultant and the task can wait until you know them."
+            ? "Allocate the first hours below — naming the mentor and the task can wait until you know them."
             : "An admin sets out the work planned for this student here."}
         </EmptyState>
       ) : (
@@ -122,7 +122,7 @@ export function AssignmentsPanel({
                         href={mentorBase && `${mentorBase}/${a.mentor.id}`}
                       />
                     ) : (
-                      // No consultant yet: the work is planned and budgeted,
+                      // No mentor yet: the work is planned and budgeted,
                       // waiting for the ⋮ edit to say whose it is.
                       <Chip tone="gray">Unassigned</Chip>
                     )}

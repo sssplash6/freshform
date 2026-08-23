@@ -66,7 +66,7 @@ async function remainingWith(
  *
  * When one IS named it must be a task an admin gave THIS mentor for THIS
  * student — nobody logs time against a colleague's task, or another student's —
- * or one with no consultant yet, which logging against claims.
+ * or one with no mentor yet, which logging against claims.
  */
 async function resolveGoal(
   raw: FormDataEntryValue | null,
@@ -139,7 +139,7 @@ export async function logSession(
 
   // Sessions draw down hours an admin allocated to THIS mentor — or, when the
   // mentor holds none, the student's unassigned pool: those hours deliberately
-  // named no consultant yet, and logging is the act that decides one. The
+  // named no mentor yet, and logging is the act that decides one. The
   // logged hours are carved out of the pool into this mentor's own allocation
   // inside the transaction below, so every number afterwards reads the same as
   // if an admin had granted them directly.
@@ -295,7 +295,7 @@ export async function logSession(
       }
     }
 
-    // A named task that had no consultant yet: logging against it claims it.
+    // A named task that had no mentor yet: logging against it claims it.
     if (goal?.unassigned) {
       await tx.assignment.update({
         where: { id: goal.id },
@@ -334,7 +334,7 @@ export async function logSession(
             ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
             : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
         // The hand-off is news an admin would otherwise reconstruct from the
-        // allocation history: the pool chose its consultant.
+        // allocation history: the pool chose its mentor.
         (carved > 0
           ? ` The hours came out of the unassigned pool (${formatHours(poolAfter)} left in it).`
           : ""),

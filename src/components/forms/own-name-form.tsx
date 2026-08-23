@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { updateOwnName } from "@/lib/actions/profile";
 
 const inputClass =
@@ -13,7 +14,7 @@ const inputClass =
  * their students' booking cards. Same field as the signup step, kept editable.
  */
 export function OwnNameForm({ defaultName }: { defaultName: string }) {
-  const [state, action, pending] = useActionState(updateOwnName, null);
+  const [state, action] = useActionState(updateOwnName, null);
 
   return (
     <div>
@@ -29,13 +30,7 @@ export function OwnNameForm({ defaultName }: { defaultName: string }) {
             className={inputClass}
           />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-        >
-          {pending ? "Saving…" : "Save"}
-        </button>
+        <SubmitButton pendingText="Saving…">Save</SubmitButton>
       </form>
       <ActionFeedback state={state} />
     </div>

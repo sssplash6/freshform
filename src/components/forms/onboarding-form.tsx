@@ -7,6 +7,7 @@ import {
   completeStudentProfile,
 } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { ProgramOption } from "@/lib/queries";
 
 const inputClass =
@@ -45,30 +46,20 @@ function TelegramField() {
   );
 }
 
-function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
-    >
-      {pending ? "Submitting…" : label}
-    </button>
-  );
-}
-
 /**
  * First sign-in step for staff-registered students: confirm full name and
  * Telegram username. Their program was already set by the staff member.
  */
 export function CompleteProfileForm({ defaultName }: { defaultName: string }) {
-  const [state, action, pending] = useActionState(completeStudentProfile, null);
+  const [state, action] = useActionState(completeStudentProfile, null);
 
   return (
     <form action={action} className="space-y-4">
       <NameField defaultName={defaultName} />
       <TelegramField />
-      <SubmitButton pending={pending} label="Save and continue" />
+      <SubmitButton pendingText="Submitting…" className="w-full">
+        Save and continue
+      </SubmitButton>
       <ActionFeedback state={state} />
     </form>
   );
@@ -86,7 +77,7 @@ export function OnboardingForm({
   defaultName: string;
   programs: ProgramOption[];
 }) {
-  const [state, action, pending] = useActionState(completeOnboarding, null);
+  const [state, action] = useActionState(completeOnboarding, null);
   const [programId, setProgramId] = useState("");
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
@@ -133,7 +124,9 @@ export function OnboardingForm({
           </select>
         </label>
       )}
-      <SubmitButton pending={pending} label="Submit registration" />
+      <SubmitButton pendingText="Submitting…" className="w-full">
+        Submit registration
+      </SubmitButton>
       <ActionFeedback state={state} />
     </form>
   );

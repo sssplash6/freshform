@@ -646,8 +646,8 @@ export async function rejectStudent(
  * The mentor is OPTIONAL: with none named, the hours land in the student's
  * unassigned pool (the mentorId-null allocation) until an admin decides who
  * does the work. The task is optional too — a grant may name the piece of work
- * it's for, which becomes that consultant's task with these hours as its
- * budget (or, unassigned, a task waiting for a consultant). Naming a task that
+ * it's for, which becomes that mentor's task with these hours as its
+ * budget (or, unassigned, a task waiting for a mentor). Naming a task that
  * is already open tops its budget up rather than adding a second row with the
  * same name. Corrections — a mistyped total, a new deadline, an amount paid —
  * need no task, since they grant nothing.
@@ -662,7 +662,7 @@ export async function setMentorAllocation(
   }
 
   const profileId = String(formData.get("studentProfileId") ?? "");
-  // Empty = the unassigned pool: hours granted before a consultant is chosen.
+  // Empty = the unassigned pool: hours granted before a mentor is chosen.
   const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
   // "set" replaces the allocation (a correction); "add" grants more hours on top
   // of whatever the student already holds with this mentor.
@@ -759,7 +759,7 @@ export async function setMentorAllocation(
 
   // A grant may say what the work is — and, if there is anything to say about
   // how to do it, what that is too. Hours with no task yet are fine: naming
-  // the work can wait, just like naming the consultant.
+  // the work can wait, just like naming the mentor.
   let task: string | null = null;
   let taskNote: string | null = null;
   if (granted > 0) {
@@ -903,7 +903,7 @@ export async function setMentorAllocation(
       });
     }
 
-    // "with Valera" when a consultant holds the hours; plain hours otherwise —
+    // "with Valera" when a mentor holds the hours; plain hours otherwise —
     // the student shouldn't have to know the pool exists.
     const withMentor = mentorLabel ? ` with ${mentorLabel}` : "";
     await notify(tx, {
@@ -929,7 +929,7 @@ export async function setMentorAllocation(
     ? taskOutcome.created
       ? mentorLabel
         ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
-        : ` "${taskOutcome.task}" is planned, budgeted ${formatHours(taskOutcome.budget)} hours — pick its consultant from the task's ⋮ menu.`
+        : ` "${taskOutcome.task}" is planned, budgeted ${formatHours(taskOutcome.budget)} hours — pick its mentor from the task's ⋮ menu.`
       : ` "${taskOutcome.task}" is now budgeted ${formatHours(taskOutcome.budget)} hours.`
     : "";
   return {

@@ -19,7 +19,7 @@ import { parseTaskField } from "@/lib/tasks";
 import { parseHoursField, type ActionState } from "@/lib/actions/shared";
 
 /**
- * The plan half of a student's ledger: which consultant is doing what task, with
+ * The plan half of a student's ledger: which mentor is doing what task, with
  * what hour budget, by when, and how far along it is. Only admins write here
  * (mentors and students read it), matching how the tracking spreadsheet was
  * run: the mentor fills the meetings log by logging sessions, the admin
@@ -92,7 +92,7 @@ function parseFields(
   };
 }
 
-/** Edit a task: any of name, consultant, hour limit, deadline, progress, note. */
+/** Edit a task: any of name, mentor, hour limit, deadline, progress, note. */
 export async function updateAssignment(
   _prev: ActionState,
   formData: FormData
@@ -106,13 +106,13 @@ export async function updateAssignment(
   const existing = await prisma.assignment.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "That task no longer exists." };
 
-  // Empty = no consultant (yet): a task can be planned before anyone owns it,
-  // and this same edit is how an unassigned task finally gets its consultant.
+  // Empty = no mentor (yet): a task can be planned before anyone owns it,
+  // and this same edit is how an unassigned task finally gets its mentor.
   const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
   if (mentorId) {
     const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
     if (!mentor || !canActAsMentor(mentor)) {
-      return { ok: false, error: "Pick a consultant." };
+      return { ok: false, error: "Pick a mentor." };
     }
   }
 
@@ -137,7 +137,7 @@ export async function updateAssignment(
     // derived progress is recomputed unless an admin has pinned it.
     await syncGoalProgress(tx, id);
 
-    // Both consultants hear about a hand-off; notify() drops the actor, so an
+    // Both mentors hear about a hand-off; notify() drops the actor, so an
     // admin reassigning to themselves isn't told about their own change. An
     // unassigned end of the hand-off is simply nobody to tell.
     await notify(tx, {
