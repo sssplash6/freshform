@@ -115,7 +115,10 @@ export function ProgramTargetsPicker({
   };
 
   return (
-    <fieldset className="mt-3" aria-describedby={invalid ? errorId : undefined}>
+    <fieldset
+      className="relative mt-3"
+      aria-describedby={invalid ? errorId : undefined}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <legend className="text-sm font-medium text-ink">
           {legend}
@@ -317,7 +320,7 @@ export function ProgramTargetsPicker({
         }}
         tabIndex={-1}
         aria-hidden="true"
-        className="pointer-events-none h-px w-px opacity-0"
+        className="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0"
       />
     </fieldset>
   );

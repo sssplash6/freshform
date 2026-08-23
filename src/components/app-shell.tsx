@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Avatar } from "@/components/avatar";
 import { NavLinks } from "@/components/nav-links";
-import { ChevronDownIcon, LogOutIcon } from "@/components/icons";
+import { CheckIcon, ChevronDownIcon, LogOutIcon } from "@/components/icons";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
@@ -44,6 +44,46 @@ function ProfileSwitch({ active }: { active: Role }) {
             key={it.role}
             href={it.href}
             className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg transition-colors hover:text-ink"
+          >
+            {it.label}
+          </Link>
+        )
+      )}
+    </div>
+  );
+}
+
+/**
+ * The same switch as a pair of menu rows. On a 320px header there is no room
+ * for branding, a two-segment switch, a bell and a menu button at once — and
+ * the switch is the one of the four that can live inside the menu without being
+ * any harder to find.
+ */
+function ProfileSwitchMenu({ active }: { active: Role }) {
+  const items = [
+    { role: ROLES.ADMIN, label: "Admin", href: "/admin" },
+    { role: ROLES.MENTOR, label: "Mentor", href: "/mentor" },
+  ] as const;
+  return (
+    <div className="border-b border-line pb-1" role="group" aria-label="Switch profile">
+      <p className="px-3 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
+        Profile
+      </p>
+      {items.map((it) =>
+        it.role === active ? (
+          <span
+            key={it.role}
+            aria-current="true"
+            className="flex min-h-11 items-center justify-between rounded-lg bg-brand-soft px-3 text-sm font-medium text-brand"
+          >
+            {it.label}
+            <CheckIcon className="h-4 w-4" />
+          </span>
+        ) : (
+          <Link
+            key={it.role}
+            href={it.href}
+            className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
           >
             {it.label}
           </Link>
@@ -199,11 +239,13 @@ export async function AppShell({
           </div>
         </div>
 
-        {/* Mobile */}
-        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 md:hidden">
+        {/* Mobile. Four things do not fit a 320px row, so the profile switch
+            moves into the menu and the role rides next to the brand as a badge
+            (a badge fits; a two-segment switch does not). */}
+        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-2 px-4 md:hidden">
           <div className="flex min-w-0 items-center gap-2">
             {brand}
-            {isDual ? <ProfileSwitch active={activeRole} /> : <RoleBadge role={activeRole} />}
+            {!isDual && <RoleBadge role={activeRole} />}
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -214,7 +256,8 @@ export async function AppShell({
                 <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
               </summary>
               <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
-                <nav aria-label="Primary navigation" className="grid gap-1">
+                {isDual && <ProfileSwitchMenu active={activeRole} />}
+                <nav aria-label="Primary navigation" className="mt-1 grid gap-1">
                   <NavLinks items={navItems} variant="menu" />
                 </nav>
                 <div className="mt-1 border-t border-line pt-1">

@@ -276,16 +276,32 @@ export function Select({
 
   // Focus follows the interaction model: into the search box when there is one,
   // otherwise it never leaves the trigger.
+  //
+  // Waits for the measurement. The popover is `visibility: hidden` for the frame
+  // before it has been placed, and a hidden element cannot take focus — focusing
+  // it there fails silently, leaving the keystrokes at the trigger, where a
+  // searchable select has nothing to do with them. Depends on the boolean, not
+  // on `anchored` itself, or every re-measure on scroll would yank focus back.
+  const measured = anchored !== null;
   useEffect(() => {
-    if (open && withSearch) searchRef.current?.focus();
-  }, [open, withSearch]);
+    if (open && withSearch && measured) searchRef.current?.focus();
+  }, [open, withSearch, measured]);
 
   // Keep the active option in view for arrow-key and typeahead navigation.
+  //
+  // Scrolls the list by hand rather than with scrollIntoView, which walks every
+  // scrollable ancestor: for the frame before the popover is placed it is still
+  // a static block at the foot of <body>, and "bring that into view" means
+  // scrolling the whole PAGE to the bottom. Opening a select two thousand pixels
+  // up the page did exactly that.
   useEffect(() => {
-    if (!open) return;
-    listRef.current
-      ?.querySelector('[data-active="true"]')
-      ?.scrollIntoView({ block: "nearest" });
+    const list = listRef.current;
+    const option = list?.querySelector('[data-active="true"]');
+    if (!open || !list || !option) return;
+    const item = option.getBoundingClientRect();
+    const box = list.getBoundingClientRect();
+    if (item.top < box.top) list.scrollTop -= box.top - item.top;
+    else if (item.bottom > box.bottom) list.scrollTop += item.bottom - box.bottom;
   }, [open, active, rows.length]);
 
   const onKeyDown = (e: ReactKeyboardEvent) => {
