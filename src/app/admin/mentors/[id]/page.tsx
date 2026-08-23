@@ -242,7 +242,7 @@ export default async function AdminMentorDetailPage({
                     className="deal-in"
                     style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
                   >
-                    <Td className="min-w-52">
+                    <Td className="sm:min-w-52">
                       <Link
                         href={`/admin/programs/${row.id}`}
                         className="font-medium text-ink hover:text-brand"
@@ -261,19 +261,25 @@ export default async function AdminMentorDetailPage({
                         />
                       )}
                     </Td>
-                    <Td align="right" className="tabular-nums">
+                    <Td label="Students" align="right" className="tabular-nums">
                       {row.students}
                     </Td>
-                    <Td align="right" className="tabular-nums text-muted-fg">
+                    <Td
+                      label="Meetings"
+                      align="right"
+                      className="tabular-nums text-muted-fg"
+                    >
                       {row.sessions}
                     </Td>
                     <Td
+                      label="Delivered"
                       align="right"
                       className="font-semibold tabular-nums text-ink"
                     >
                       {formatHours(row.delivered)}
                     </Td>
                     <Td
+                      label="Missed"
                       align="right"
                       className={`tabular-nums ${
                         row.missed > 0 ? "text-amber-700" : "text-muted-fg"
@@ -281,10 +287,11 @@ export default async function AdminMentorDetailPage({
                     >
                       {row.missed > 0 ? formatHours(row.missed) : "—"}
                     </Td>
-                    <Td align="right" className="tabular-nums">
+                    <Td label="Allocated" align="right" className="tabular-nums">
                       {formatHours(row.allocated)}
                     </Td>
                     <Td
+                      label="Remaining"
                       align="right"
                       className={`font-medium tabular-nums ${
                         row.remaining < 0 ? "text-red-700" : "text-ink"
@@ -386,7 +393,7 @@ export default async function AdminMentorDetailPage({
                   </Link>
                 </Td>
                 {!scope && (
-                  <Td className="whitespace-nowrap">
+                  <Td label="Program" className="whitespace-nowrap">
                     {s.student.program.name}
                     {s.student.cohort && (
                       <span className="block text-xs text-muted-fg">
@@ -395,13 +402,14 @@ export default async function AdminMentorDetailPage({
                     )}
                   </Td>
                 )}
-                <Td align="right" className="tabular-nums">
+                <Td label="Allocated" align="right" className="tabular-nums">
                   {formatHours(s.allocated)}
                 </Td>
-                <Td align="right" className="tabular-nums">
+                <Td label="Completed" align="right" className="tabular-nums">
                   {formatHours(s.completed)}
                 </Td>
                 <Td
+                  label="Missed"
                   align="right"
                   className={`tabular-nums ${
                     s.missed > 0 ? "text-amber-700" : "text-muted-fg"
@@ -410,6 +418,7 @@ export default async function AdminMentorDetailPage({
                   {s.missed > 0 ? formatHours(s.missed) : "—"}
                 </Td>
                 <Td
+                  label="Remaining"
                   align="right"
                   className={`font-medium tabular-nums ${
                     s.remaining < 0 ? "text-red-700" : "text-ink"
@@ -417,7 +426,7 @@ export default async function AdminMentorDetailPage({
                 >
                   {formatHours(s.remaining)}
                 </Td>
-                <Td className="whitespace-nowrap">
+                <Td label="Use by" className="whitespace-nowrap">
                   <Deadline deadline={s.deadline} />
                 </Td>
               </Tr>

@@ -70,29 +70,30 @@ export function StudentsTable({
               <div className="text-xs text-muted-fg">{s.user.email}</div>
             </NameCell>
           </Td>
-          {showProgram && <Td>{s.program.name}</Td>}
-          {showCohort && <Td>{s.cohort?.name ?? "—"}</Td>}
-          <Td>
+          {showProgram && <Td label="Program">{s.program.name}</Td>}
+          {showCohort && <Td label="Cohort">{s.cohort?.name ?? "—"}</Td>}
+          <Td label="Telegram">
             {s.telegramUsername ? (
               <TelegramHandle username={s.telegramUsername} />
             ) : (
               <span className="text-muted-fg">—</span>
             )}
           </Td>
-          <Td>
+          <Td label="Folder">
             {s.folderUrl ? (
               <StudentFolderLink url={s.folderUrl} />
             ) : (
               <span className="text-muted-fg">—</span>
             )}
           </Td>
-          <Td align="right" className="tabular-nums">
+          <Td label="Allotted" align="right" className="tabular-nums">
             {formatHours(s.allottedHours)}
           </Td>
-          <Td align="right" className="tabular-nums">
+          <Td label="Completed" align="right" className="tabular-nums">
             {formatHours(s.completedHours)}
           </Td>
           <Td
+            label="Missed"
             align="right"
             className={`tabular-nums ${
               s.missedHours > 0 ? "text-amber-700" : "text-muted-fg"
@@ -101,6 +102,7 @@ export function StudentsTable({
             {s.missedHours > 0 ? formatHours(s.missedHours) : "—"}
           </Td>
           <Td
+            label="Remaining"
             align="right"
             className={`font-medium tabular-nums ${
               s.remainingHours < 0 ? "text-red-700" : "text-ink"

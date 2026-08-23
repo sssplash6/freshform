@@ -11,6 +11,7 @@ import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
   SESSION_STATUS,
@@ -295,6 +296,18 @@ export default async function MentorHomePage({
     };
   };
 
+  const studentColumns: Column[] = [
+    { label: "Student" },
+    { label: "Telegram" },
+    { label: "Folder" },
+    { label: "Allocated to you", align: "right" },
+    { label: "Completed", align: "right" },
+    { label: "Missed", align: "right" },
+    { label: "Remaining", align: "right" },
+    { label: "Use by" },
+    { label: "" },
+  ];
+
   const byProgram = new Map<string, { name: string; students: MentorStudent[] }>();
   for (const s of visible) {
     const key = s.profile.programId;
@@ -383,101 +396,88 @@ export default async function MentorHomePage({
                 group.students.reduce((sum, s) => sum + s.remaining, 0),
               )} hours remaining with you`}
             />
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
-                  <tr>
-                    <th className="px-4 py-3">Student</th>
-                    <th className="px-4 py-3">Telegram</th>
-                    <th className="px-4 py-3">Folder</th>
-                    <th className="px-4 py-3 text-right">Allocated to you</th>
-                    <th className="px-4 py-3 text-right">Completed</th>
-                    <th className="px-4 py-3 text-right">Missed</th>
-                    <th className="px-4 py-3 text-right">Remaining</th>
-                    <th className="px-4 py-3">Use by</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
-                  {group.students.map((s, i) => (
-                    <tr
-                      key={s.profile.id}
-                      className="deal-in transition-colors hover:bg-canvas"
-                      style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
+            <Table columns={studentColumns} framed={false}>
+              {group.students.map((s, i) => (
+                <Tr
+                  key={s.profile.id}
+                  className="deal-in"
+                  style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
+                >
+                  <Td>
+                    <Link
+                      href={`/mentor/students/${s.profile.id}`}
+                      className="group block"
                     >
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/mentor/students/${s.profile.id}`}
-                          className="group block"
-                        >
-                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand">
-                            {s.profile.user.name ?? "—"}
-                            {!s.approved && (
-                              <Chip tone="amber">Pending approval</Chip>
-                            )}
-                            {s.pool != null && (
-                              <Chip tone="gray">
-                                {formatHours(s.pool)}h unassigned
-                              </Chip>
-                            )}
-                          </span>
-                          <span className="block text-xs text-muted-fg">
-                            {s.profile.user.email}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.profile.telegramUsername ? (
-                          <TelegramHandle
-                            username={s.profile.telegramUsername}
-                          />
-                        ) : (
-                          <span className="text-muted-fg">—</span>
+                      <span className="flex flex-wrap items-center gap-2 font-medium text-ink group-hover:text-brand">
+                        {s.profile.user.name ?? "—"}
+                        {!s.approved && <Chip tone="amber">Pending approval</Chip>}
+                        {s.pool != null && (
+                          <Chip tone="gray">
+                            {formatHours(s.pool)}h unassigned
+                          </Chip>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.profile.folderUrl ? (
-                          <StudentFolderLink url={s.profile.folderUrl} />
-                        ) : (
-                          <span className="text-muted-fg">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatHours(s.allocated)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {formatHours(s.completed)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right tabular-nums ${
-                          s.missed > 0 ? "text-amber-700" : "text-muted-fg"
-                        }`}
-                      >
-                        {s.missed > 0 ? formatHours(s.missed) : "—"}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-medium tabular-nums ${
-                          s.remaining < 0 ? "text-red-700" : "text-ink"
-                        }`}
-                      >
-                        {formatHours(s.remaining)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Deadline deadline={s.deadline} />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <ArrowLink
-                          href={`/mentor/students/${s.profile.id}`}
-                          className="text-[13px]"
-                        >
-                          View
-                        </ArrowLink>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </span>
+                      <span className="block text-xs text-muted-fg">
+                        {s.profile.user.email}
+                      </span>
+                    </Link>
+                  </Td>
+                  <Td label="Telegram">
+                    {s.profile.telegramUsername ? (
+                      <TelegramHandle username={s.profile.telegramUsername} />
+                    ) : (
+                      <span className="text-muted-fg">—</span>
+                    )}
+                  </Td>
+                  <Td label="Folder">
+                    {s.profile.folderUrl ? (
+                      <StudentFolderLink url={s.profile.folderUrl} />
+                    ) : (
+                      <span className="text-muted-fg">—</span>
+                    )}
+                  </Td>
+                  <Td
+                    label="Allocated to you"
+                    align="right"
+                    className="tabular-nums"
+                  >
+                    {formatHours(s.allocated)}
+                  </Td>
+                  <Td label="Completed" align="right" className="tabular-nums">
+                    {formatHours(s.completed)}
+                  </Td>
+                  <Td
+                    label="Missed"
+                    align="right"
+                    className={`tabular-nums ${
+                      s.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                    }`}
+                  >
+                    {s.missed > 0 ? formatHours(s.missed) : "—"}
+                  </Td>
+                  <Td
+                    label="Remaining"
+                    align="right"
+                    className={`font-medium tabular-nums ${
+                      s.remaining < 0 ? "text-red-700" : "text-ink"
+                    }`}
+                  >
+                    {formatHours(s.remaining)}
+                  </Td>
+                  <Td label="Use by">
+                    <Deadline deadline={s.deadline} />
+                  </Td>
+                  <Td align="right">
+                    <ArrowLink
+                      href={`/mentor/students/${s.profile.id}`}
+                      className="text-[13px]"
+                    >
+                      View
+                    </ArrowLink>
+                  </Td>
+                </Tr>
+              ))}
+            </Table>
           </Panel>
         ))
       )}

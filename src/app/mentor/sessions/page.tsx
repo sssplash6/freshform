@@ -3,6 +3,7 @@ import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ATTENDANCE,
   ATTENDANCE_META,
@@ -140,6 +141,16 @@ export default async function MentorSessionsPage({
 
   const params = { student, program, from, to };
 
+  const columns: Column[] = [
+    { label: "Date" },
+    { label: "Student" },
+    { label: "Hours", align: "right" },
+    { label: "Task" },
+    { label: "Notes" },
+    { label: "Status" },
+    { label: "" },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -219,83 +230,70 @@ export default async function MentorSessionsPage({
             </p>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
-                    <tr>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Student</th>
-                      <th className="px-4 py-3 text-right">Hours</th>
-                      <th className="px-4 py-3">Task</th>
-                      <th className="px-4 py-3">Notes</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line/60">
-                    {sessions.map((s) => {
-                      const voided = s.status === SESSION_STATUS.VOIDED;
-                      return (
-                        <tr key={s.id} className={voided ? "opacity-50" : ""}>
-                          <td className="px-4 py-3 tabular-nums">
-                            {formatDate(s.date)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-ink">
-                              {s.student.user.name ?? s.student.user.email}
-                            </div>
-                            <div className="text-xs text-muted-fg">
-                              {s.student.program.name}
-                              {s.student.cohort
-                                ? ` / ${s.student.cohort.name}`
-                                : ""}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums">
-                            {formatHours(s.hours)}
-                          </td>
-                          <td className="max-w-56 truncate px-4 py-3 text-plan-ink">
-                            {s.assignment?.purpose ?? "—"}
-                          </td>
-                          <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
-                            {s.note ?? "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {voided ? (
-                              <Chip tone="gray">Voided</Chip>
-                            ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
-                              <Chip tone="green">Logged</Chip>
-                            ) : (
-                              <Chip
-                                tone={
-                                  ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"
-                                }
-                              >
-                                {ATTENDANCE_META[attendanceOf(s)].label}
-                              </Chip>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {!voided && (
-                              <SessionRowActions
-                                session={{
-                                  id: s.id,
-                                  hours: s.hours,
-                                  date: toDateInputValue(s.date),
-                                  attendance: attendanceOf(s),
-                                  note: s.note,
-                                  assignmentId: s.assignmentId,
-                                }}
-                                goals={goalsByStudent.get(s.studentId) ?? []}
-                              />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <Table columns={columns}>
+                {sessions.map((s) => {
+                  const voided = s.status === SESSION_STATUS.VOIDED;
+                  return (
+                    <Tr key={s.id} className={voided ? "opacity-50" : ""}>
+                      <Td label="Date" className="tabular-nums">
+                        {formatDate(s.date)}
+                      </Td>
+                      <Td label="Student">
+                        <span className="font-medium text-ink">
+                          {s.student.user.name ?? s.student.user.email}
+                        </span>
+                        <span className="block text-xs text-muted-fg">
+                          {s.student.program.name}
+                          {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
+                        </span>
+                      </Td>
+                      <Td label="Hours" align="right" className="tabular-nums">
+                        {formatHours(s.hours)}
+                      </Td>
+                      <Td
+                        label="Task"
+                        className="text-plan-ink sm:max-w-56 sm:truncate"
+                      >
+                        {s.assignment?.purpose ?? "—"}
+                      </Td>
+                      <Td
+                        label="Notes"
+                        className="text-muted-fg sm:max-w-56 sm:truncate"
+                      >
+                        {s.note ?? "—"}
+                      </Td>
+                      <Td label="Status">
+                        {voided ? (
+                          <Chip tone="gray">Voided</Chip>
+                        ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
+                          <Chip tone="green">Logged</Chip>
+                        ) : (
+                          <Chip
+                            tone={ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"}
+                          >
+                            {ATTENDANCE_META[attendanceOf(s)].label}
+                          </Chip>
+                        )}
+                      </Td>
+                      <Td>
+                        {!voided && (
+                          <SessionRowActions
+                            session={{
+                              id: s.id,
+                              hours: s.hours,
+                              date: toDateInputValue(s.date),
+                              attendance: attendanceOf(s),
+                              note: s.note,
+                              assignmentId: s.assignmentId,
+                            }}
+                            goals={goalsByStudent.get(s.studentId) ?? []}
+                          />
+                        )}
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </Table>
               <Pagination
                 basePath="/mentor/sessions"
                 params={params}

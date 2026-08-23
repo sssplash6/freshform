@@ -223,13 +223,14 @@ export default async function AdminStudentDetailPage({
                     <Chip tone="gray">Unassigned</Chip>
                   )}
                 </Td>
-                <Td align="right" className="tabular-nums">
+                <Td label="Allocated" align="right" className="tabular-nums">
                   {formatHours(m.allocated)}
                 </Td>
-                <Td align="right" className="tabular-nums">
+                <Td label="Completed" align="right" className="tabular-nums">
                   {formatHours(m.completed)}
                 </Td>
                 <Td
+                  label="Missed"
                   align="right"
                   className={`tabular-nums ${
                     m.missed > 0 ? "text-amber-700" : "text-muted-fg"
@@ -238,6 +239,7 @@ export default async function AdminStudentDetailPage({
                   {m.missed > 0 ? formatHours(m.missed) : "—"}
                 </Td>
                 <Td
+                  label="Remaining"
                   align="right"
                   className={`font-medium tabular-nums ${
                     m.remaining < 0 ? "text-red-700" : "text-ink"
@@ -245,11 +247,11 @@ export default async function AdminStudentDetailPage({
                 >
                   {formatHours(m.remaining)}
                 </Td>
-                <Td>
+                <Td label="Use by">
                   <Deadline deadline={m.deadline} />
                 </Td>
                 {isMasters && (
-                  <Td align="right" className="tabular-nums">
+                  <Td label="Paid" align="right" className="tabular-nums">
                     {m.amountPaid != null ? formatMoney(m.amountPaid) : "—"}
                   </Td>
                 )}

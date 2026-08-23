@@ -104,7 +104,7 @@ export function AssignmentsPanel({
                   className={`deal-in ${isDone ? "bg-green-50/50" : ""}`}
                   style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
                 >
-                  <Td className="max-w-xs">
+                  <Td className="sm:max-w-xs">
                     <span className="font-medium text-ink">{a.purpose}</span>
                     {/* What a person said about this task that its state can't
                         carry — a missed hour, an open question. */}
@@ -114,7 +114,7 @@ export function AssignmentsPanel({
                       </span>
                     )}
                   </Td>
-                  <Td>
+                  <Td label="Mentor">
                     {a.mentor ? (
                       <PersonChip
                         person={a.mentor}
@@ -130,6 +130,7 @@ export function AssignmentsPanel({
                   {/* Hours mentors actually logged against this task. Amber once
                       they pass the budget: overspend is warned, never blocked. */}
                   <Td
+                    label="Logged"
                     align="right"
                     className={`tabular-nums ${
                       a.hourLimit != null && a.loggedHours > a.hourLimit
@@ -141,17 +142,21 @@ export function AssignmentsPanel({
                   >
                     {a.loggedHours > 0 ? `${formatHours(a.loggedHours)}h` : "—"}
                   </Td>
-                  <Td align="right" className="font-semibold tabular-nums text-ink">
+                  <Td
+                    label="Budget"
+                    align="right"
+                    className="font-semibold tabular-nums text-ink"
+                  >
                     {a.hourLimit == null ? (
                       <span className="font-normal text-muted-fg">—</span>
                     ) : (
                       `${formatHours(a.hourLimit)}h`
                     )}
                   </Td>
-                  <Td className="whitespace-nowrap">
+                  <Td label="Deadline" className="whitespace-nowrap">
                     {a.deadline ?? <span className="text-muted-fg">—</span>}
                   </Td>
-                  <Td>
+                  <Td label="Progress">
                     <span className="flex items-center gap-1.5">
                       <Chip tone={PROGRESS_TONE[a.progress] ?? "gray"}>
                         {ASSIGNMENT_PROGRESS_LABELS[a.progress] ?? a.progress}

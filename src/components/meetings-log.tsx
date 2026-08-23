@@ -156,7 +156,7 @@ export function MeetingsLog({
                 style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
               >
                 {withTeam && (
-                  <Td className={voided ? "opacity-45" : undefined}>
+                  <Td label="Team" className={voided ? "opacity-45" : undefined}>
                     <PersonChip
                       person={s.mentor}
                       size="sm"
@@ -165,7 +165,7 @@ export function MeetingsLog({
                   </Td>
                 )}
                 {withStudent && (
-                  <Td className={voided ? "opacity-55" : undefined}>
+                  <Td label="Student" className={voided ? "opacity-55" : undefined}>
                     {s.student ? (
                       <Link
                         href={`/admin/students/${s.student.id}`}
@@ -178,7 +178,7 @@ export function MeetingsLog({
                     )}
                   </Td>
                 )}
-                <Td align="right">
+                <Td label="Duration" align="right">
                   <span
                     className={
                       voided || state === ATTENDANCE.RESCHEDULED
@@ -190,11 +190,12 @@ export function MeetingsLog({
                   </span>
                 </Td>
                 <Td
+                  label="Date"
                   className={`whitespace-nowrap tabular-nums ${voided ? "text-muted-fg" : "text-ink"}`}
                 >
                   {formatDate(s.date)}
                 </Td>
-                <Td className="max-w-56">
+                <Td label="Task" className="sm:max-w-56">
                   {s.assignment ? (
                     <span
                       className={`text-plan-ink ${voided ? "opacity-55" : ""}`}
@@ -205,7 +206,7 @@ export function MeetingsLog({
                     <span className="text-muted-fg">—</span>
                   )}
                 </Td>
-                <Td className="max-w-md">
+                <Td label="Notes" className="sm:max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>
                     {s.note ? (
                       <ExpandableNote text={s.note} />

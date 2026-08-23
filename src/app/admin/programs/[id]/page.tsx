@@ -254,10 +254,10 @@ export default async function AdminProgramOverviewPage({
                 className="deal-in"
                 style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
               >
-                <Td className="max-w-xs">
+                <Td className="sm:max-w-xs">
                   <span className="font-medium text-ink">{task.purpose}</span>
                 </Td>
-                <Td>
+                <Td label="Student">
                   <Link
                     href={`/admin/students/${task.studentId}`}
                     className="text-ink hover:text-brand"
@@ -265,7 +265,7 @@ export default async function AdminProgramOverviewPage({
                     {task.student.user.name ?? task.student.user.email}
                   </Link>
                 </Td>
-                <Td>
+                <Td label="Mentor">
                   {task.mentor ? (
                     <PersonChip
                       person={task.mentor}
@@ -277,6 +277,7 @@ export default async function AdminProgramOverviewPage({
                   )}
                 </Td>
                 <Td
+                  label="Logged"
                   align="right"
                   className={`tabular-nums ${
                     task.hourLimit != null && task.loggedHours > task.hourLimit
@@ -288,14 +289,18 @@ export default async function AdminProgramOverviewPage({
                 >
                   {task.loggedHours > 0 ? `${formatHours(task.loggedHours)}h` : "—"}
                 </Td>
-                <Td align="right" className="font-semibold tabular-nums text-ink">
+                <Td
+                  label="Budget"
+                  align="right"
+                  className="font-semibold tabular-nums text-ink"
+                >
                   {task.hourLimit == null ? (
                     <span className="font-normal text-muted-fg">—</span>
                   ) : (
                     `${formatHours(task.hourLimit)}h`
                   )}
                 </Td>
-                <Td>
+                <Td label="Progress">
                   <Chip tone={PROGRESS_TONE[task.progress] ?? "gray"}>
                     {ASSIGNMENT_PROGRESS_LABELS[task.progress] ?? task.progress}
                   </Chip>
