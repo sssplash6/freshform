@@ -1,26 +1,30 @@
 import { MentorFeedbackList } from "@/components/mentor-feedback-list";
+import { Pagination, parsePage } from "@/components/ui/pagination";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { prisma } from "@/lib/prisma";
+import { mentorFeedbackGroups } from "@/lib/feedback";
+
+const MENTORS_PER_PAGE = 10;
 
 /** Dept Leader: feedback for mentors assigned within their program only. */
-export default async function LeaderFeedbackPage() {
+export default async function LeaderFeedbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await requireRole(ROLES.DEPT_LEADER);
+  const page = parsePage((await searchParams).page);
 
-  const feedback = await prisma.mentorFeedback.findMany({
-    where: {
+  const { groups, mentors } = await mentorFeedbackGroups(
+    {
       mentor: {
         mentorAssignments: {
           some: { programId: user.programId ?? "" },
         },
       },
     },
-    include: {
-      mentor: true,
-      student: { include: { user: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+    { skip: (page - 1) * MENTORS_PER_PAGE, take: MENTORS_PER_PAGE }
+  );
 
   return (
     <div className="space-y-6">
@@ -30,7 +34,15 @@ export default async function LeaderFeedbackPage() {
           Ratings for mentors assigned in your program.
         </p>
       </div>
-      <MentorFeedbackList feedback={feedback} />
+      <MentorFeedbackList groups={groups} />
+      <Pagination
+        basePath="/leader/feedback"
+        params={{}}
+        page={page}
+        pageSize={MENTORS_PER_PAGE}
+        total={mentors}
+        unit="rated mentors"
+      />
     </div>
   );
 }

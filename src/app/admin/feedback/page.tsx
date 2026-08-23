@@ -1,44 +1,56 @@
 import { MentorFeedbackList } from "@/components/mentor-feedback-list";
-import { Rating, average } from "@/components/rating";
+import { Rating } from "@/components/rating";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Pagination, parsePage } from "@/components/ui/pagination";
+import { mentorFeedbackGroups } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
 
-export default async function AdminFeedbackPage() {
-  const [mentorFeedback, websiteFeedback] = await Promise.all([
-    prisma.mentorFeedback.findMany({
-      include: {
-        mentor: true,
-        student: { include: { user: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.websiteFeedback.findMany({
-      include: { student: { include: { user: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+/** Mentors per page of the grouped list, and site comments per page. */
+const MENTORS_PER_PAGE = 10;
+const SITE_PER_PAGE = 20;
 
-  const mentorAvg = average(mentorFeedback.map((f) => f.rating));
-  const siteAvg = average(websiteFeedback.map((f) => f.rating));
+export default async function AdminFeedbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; site?: string }>;
+}) {
+  const { page: rawPage, site: rawSite } = await searchParams;
+  const page = parsePage(rawPage);
+  const sitePage = parsePage(rawSite);
+
+  // The headline numbers are aggregates, not a whole table read into memory to
+  // be averaged in JavaScript.
+  const [mentorStats, siteStats, { groups, mentors }, websiteFeedback] =
+    await Promise.all([
+      prisma.mentorFeedback.aggregate({ _avg: { rating: true }, _count: true }),
+      prisma.websiteFeedback.aggregate({ _avg: { rating: true }, _count: true }),
+      mentorFeedbackGroups(
+        {},
+        { skip: (page - 1) * MENTORS_PER_PAGE, take: MENTORS_PER_PAGE }
+      ),
+      prisma.websiteFeedback.findMany({
+        include: { student: { include: { user: true } } },
+        orderBy: { createdAt: "desc" },
+        skip: (sitePage - 1) * SITE_PER_PAGE,
+        take: SITE_PER_PAGE,
+      }),
+    ]);
+
+  const mentorAvg = mentorStats._avg.rating;
+  const siteAvg = siteStats._avg.rating;
 
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-ink">Feedback</h1>
 
       <StatCardGrid>
-        <StatCard
-          label="Mentor ratings"
-          value={String(mentorFeedback.length)}
-        />
+        <StatCard label="Mentor ratings" value={String(mentorStats._count)} />
         <StatCard
           label="Avg mentor rating"
           value={mentorAvg === null ? "—" : mentorAvg.toFixed(1)}
           tone="brand"
         />
-        <StatCard
-          label="Website ratings"
-          value={String(websiteFeedback.length)}
-        />
+        <StatCard label="Website ratings" value={String(siteStats._count)} />
         <StatCard
           label="Avg website rating"
           value={siteAvg === null ? "—" : siteAvg.toFixed(1)}
@@ -46,20 +58,21 @@ export default async function AdminFeedbackPage() {
         />
       </StatCardGrid>
 
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
-          Mentor feedback
-        </h2>
-        <MentorFeedbackList
-          feedback={mentorFeedback}
-          mentorBase="/admin/mentors"
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-ink">Mentor feedback</h2>
+        <MentorFeedbackList groups={groups} mentorBase="/admin/mentors" />
+        <Pagination
+          basePath="/admin/feedback"
+          params={{ site: rawSite }}
+          page={page}
+          pageSize={MENTORS_PER_PAGE}
+          total={mentors}
+          unit="rated mentors"
         />
       </section>
 
-      <section>
-        <h2 className="mb-2 text-base font-semibold text-ink">
-          Website feedback
-        </h2>
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-ink">Website feedback</h2>
         {websiteFeedback.length === 0 ? (
           <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
             No website feedback yet.
@@ -85,6 +98,15 @@ export default async function AdminFeedbackPage() {
             ))}
           </ul>
         )}
+        <Pagination
+          basePath="/admin/feedback"
+          params={{ page: rawPage }}
+          page={sitePage}
+          pageSize={SITE_PER_PAGE}
+          total={siteStats._count}
+          unit="website ratings"
+          param="site"
+        />
       </section>
     </div>
   );

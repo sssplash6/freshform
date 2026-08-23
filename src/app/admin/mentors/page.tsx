@@ -2,29 +2,69 @@ import Link from "next/link";
 
 import { CreateMentorForm } from "@/components/forms/create-mentor-form";
 import { MentorList, type MentorListRow } from "@/components/forms/mentor-list";
+import {
+  PAGE_SIZE,
+  Pagination,
+  parsePage,
+} from "@/components/ui/pagination";
+import { SearchForm } from "@/components/ui/search-form";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
 
-export default async function AdminMentorsPage() {
-  const [mentors, programs, assignments] = await Promise.all([
-    prisma.user.findMany({
-      // Plain mentors plus dual-role admins who also mentor.
-      where: { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] },
-      orderBy: { createdAt: "asc" },
-    }),
-    programOptions(),
-    prisma.mentorAssignment.findMany({
-      include: { program: true, cohort: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+/** How many unregistered sign-ins to name before the list is just a count. */
+const UNASSIGNED_SHOWN = 10;
 
-  const unassigned = mentors.filter(
-    (m) => m.status === USER_STATUS.UNASSIGNED
-  );
+export default async function AdminMentorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const { q = "", page: rawPage } = await searchParams;
+  const query = q.trim();
+  const page = parsePage(rawPage);
+
+  // Plain mentors plus dual-role admins who also mentor.
+  const isMentor = { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] };
+  const where = query
+    ? {
+        AND: [
+          isMentor,
+          { OR: [{ name: { contains: query } }, { email: { contains: query } }] },
+        ],
+      }
+    : isMentor;
+
+  const [mentors, total, unassigned, unassignedCount, programs] =
+    await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.user.count({ where }),
+      // Its own query rather than a filter over the page: someone waiting to be
+      // registered must not be invisible because they sort onto page three.
+      prisma.user.findMany({
+        where: { AND: [isMentor, { status: USER_STATUS.UNASSIGNED }] },
+        orderBy: { createdAt: "asc" },
+        take: UNASSIGNED_SHOWN,
+      }),
+      prisma.user.count({
+        where: { AND: [isMentor, { status: USER_STATUS.UNASSIGNED }] },
+      }),
+      programOptions(),
+    ]);
+
+  // Only the pairings of the mentors actually on this page.
+  const assignments = await prisma.mentorAssignment.findMany({
+    where: { mentorId: { in: mentors.map((m) => m.id) } },
+    include: { program: true, cohort: true },
+    orderBy: { createdAt: "asc" },
+  });
+
   const programSelectOptions = toProgramOptions(programs);
-
   const programsWithCohorts = new Set(
     programs.filter((p) => p.cohorts.length > 0).map((p) => p.id)
   );
@@ -52,10 +92,10 @@ export default async function AdminMentorsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-ink">Mentors</h1>
 
-      {unassigned.length > 0 && (
+      {unassignedCount > 0 && (
         <div className="rounded-lg border border-accent/40 bg-accent-soft p-4">
           <h2 className="text-base font-semibold text-ink">
-            Awaiting assignment ({unassigned.length})
+            Awaiting assignment ({unassignedCount})
           </h2>
           <p className="mt-1 text-xs text-muted-fg">
             These mentors signed in before being registered. Edit one below to
@@ -75,6 +115,12 @@ export default async function AdminMentorsPage() {
               </li>
             ))}
           </ul>
+          {unassignedCount > unassigned.length && (
+            <p className="mt-1.5 text-xs text-muted-fg">
+              …and {unassignedCount - unassigned.length} more — search for them
+              below.
+            </p>
+          )}
         </div>
       )}
 
@@ -82,7 +128,30 @@ export default async function AdminMentorsPage() {
 
       <div className="space-y-3">
         <h2 className="text-base font-semibold text-ink">All mentors</h2>
-        <MentorList mentors={rows} programs={programSelectOptions} />
+        <SearchForm
+          action="/admin/mentors"
+          label="Find a mentor"
+          placeholder="Name or email"
+          defaultValue={query}
+        />
+        {rows.length === 0 ? (
+          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
+            {query
+              ? `No mentor matches “${query}”.`
+              : "No mentors registered yet."}
+          </p>
+        ) : (
+          <>
+            <MentorList mentors={rows} programs={programSelectOptions} />
+            <Pagination
+              basePath="/admin/mentors"
+              params={{ q: query }}
+              page={page}
+              total={total}
+              unit="mentors"
+            />
+          </>
+        )}
       </div>
     </div>
   );

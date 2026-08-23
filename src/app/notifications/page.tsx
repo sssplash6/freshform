@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Pagination, parsePage } from "@/components/ui/pagination";
 import { requireUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+
+/** A page of the feed. Deliberately generous — it is read by scrolling. */
+const PER_PAGE = 50;
 
 /** What this feed is for, in the words of the person reading it. */
 const BLURB: Record<string, string> = {
@@ -21,27 +25,40 @@ const BLURB: Record<string, string> = {
     "Every session your mentors log, every change to your hours, and deadlines before they pass.",
 };
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await requireUser();
+  const page = parsePage((await searchParams).page);
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: user.id },
-    include: {
-      actor: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          // Feeds the actor's PersonBadge; without it they'd show initials
-          // here while wearing their picture everywhere else.
-          avatarUpdatedAt: true,
+  // The feed used to stop dead at the hundredth notification with nothing to
+  // say so: older history simply did not exist as far as the page was
+  // concerned. It is paged now, and the unread badge counts every unread one
+  // rather than the unread ones that happened to be on screen.
+  const [notifications, total, unread] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId: user.id },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            // Feeds the actor's PersonBadge; without it they'd show initials
+            // here while wearing their picture everywhere else.
+            avatarUpdatedAt: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
-  const unread = notifications.filter((n) => !n.read).length;
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+    prisma.notification.count({ where: { userId: user.id } }),
+    prisma.notification.count({ where: { userId: user.id, read: false } }),
+  ]);
   const blurb = BLURB[user.role] ?? "Everything that changed for you.";
 
   return (
@@ -74,7 +91,18 @@ export default async function NotificationsPage() {
             {blurb} It all lands here, newest first.
           </EmptyState>
         ) : (
-          <NotificationList notifications={notifications} />
+          <>
+            <NotificationList notifications={notifications} />
+            <Pagination
+              basePath="/notifications"
+              params={{}}
+              page={page}
+              pageSize={PER_PAGE}
+              total={total}
+              unit="notifications"
+              className="border-t border-line px-4 py-3 sm:px-5"
+            />
+          </>
         )}
       </Panel>
 

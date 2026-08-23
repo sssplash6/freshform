@@ -10,9 +10,15 @@ import type { Prisma } from "@/generated/prisma/client";
  * (profiles + grouped sums over allocations and ACTIVE sessions), not one
  * query per student. allottedHours = sum of the student's per-mentor
  * allocations.
+ *
+ * `slice` narrows it to one page. The derived totals are then computed for that
+ * page only — which is the point: the grouped sums are keyed by the ids that
+ * came back, so a page of twenty-five students costs the same three queries
+ * whether the school has thirty students or three thousand.
  */
 export async function studentsWithHours(
-  where: Prisma.StudentProfileWhereInput = {}
+  where: Prisma.StudentProfileWhereInput = {},
+  slice?: { skip: number; take: number }
 ) {
   const profiles = await prisma.studentProfile.findMany({
     where,
@@ -22,6 +28,7 @@ export async function studentsWithHours(
       cohort: true,
     },
     orderBy: [{ program: { name: "asc" } }, { createdAt: "asc" }],
+    ...(slice ?? {}),
   });
   const ids = profiles.map((p) => p.id);
 

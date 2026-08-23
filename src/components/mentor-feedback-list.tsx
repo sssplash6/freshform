@@ -1,11 +1,25 @@
 import Link from "next/link";
 
-import { Rating, average } from "@/components/rating";
+import { Rating } from "@/components/rating";
 import type { MentorFeedback, StudentProfile, User } from "@/generated/prisma/client";
 
 type FeedbackRow = MentorFeedback & {
-  mentor: User;
   student: StudentProfile & { user: User };
+};
+
+/**
+ * One mentor's standing: their average and total over every rating they have
+ * ever had, and the most recent handful of comments.
+ *
+ * The average and the count come from the database rather than from `rows`,
+ * because `rows` is deliberately only the latest few. A page that read every
+ * rating ever written just to average five of them is the thing this replaces.
+ */
+export type MentorFeedbackGroup = {
+  mentor: User;
+  average: number;
+  total: number;
+  rows: FeedbackRow[];
 };
 
 /**
@@ -15,13 +29,13 @@ type FeedbackRow = MentorFeedback & {
  * have no such page.
  */
 export function MentorFeedbackList({
-  feedback,
+  groups,
   mentorBase,
 }: {
-  feedback: FeedbackRow[];
+  groups: MentorFeedbackGroup[];
   mentorBase?: string;
 }) {
-  if (feedback.length === 0) {
+  if (groups.length === 0) {
     return (
       <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
         No mentor feedback yet.
@@ -29,65 +43,60 @@ export function MentorFeedbackList({
     );
   }
 
-  const byMentor = new Map<string, FeedbackRow[]>();
-  for (const f of feedback) {
-    if (!byMentor.has(f.mentorId)) byMentor.set(f.mentorId, []);
-    byMentor.get(f.mentorId)!.push(f);
-  }
-
   return (
     <div className="space-y-4">
-      {[...byMentor.values()].map((rows) => {
-        const mentor = rows[0].mentor;
-        const avg = average(rows.map((r) => r.rating))!;
-        return (
-          <section
-            key={mentor.id}
-            className="rounded-xl border border-line bg-surface p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-ink">
-                  {mentorBase ? (
-                    <Link
-                      href={`${mentorBase}/${mentor.id}`}
-                      className="hover:text-brand"
-                    >
-                      {mentor.name ?? mentor.email}
-                    </Link>
-                  ) : (
-                    (mentor.name ?? mentor.email)
-                  )}
-                </h3>
-                <p className="text-xs text-muted-fg">{mentor.email}</p>
-              </div>
-              <div className="text-right text-sm">
-                <Rating value={Math.round(avg)} />
-                <p className="text-xs text-muted-fg">
-                  {avg.toFixed(1)} avg · {rows.length} rating
-                  {rows.length === 1 ? "" : "s"}
-                </p>
-              </div>
+      {groups.map(({ mentor, average, total, rows }) => (
+        <section
+          key={mentor.id}
+          className="rounded-xl border border-line bg-surface p-4"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate font-medium text-ink">
+                {mentorBase ? (
+                  <Link
+                    href={`${mentorBase}/${mentor.id}`}
+                    className="hover:text-brand"
+                  >
+                    {mentor.name ?? mentor.email}
+                  </Link>
+                ) : (
+                  (mentor.name ?? mentor.email)
+                )}
+              </h3>
+              <p className="truncate text-xs text-muted-fg">{mentor.email}</p>
             </div>
-            <ul className="mt-3 space-y-2 border-t border-line/60 pt-3">
-              {rows.map((f) => (
-                <li key={f.id} className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <Rating value={f.rating} />
-                    <span className="text-xs text-muted-fg">
-                      by {f.student.user.name ?? f.student.user.email} ·{" "}
-                      {f.createdAt.toISOString().slice(0, 10)}
-                    </span>
-                  </div>
-                  {f.comment && (
-                    <p className="mt-0.5 text-muted-fg">{f.comment}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+            <div className="shrink-0 text-right text-sm">
+              <Rating value={Math.round(average)} />
+              <p className="text-xs text-muted-fg">
+                {average.toFixed(1)} avg · {total} rating
+                {total === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+          <ul className="mt-3 space-y-2 border-t border-line/60 pt-3">
+            {rows.map((f) => (
+              <li key={f.id} className="text-sm">
+                <div className="flex items-center gap-2">
+                  <Rating value={f.rating} />
+                  <span className="text-xs text-muted-fg">
+                    by {f.student.user.name ?? f.student.user.email} ·{" "}
+                    {f.createdAt.toISOString().slice(0, 10)}
+                  </span>
+                </div>
+                {f.comment && (
+                  <p className="mt-0.5 text-muted-fg">{f.comment}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+          {total > rows.length && (
+            <p className="mt-2 text-xs text-muted-fg">
+              Showing the {rows.length} most recent of {total}.
+            </p>
+          )}
+        </section>
+      ))}
     </div>
   );
 }

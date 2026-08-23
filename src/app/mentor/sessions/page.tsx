@@ -2,6 +2,7 @@ import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
+import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import {
   ATTENDANCE,
   ATTENDANCE_META,
@@ -29,6 +30,7 @@ export default async function MentorSessionsPage({
     program?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
   const user = await requireMentor();
@@ -37,20 +39,73 @@ export default async function MentorSessionsPage({
     program = "",
     from = "",
     to = "",
+    page: rawPage,
   } = await searchParams;
+  const page = parsePage(rawPage);
 
-  const sessions = await prisma.session.findMany({
-    where: { mentorId: user.id },
-    include: {
-      student: { include: { user: true, program: true, cohort: true } },
-      assignment: { select: { id: true, purpose: true } },
-    },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+  const fromDate = parseFilterDate(from);
+  const toDate = parseFilterDate(to);
+  const filtering = Boolean(student || program || fromDate || toDate);
+
+  // The filters are the WHERE clause, not a pass over everything this mentor
+  // ever logged: a few years of sessions is not a list to read into memory and
+  // sift in JavaScript, and the totals below have to describe the whole filtered
+  // set anyway — which only the database can answer once the page is a slice.
+  const where = {
+    mentorId: user.id,
+    ...(student ? { studentId: student } : {}),
+    ...(program ? { student: { programId: program } } : {}),
+    ...(fromDate || toDate
+      ? {
+          date: {
+            ...(fromDate ? { gte: fromDate } : {}),
+            ...(toDate ? { lte: toDate } : {}),
+          },
+        }
+      : {}),
+  };
+
+  const [sessions, total, everLogged, byAttendance, loggedStudentIds] =
+    await Promise.all([
+      prisma.session.findMany({
+        where,
+        include: {
+          student: { include: { user: true, program: true, cohort: true } },
+          assignment: { select: { id: true, purpose: true } },
+        },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.session.count({ where }),
+      prisma.session.count({ where: { mentorId: user.id } }),
+      // Totals over every session the filters match, page or no page.
+      prisma.session.groupBy({
+        by: ["attended"],
+        where: { ...where, status: SESSION_STATUS.ACTIVE },
+        _sum: { hours: true },
+        _count: true,
+      }),
+      // Filter choices come from the sessions themselves, so a mentor only ever
+      // sees students they actually logged sessions with.
+      prisma.session.groupBy({
+        by: ["studentId"],
+        where: { mentorId: user.id },
+      }),
+    ]);
+
+  const loggedStudents = await prisma.studentProfile.findMany({
+    where: { id: { in: loggedStudentIds.map((s) => s.studentId) } },
+    include: { user: true, program: true },
   });
 
-  // This mentor's goals per student, so a session's goal can be corrected here.
+  // This mentor's tasks for the students on THIS page, so a session's task can
+  // be corrected from its row.
   const myGoals = await prisma.assignment.findMany({
-    where: { mentorId: user.id },
+    where: {
+      mentorId: user.id,
+      studentId: { in: [...new Set(sessions.map((s) => s.studentId))] },
+    },
     orderBy: [{ studentId: "asc" }, { position: "asc" }],
     select: { id: true, studentId: true, purpose: true },
   });
@@ -61,60 +116,45 @@ export default async function MentorSessionsPage({
     goalsByStudent.set(g.studentId, list);
   }
 
-  // Filter choices come from the sessions themselves, so a mentor only ever
-  // sees students/programs they actually logged sessions with.
-  const studentOptions = [
-    ...new Map(
-      sessions.map((s) => [
-        s.studentId,
-        s.student.user.name ?? s.student.user.email,
-      ])
-    ),
-  ]
-    .map(([value, label]) => ({ value, label }))
+  const studentOptions = loggedStudents
+    .map((s) => ({
+      value: s.id,
+      label: s.user.name ?? s.user.email,
+      hint: s.program.name,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const programOptions = [
-    ...new Map(
-      sessions.map((s) => [s.student.programId, s.student.program.name])
-    ),
+    ...new Map(loggedStudents.map((s) => [s.programId, s.program.name])),
   ]
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const fromDate = parseFilterDate(from);
-  const toDate = parseFilterDate(to);
-  const filtering = Boolean(student || program || fromDate || toDate);
-  const filtered = sessions.filter((s) => {
-    if (student && s.studentId !== student) return false;
-    if (program && s.student.programId !== program) return false;
-    if (fromDate && s.date < fromDate) return false;
-    if (toDate && s.date > toDate) return false;
-    return true;
-  });
-
-  const activeFiltered = filtered.filter(
-    (s) => s.status === SESSION_STATUS.ACTIVE
+  const activeHours = byAttendance.reduce(
+    (sum, row) => sum + (row._sum.hours ?? 0),
+    0
   );
-  const totalActiveHours = activeFiltered.reduce((sum, s) => sum + s.hours, 0);
-  const totalMissedHours = activeFiltered
-    .filter((s) => !s.attended)
-    .reduce((sum, s) => sum + s.hours, 0);
+  const activeCount = byAttendance.reduce((sum, row) => sum + row._count, 0);
+  const missedHours = byAttendance
+    .filter((row) => !row.attended)
+    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
+
+  const params = { student, program, from, to };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-ink">My sessions</h1>
         <p className="mt-1.5 text-base text-muted-fg">
-          {formatHours(totalActiveHours)} active hours logged across{" "}
-          {activeFiltered.length} sessions
-          {totalMissedHours > 0
-            ? `, including ${formatHours(totalMissedHours)} missed to no-shows`
+          {formatHours(activeHours)} active hours logged across {activeCount}{" "}
+          sessions
+          {missedHours > 0
+            ? `, including ${formatHours(missedHours)} missed to no-shows`
             : ""}
           .
         </p>
       </div>
 
-      {sessions.length === 0 ? (
+      {everLogged === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No sessions logged yet.
         </p>
@@ -173,82 +213,97 @@ export default async function MentorSessionsPage({
             )}
           </form>
 
-          {filtered.length === 0 ? (
+          {sessions.length === 0 ? (
             <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
               No sessions match these filters.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
-                  <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Student</th>
-                    <th className="px-4 py-3 text-right">Hours</th>
-                    <th className="px-4 py-3">Task</th>
-                    <th className="px-4 py-3">Notes</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
-                  {filtered.map((s) => {
-                    const voided = s.status === SESSION_STATUS.VOIDED;
-                    return (
-                      <tr key={s.id} className={voided ? "opacity-50" : ""}>
-                        <td className="px-4 py-3 tabular-nums">
-                          {formatDate(s.date)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-ink">
-                            {s.student.user.name ?? s.student.user.email}
-                          </div>
-                          <div className="text-xs text-muted-fg">
-                            {s.student.program.name}
-                            {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {formatHours(s.hours)}
-                        </td>
-                        <td className="max-w-56 truncate px-4 py-3 text-plan-ink">
-                          {s.assignment?.purpose ?? "—"}
-                        </td>
-                        <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
-                          {s.note ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {voided ? (
-                            <Chip tone="gray">Voided</Chip>
-                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
-                            <Chip tone="green">Logged</Chip>
-                          ) : (
-                            <Chip tone={ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"}>
-                              {ATTENDANCE_META[attendanceOf(s)].label}
-                            </Chip>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {!voided && (
-                            <SessionRowActions
-                              session={{
-                                id: s.id,
-                                hours: s.hours,
-                                date: toDateInputValue(s.date),
-                                attendance: attendanceOf(s),
-                                note: s.note,
-                                assignmentId: s.assignmentId,
-                              }}
-                              goals={goalsByStudent.get(s.studentId) ?? []}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted-fg">
+                    <tr>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Student</th>
+                      <th className="px-4 py-3 text-right">Hours</th>
+                      <th className="px-4 py-3">Task</th>
+                      <th className="px-4 py-3">Notes</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line/60">
+                    {sessions.map((s) => {
+                      const voided = s.status === SESSION_STATUS.VOIDED;
+                      return (
+                        <tr key={s.id} className={voided ? "opacity-50" : ""}>
+                          <td className="px-4 py-3 tabular-nums">
+                            {formatDate(s.date)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-ink">
+                              {s.student.user.name ?? s.student.user.email}
+                            </div>
+                            <div className="text-xs text-muted-fg">
+                              {s.student.program.name}
+                              {s.student.cohort
+                                ? ` / ${s.student.cohort.name}`
+                                : ""}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {formatHours(s.hours)}
+                          </td>
+                          <td className="max-w-56 truncate px-4 py-3 text-plan-ink">
+                            {s.assignment?.purpose ?? "—"}
+                          </td>
+                          <td className="max-w-56 truncate px-4 py-3 text-muted-fg">
+                            {s.note ?? "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {voided ? (
+                              <Chip tone="gray">Voided</Chip>
+                            ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
+                              <Chip tone="green">Logged</Chip>
+                            ) : (
+                              <Chip
+                                tone={
+                                  ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"
+                                }
+                              >
+                                {ATTENDANCE_META[attendanceOf(s)].label}
+                              </Chip>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {!voided && (
+                              <SessionRowActions
+                                session={{
+                                  id: s.id,
+                                  hours: s.hours,
+                                  date: toDateInputValue(s.date),
+                                  attendance: attendanceOf(s),
+                                  note: s.note,
+                                  assignmentId: s.assignmentId,
+                                }}
+                                goals={goalsByStudent.get(s.studentId) ?? []}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination
+                basePath="/mentor/sessions"
+                params={params}
+                page={page}
+                total={total}
+                unit="sessions"
+              />
+            </>
           )}
         </>
       )}

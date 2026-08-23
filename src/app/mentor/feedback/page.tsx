@@ -1,5 +1,6 @@
-import { Rating, average } from "@/components/rating";
+import { Rating } from "@/components/rating";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 
@@ -7,14 +8,30 @@ import { prisma } from "@/lib/prisma";
  * A mentor's own ratings. Anonymous by policy: no student names or
  * identifying details are shown here.
  */
-export default async function MentorFeedbackPage() {
+export default async function MentorFeedbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await requireMentor();
+  const page = parsePage((await searchParams).page);
 
-  const feedback = await prisma.mentorFeedback.findMany({
-    where: { mentorId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
-  const avg = average(feedback.map((f) => f.rating));
+  // The count and the average describe every rating; the list is one page of
+  // them. Averaging a whole table in JavaScript is what the aggregate is for.
+  const [feedback, stats] = await Promise.all([
+    prisma.mentorFeedback.findMany({
+      where: { mentorId: user.id },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.mentorFeedback.aggregate({
+      where: { mentorId: user.id },
+      _avg: { rating: true },
+      _count: true,
+    }),
+  ]);
+  const avg = stats._avg.rating;
 
   return (
     <div className="space-y-6">
@@ -26,7 +43,7 @@ export default async function MentorFeedbackPage() {
       </div>
 
       <StatCardGrid>
-        <StatCard label="Ratings received" value={String(feedback.length)} />
+        <StatCard label="Ratings received" value={String(stats._count)} />
         <StatCard
           label="Average rating"
           value={avg === null ? "—" : avg.toFixed(1)}
@@ -34,27 +51,37 @@ export default async function MentorFeedbackPage() {
         />
       </StatCardGrid>
 
-      {feedback.length === 0 ? (
+      {stats._count === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           No feedback yet.
         </p>
       ) : (
-        <ul className="space-y-2">
-          {feedback.map((f) => (
-            <li
-              key={f.id}
-              className="rounded-xl border border-line bg-surface p-3 text-sm"
-            >
-              <div className="flex items-center justify-between">
-                <Rating value={f.rating} />
-                <span className="text-xs text-muted-fg">
-                  {f.createdAt.toISOString().slice(0, 10)}
-                </span>
-              </div>
-              {f.comment && <p className="mt-1 text-muted-fg">{f.comment}</p>}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-2">
+            {feedback.map((f) => (
+              <li
+                key={f.id}
+                className="rounded-xl border border-line bg-surface p-3 text-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <Rating value={f.rating} />
+                  <span className="text-xs text-muted-fg">
+                    {f.createdAt.toISOString().slice(0, 10)}
+                  </span>
+                </div>
+                {f.comment && <p className="mt-1 text-muted-fg">{f.comment}</p>}
+              </li>
+            ))}
+          </ul>
+          <Pagination
+            basePath="/mentor/feedback"
+            params={{}}
+            page={page}
+            total={stats._count}
+            unit="ratings"
+            className="mt-3"
+          />
+        </>
       )}
     </div>
   );
