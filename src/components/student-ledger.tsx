@@ -1,10 +1,11 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
-import { HoursBreakdown } from "@/components/hours-breakdown";
+import { LedgerBoard } from "@/components/ledger-board";
 import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { formatDuration } from "@/lib/format";
+import type { ScheduledMeeting } from "@/lib/interviews";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
 
 type Totals = {
@@ -37,7 +38,7 @@ export function StudentLedger({
   manage = false,
   manageSessions,
   extraStats,
-  meetings,
+  scheduled,
   mentorBase,
 }: {
   sessions: LedgerSession[];
@@ -53,8 +54,8 @@ export function StudentLedger({
   manageSessions?: ManageMeetings;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
-  /** The scheduled-meetings panel, when the reader gets one. */
-  meetings?: React.ReactNode;
+  /** The rows behind that panel, so the board can show them beside the log. */
+  scheduled?: ScheduledMeeting[];
   /** Base path (admin only) that makes every mentor chip link to their page. */
   mentorBase?: string;
 }) {
@@ -93,18 +94,16 @@ export function StudentLedger({
         {extraStats}
       </StatCardGrid>
 
-      {/* The same figures as one bar: the strip says what each number is, this
-          says how they sit against each other. */}
-      <HoursBreakdown
-        allotted={totals.allotted}
-        completed={totals.completed}
-        missed={totals.missed}
-        forfeited={totals.forfeited}
-        remaining={totals.remaining}
-        extra={totals.extra}
+      {/* The spreadsheet's whole tab, side by side and read-only: this is what
+          the page is opened for. The panels under it are where rows get
+          changed. */}
+      <LedgerBoard
+        sessions={sessions}
+        meetings={scheduled ?? []}
+        assignments={assignments}
+        totals={totals}
+        mentorBase={mentorBase}
       />
-
-      {meetings}
 
       <MeetingsLog
         sessions={sessions}

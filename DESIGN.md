@@ -84,6 +84,13 @@ vocabulary throughout: mentor, student, task, program.
   expired, still yours — so the proportions answer the question the four
   figures used to make people subtract for. Hours logged out of plan sit
   outside the bar; they were never part of what was bought.
+- `LedgerBoard` is the tracking spreadsheet's whole tab on one screen: the
+  balance across the top, meetings down the left, the plan down the right. That
+  side-by-side is what the sheet did that stacked panels don't — the team reads
+  a student by holding both halves at once. It leads the student page and is
+  read-only; the panels under it are the workbench. Both of its columns split
+  the same way, ahead of us then behind us, because it is the same question
+  asked of meetings and of tasks.
 - `ScheduledMeetings` is the plan-tone counterpart to the amber meetings log.
   Coming and completed are shaped differently on purpose — a column of
   calendar leaves against a timeline of dots — so nobody has to read a heading

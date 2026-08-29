@@ -9,7 +9,6 @@ import { StatCard } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
 import { StudentFolderForm } from "@/components/forms/student-folder-form";
 import { StudentFolderLink } from "@/components/student-folder-link";
-import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StudentLedger } from "@/components/student-ledger";
 import { PersonChip } from "@/components/person-chip";
 import { TelegramHandle } from "@/components/telegram-handle";
@@ -165,13 +164,7 @@ export default async function AdminStudentDetailPage({
         manage
         manageSessions={{ isAdmin: true, tasksBySession }}
         mentorBase="/admin/mentors"
-        meetings={
-          <ScheduledMeetings
-            meetings={meetings}
-            view="staff"
-            emptyBody="Mentors book interviews from their own view of this student; anything they schedule shows here."
-          />
-        }
+        scheduled={meetings}
         extraStats={
           <>
             <StatCard
