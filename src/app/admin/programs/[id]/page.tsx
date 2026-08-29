@@ -14,7 +14,7 @@ import {
   USER_STATUS,
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
-import { formatDate, formatHours, formatMoney } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import {
   programTasks,
@@ -51,30 +51,30 @@ function flagsFor(
   if (student.user.status === USER_STATUS.PENDING) {
     flags.push({ label: "Pending approval", tone: "amber" });
   }
-  if (student.allottedHours === 0) {
-    flags.push({ label: "No hours allocated", tone: "amber" });
+  if (student.allottedMinutes === 0) {
+    flags.push({ label: "No time allocated", tone: "amber" });
   } else if (openTaskCount === 0) {
     flags.push({ label: "No open task", tone: "amber" });
   }
-  if (student.remainingHours < 0) {
+  if (student.remainingMinutes < 0) {
     flags.push({
-      label: `Overdrawn by ${formatHours(-student.remainingHours)}h`,
+      label: `Overdrawn by ${formatDuration(-student.remainingMinutes)}`,
       tone: "red",
     });
   }
-  if (student.forfeitedHours > 0) {
+  if (student.forfeitedMinutes > 0) {
     flags.push({
-      label: `${formatHours(student.forfeitedHours)}h expired unused`,
+      label: `${formatDuration(student.forfeitedMinutes)} expired unused`,
       tone: "red",
     });
   }
   if (
     nextDeadline &&
-    student.remainingHours > 0 &&
+    student.remainingMinutes > 0 &&
     nextDeadline.getTime() - Date.now() < DEADLINE_HORIZON
   ) {
     flags.push({
-      label: `${formatHours(student.remainingHours)}h due ${formatDate(nextDeadline)}`,
+      label: `${formatDuration(student.remainingMinutes)} due ${formatDate(nextDeadline)}`,
       tone: "amber",
     });
   }
@@ -116,10 +116,10 @@ export default async function AdminProgramOverviewPage({
   const meetingTasks = await taskOptionsForSessions(recentSessions);
   const totals = students.reduce(
     (acc, s) => ({
-      allotted: acc.allotted + s.allottedHours,
-      completed: acc.completed + s.completedHours,
-      missed: acc.missed + s.missedHours,
-      remaining: acc.remaining + s.remainingHours,
+      allotted: acc.allotted + s.allottedMinutes,
+      completed: acc.completed + s.completedMinutes,
+      missed: acc.missed + s.missedMinutes,
+      remaining: acc.remaining + s.remainingMinutes,
     }),
     { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
@@ -163,7 +163,7 @@ export default async function AdminProgramOverviewPage({
     { label: "Progress" },
   ];
   const shownTasks = openTasks.slice(0, 8);
-  const plannedHours = openTasks.reduce((sum, t) => sum + (t.hourLimit ?? 0), 0);
+  const plannedMinutes = openTasks.reduce((sum, t) => sum + (t.minuteLimit ?? 0), 0);
 
   return (
     <div className="space-y-8">
@@ -171,16 +171,16 @@ export default async function AdminProgramOverviewPage({
         <StatCard label="Students" value={String(students.length)} />
         <StatCard label="Mentors" value={String(mentorCount)} />
         <StatCard
-          label="Hours completed"
-          value={formatHours(totals.completed)}
+          label="Time completed"
+          value={formatDuration(totals.completed)}
           tone="brand"
         />
         {totals.missed > 0 && (
-          <StatCard label="Hours missed" value={formatHours(totals.missed)} />
+          <StatCard label="Time missed" value={formatDuration(totals.missed)} />
         )}
         <StatCard
-          label="Hours remaining"
-          value={formatHours(totals.remaining)}
+          label="Time remaining"
+          value={formatDuration(totals.remaining)}
           tone={totals.remaining < 0 ? "danger" : "default"}
         />
         {isMasters && (
@@ -233,18 +233,18 @@ export default async function AdminProgramOverviewPage({
       <Panel tone="plan">
         <PanelHeader
           tone="plan"
-          eyebrow="What the hours are for"
+          eyebrow="What the time is for"
           title="Tasks in flight"
           caption={
             openTasks.length === 0
               ? "Nothing open"
-              : `${openTasks.length} open · ${formatHours(plannedHours)} hours budgeted${openTasks.length > shownTasks.length ? ` · showing ${shownTasks.length}` : ""}`
+              : `${openTasks.length} open · ${formatDuration(plannedMinutes)} budgeted${openTasks.length > shownTasks.length ? ` · showing ${shownTasks.length}` : ""}`
           }
         />
         {openTasks.length === 0 ? (
           <EmptyState framed={false} title="No open tasks">
-            Tasks arrive with the hours an admin allocates for them — open a
-            student and allocate hours to start one.
+            Tasks arrive with the time an admin allocates for them — open a
+            student and allocate time to start one.
           </EmptyState>
         ) : (
           <Table framed={false} columns={taskColumns}>
@@ -280,24 +280,24 @@ export default async function AdminProgramOverviewPage({
                   label="Logged"
                   align="right"
                   className={`tabular-nums ${
-                    task.hourLimit != null && task.loggedHours > task.hourLimit
+                    task.minuteLimit != null && task.loggedMinutes > task.minuteLimit
                       ? "font-semibold text-amber-700"
-                      : task.loggedHours > 0
+                      : task.loggedMinutes > 0
                         ? "text-ink"
                         : "text-muted-fg"
                   }`}
                 >
-                  {task.loggedHours > 0 ? `${formatHours(task.loggedHours)}h` : "—"}
+                  {task.loggedMinutes > 0 ? formatMinutes(task.loggedMinutes) : "—"}
                 </Td>
                 <Td
                   label="Budget"
                   align="right"
                   className="font-semibold tabular-nums text-ink"
                 >
-                  {task.hourLimit == null ? (
+                  {task.minuteLimit == null ? (
                     <span className="font-normal text-muted-fg">—</span>
                   ) : (
-                    `${formatHours(task.hourLimit)}h`
+                    formatMinutes(task.minuteLimit)
                   )}
                 </Td>
                 <Td label="Progress">

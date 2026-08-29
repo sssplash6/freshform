@@ -34,7 +34,7 @@ export function TaskPicker({
   customName?: string;
   /** Tighter labels, for the narrow row-action popovers. */
   compact?: boolean;
-  /** Hours may be granted before the work has a name; this drops the asterisk
+  /** Time may be granted before the work has a name; this drops the asterisk
    *  and lets the picker be cleared back to nothing. */
   optional?: boolean;
   className?: string;
@@ -73,10 +73,10 @@ export function TaskPicker({
       <div className="mt-1">
         <Select
           name={name}
-          ariaLabel="Task these hours are for"
+          ariaLabel="Task this time is for"
           options={options}
           placeholder={
-            optional ? "Nothing named yet — decide later" : "What are these hours for?"
+            optional ? "Nothing named yet — decide later" : "What is this time for?"
           }
           required={!optional}
           onChange={setPicked}

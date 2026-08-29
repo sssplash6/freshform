@@ -29,11 +29,11 @@ import type { Prisma } from "@/generated/prisma/client";
 
 /** What the hours say this goal's progress is. */
 export function deriveProgress(
-  loggedHours: number,
-  hourLimit: number | null
+  loggedMinutes: number,
+  minuteLimit: number | null
 ): AssignmentProgress {
-  if (loggedHours <= 0) return ASSIGNMENT_PROGRESS.NOT_STARTED;
-  if (hourLimit != null && hourLimit > 0 && loggedHours >= hourLimit) {
+  if (loggedMinutes <= 0) return ASSIGNMENT_PROGRESS.NOT_STARTED;
+  if (minuteLimit != null && minuteLimit > 0 && loggedMinutes >= minuteLimit) {
     return ASSIGNMENT_PROGRESS.DONE;
   }
   return ASSIGNMENT_PROGRESS.IN_PROGRESS;
@@ -45,8 +45,8 @@ export type GoalSyncResult = {
   /** Null when the task has no mentor yet. */
   mentorId: string | null;
   studentId: string;
-  loggedHours: number;
-  hourLimit: number | null;
+  loggedMinutes: number;
+  minuteLimit: number | null;
   from: string;
   to: AssignmentProgress;
   changed: boolean;
@@ -71,11 +71,11 @@ export async function syncGoalProgress(
 
   const sum = await tx.session.aggregate({
     where: { assignmentId, status: SESSION_STATUS.ACTIVE },
-    _sum: { hours: true },
+    _sum: { minutes: true },
   });
   // Float noise: 0.1 + 0.2 must not read as short of a 0.3 limit.
-  const loggedHours = Number((sum._sum.hours ?? 0).toFixed(2));
-  const next = deriveProgress(loggedHours, goal.hourLimit);
+  const loggedMinutes = Number((sum._sum.minutes ?? 0).toFixed(2));
+  const next = deriveProgress(loggedMinutes, goal.minuteLimit);
 
   const changed = next !== goal.progress;
   if (changed) {
@@ -90,8 +90,8 @@ export async function syncGoalProgress(
     purpose: goal.purpose,
     mentorId: goal.mentorId,
     studentId: goal.studentId,
-    loggedHours,
-    hourLimit: goal.hourLimit,
+    loggedMinutes,
+    minuteLimit: goal.minuteLimit,
     from: goal.progress,
     to: next,
     changed,

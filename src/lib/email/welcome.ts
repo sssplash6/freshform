@@ -52,7 +52,7 @@ export function welcomeMail({
           {
             heading: "What happens next",
             lines: [
-              "You'll be notified as mentoring hours are allocated to you — then you can book sessions with your mentors.",
+              "You'll be notified as mentoring time are allocated to you — then you can book sessions with your mentors.",
               `Sign in any time with Google using this address (${to}).`,
             ],
           },
@@ -61,7 +61,7 @@ export function welcomeMail({
           {
             heading: "What this is",
             lines: [
-              "Freshman Academy tracks your mentoring here: which mentors are yours, how many hours you hold with each, and every session you use. Any change to your hours notifies you — nothing happens silently.",
+              "Freshman Academy tracks your mentoring here: which mentors are yours, how many hours you hold with each, and every session you use. Any change to your time notifies you — nothing happens silently.",
             ],
           },
           {
@@ -69,7 +69,7 @@ export function welcomeMail({
             lines: [
               `Sign in with Google using this address (${to}) — there's no password to set up.`,
               "You'll confirm your full name and Telegram username on your first sign-in.",
-              "You'll get a notification as soon as mentoring hours are allocated to you.",
+              "You'll get a notification as soon as mentoring time are allocated to you.",
             ],
           },
         ];

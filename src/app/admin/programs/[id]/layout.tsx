@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ProgramTabs } from "@/components/program-tabs";
 import { PageHeader } from "@/components/ui/page-header";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { monogramOf, programTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
@@ -40,7 +40,7 @@ export default async function ProgramLayout({
   ]);
 
   const mentorCount = new Set(mentorPairings.map((m) => m.mentorId)).size;
-  const remaining = students.reduce((sum, s) => sum + s.remainingHours, 0);
+  const remaining = students.reduce((sum, s) => sum + s.remainingMinutes, 0);
   const base = `/admin/programs/${program.id}`;
 
   return (
@@ -52,7 +52,7 @@ export default async function ProgramLayout({
         programTone={programTone(position)}
         monogram={monogramOf(program.name)}
         title={program.name}
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatHours(remaining)} hours still to deliver.`}
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} still to deliver.`}
       />
 
       <ProgramTabs

@@ -8,7 +8,7 @@ import { Meter } from "@/components/ui/meter";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { personTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
@@ -105,7 +105,7 @@ export default async function StudentBookPage() {
 
                   {remaining === undefined ? (
                     <p className="mt-4 text-sm text-muted-fg">
-                      No hours with this mentor yet.
+                      No time with this mentor yet.
                     </p>
                   ) : (
                     <>
@@ -116,10 +116,10 @@ export default async function StudentBookPage() {
                             remaining < 0 ? "text-red-700" : "text-ink",
                           )}
                         >
-                          {formatHours(remaining < 0 ? -remaining : remaining)}
+                          {formatDuration(remaining < 0 ? -remaining : remaining)}
                         </span>
                         <span className="ml-1.5 text-sm text-muted-fg">
-                          {remaining < 0 ? "hours over" : "hours you can book"}
+                          {remaining < 0 ? "over" : "you can book"}
                         </span>
                       </p>
                       {allocated > 0 && (
@@ -130,7 +130,7 @@ export default async function StudentBookPage() {
                           tone={remaining < 0 ? "danger" : "accent"}
                           ariaValueNow={used}
                           ariaValueMax={allocated}
-                          ariaLabel={`Hours used with ${a.mentor.name ?? a.mentor.email}`}
+                          ariaLabel={`Time used with ${a.mentor.name ?? a.mentor.email}`}
                         />
                       )}
                       {withMentor?.deadline && (

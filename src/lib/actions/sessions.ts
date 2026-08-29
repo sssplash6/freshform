@@ -12,22 +12,27 @@ import {
   attendanceOf,
   canActAsMentor,
   CHARGED_SESSION,
-  HOURS_KIND,
-  HOURS_KIND_META,
-  hoursKindFields,
-  hoursKindOf,
+  TIME_KIND,
+  TIME_KIND_META,
+  timeKindFields,
+  timeKindOf,
   INTERVIEW_STATUS,
   NOTIFICATION_TYPES,
   ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
-import { formatDate, formatHours, formatMeetingWhen } from "@/lib/format";
+import {
+  formatDate,
+  formatDuration,
+  formatMeetingWhen,
+  formatMinutes,
+} from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { adminIds, notify, notificationHref } from "@/lib/notify";
 import {
   parseDateField,
-  parseHoursField,
+  parseMinutesField,
   type ActionState,
 } from "@/lib/actions/shared";
 
@@ -49,7 +54,7 @@ function readAttendance(raw: FormDataEntryValue | null): string {
  */
 function readHoursKind(raw: FormDataEntryValue | null): string {
   const value = String(raw ?? "").trim().toUpperCase();
-  return value in HOURS_KIND_META ? value : HOURS_KIND.PLAN;
+  return value in TIME_KIND_META ? value : TIME_KIND.PLAN;
 }
 
 /** Midnight UTC on the day of `d`. */
@@ -125,9 +130,9 @@ async function remainingWith(
       mentorId,
       ...CHARGED_SESSION,
     },
-    _sum: { hours: true },
+    _sum: { minutes: true },
   });
-  return allocatedHours - (sum._sum.hours ?? 0);
+  return allocatedHours - (sum._sum.minutes ?? 0);
 }
 
 /**
@@ -185,19 +190,19 @@ export async function logSession(
   }
 
   const studentProfileId = String(formData.get("studentProfileId") ?? "");
-  const hoursParsed = parseHoursField(formData.get("hours"), {
+  const minutesParsed = parseMinutesField(formData.get("minutes"), {
     min: 0.01,
-    label: "Hours",
+    label: "Minutes",
   });
-  if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
+  if ("error" in minutesParsed) return { ok: false, error: minutesParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
   const note = String(formData.get("note") ?? "").trim() || null;
   const state = readAttendance(formData.get("attendance"));
   const fields = attendanceFields(state);
   const rescheduled = state === ATTENDANCE.RESCHEDULED;
-  const kind = readHoursKind(formData.get("hoursKind"));
-  const withinPlan = hoursKindFields(kind).withinPlan;
+  const kind = readHoursKind(formData.get("timeKind"));
+  const withinPlan = timeKindFields(kind).withinPlan;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: studentProfileId },
@@ -254,7 +259,7 @@ export async function logSession(
     return {
       ok: false,
       error: withinPlan
-        ? "No hours were allocated to you for that student, and they hold no unassigned hours you can log against. Ask an admin to allocate hours first, or log this as extra hours."
+        ? "No hours were allocated to you for that student, and they hold no unassigned time you can log against. Ask an admin to allocate time first, or log this as extra hours."
         : "You aren't assigned to that student's program, so you can't log hours for them.",
     };
   }
@@ -299,11 +304,11 @@ export async function logSession(
         studentId: profile.id,
         mentorId: mentor.id,
         assignmentId: goal?.id ?? null,
-        hours: hoursParsed.value,
+        minutes: minutesParsed.value,
         date: dateParsed.value,
         note,
         ...fields,
-        ...hoursKindFields(kind),
+        ...timeKindFields(kind),
       },
     });
 
@@ -337,15 +342,15 @@ export async function logSession(
       const freshPool = await tx.hourAllocation.findUnique({
         where: { id: pool.id },
       });
-      const available = freshPool?.hours ?? 0;
-      carved = Math.max(0, Math.min(available, hoursParsed.value));
-      poolAfter = Number((available - carved).toFixed(2));
+      const available = freshPool?.minutes ?? 0;
+      carved = Math.max(0, Math.min(available, minutesParsed.value));
+      poolAfter = available - carved;
       if (freshPool && carved > 0) {
         // Money stays banked on the pool row: amountPaid records what was paid
         // for the original grant, not who ended up delivering it.
         await tx.hourAllocation.update({
           where: { id: freshPool.id },
-          data: { hours: poolAfter },
+          data: { minutes: poolAfter },
         });
         // A double-submit can land here with the first carve's allocation
         // already created; the second tops it up instead of violating the
@@ -355,19 +360,19 @@ export async function logSession(
             studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
           },
         });
-        const mineBefore = mine?.hours ?? 0;
-        const mineAfter = Number((mineBefore + carved).toFixed(2));
+        const mineBefore = mine?.minutes ?? 0;
+        const mineAfter = mineBefore + carved;
         if (mine) {
           await tx.hourAllocation.update({
             where: { id: mine.id },
-            data: { hours: mineAfter },
+            data: { minutes: mineAfter },
           });
         } else {
           await tx.hourAllocation.create({
             data: {
               studentId: profile.id,
               mentorId: mentor.id,
-              hours: carved,
+              minutes: carved,
               deadline: freshPool.deadline,
             },
           });
@@ -380,15 +385,15 @@ export async function logSession(
               studentId: profile.id,
               mentorId: null,
               changedById: mentor.id,
-              oldHours: available,
-              newHours: poolAfter,
+              oldMinutes: available,
+              newMinutes: poolAfter,
             },
             {
               studentId: profile.id,
               mentorId: mentor.id,
               changedById: mentor.id,
-              oldHours: mineBefore,
-              newHours: mineAfter,
+              oldMinutes: mineBefore,
+              newMinutes: mineAfter,
             },
           ],
         });
@@ -414,12 +419,12 @@ export async function logSession(
       actorId: mentor.id,
       href: notificationHref.studentHome(),
       message: rescheduled
-        ? `${mentorLabel} recorded that your ${formatHours(hoursParsed.value)}-hour meeting on ${formatDate(dateParsed.value)}${forTask} was rescheduled. No hours were charged.`
+        ? `${mentorLabel} recorded that your ${formatMinutes(minutesParsed.value)} meeting on ${formatDate(dateParsed.value)}${forTask} was rescheduled. No time was charged.`
         : !withinPlan
-          ? `${mentorLabel} logged ${formatHours(hoursParsed.value)} extra hours on ${formatDate(dateParsed.value)}${toward} — work on top of your plan, so none of your hours were used.`
+          ? `${mentorLabel} logged ${formatDuration(minutesParsed.value)} extra hours on ${formatDate(dateParsed.value)}${toward} — work on top of your plan, so none of your time were used.`
           : state === ATTENDANCE.ABSENT
-            ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
-            : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
+            ? `${mentorLabel} recorded a ${formatMinutes(minutesParsed.value)} no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
+            : `${mentorLabel} logged a ${formatMinutes(minutesParsed.value)} session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
     });
 
     // Staff watch delivery across every program, so a logged session is news
@@ -431,16 +436,16 @@ export async function logSession(
       href: notificationHref.adminStudent(profile.id),
       message:
         (rescheduled
-          ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no hours charged.`
+          ? `${mentorLabel} rescheduled a ${formatMinutes(minutesParsed.value)} meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no time charged.`
           : !withinPlan
-            ? `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward} as EXTRA — outside the plan, so no allocation was charged.`
+            ? `${mentorLabel} logged ${formatMinutes(minutesParsed.value)} with ${studentName} on ${formatDate(dateParsed.value)}${toward} as EXTRA — outside the plan, so no allocation was charged.`
             : state === ATTENDANCE.ABSENT
-              ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
-              : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
+              ? `${mentorLabel} recorded a ${formatMinutes(minutesParsed.value)} no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
+              : `${mentorLabel} logged ${formatMinutes(minutesParsed.value)} with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
         // The hand-off is news an admin would otherwise reconstruct from the
         // allocation history: the pool chose its mentor.
         (carved > 0
-          ? ` The hours came out of the unassigned pool (${formatHours(poolAfter)} left in it).`
+          ? ` The time came out of the unassigned pool (${formatDuration(poolAfter)} left in it).`
           : ""),
     });
 
@@ -450,7 +455,7 @@ export async function logSession(
         type: NOTIFICATION_TYPES.GOAL_DONE,
         actorId: mentor.id,
         href: notificationHref.adminStudent(profile.id),
-        message: `"${synced.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
+        message: `"${synced.purpose}" for ${studentName} is complete: ${formatMinutes(synced.loggedMinutes)} of ${formatMinutes(synced.minuteLimit ?? 0)} planned hours logged.`,
       });
     }
     return { sync: synced, carved, poolAfter, meeting };
@@ -463,7 +468,7 @@ export async function logSession(
   // Tell the mentor what their own log just did to the task, so an automatic
   // status change is never a surprise they discover later.
   const goalNote = sync?.becameDone
-    ? ` "${sync.purpose}" hit its ${formatHours(sync.hourLimit ?? 0)}-hour limit and is now marked done.`
+    ? ` "${sync.purpose}" hit its ${formatMinutes(sync.minuteLimit ?? 0)} limit and is now marked done.`
     : sync?.changed
       ? ` "${sync.purpose}" is now in progress.`
       : "";
@@ -477,36 +482,36 @@ export async function logSession(
   if (!withinPlan) {
     return {
       ok: true,
-      message: `Logged as extra hours.${stateNote}${goalNote}${meetingNote} ${formatHours(hoursParsed.value)} hours on top of the plan, so ${studentName}'s balance is unchanged.`,
+      message: `Logged as extra time.${stateNote}${goalNote}${meetingNote} ${formatMinutes(minutesParsed.value)} on top of the plan, so ${studentName}'s balance is unchanged.`,
     };
   }
   if (rescheduled) {
     return {
       ok: true,
       message: pool
-        ? `Rescheduled meeting recorded — no hours charged, and ${studentName}'s unassigned pool is untouched.`
-        : `Rescheduled meeting recorded — no hours charged. ${studentName} still has ${formatHours(await remainingWith(profile.id, mentor.id, allocation!.hours))} hours left with you.`,
+        ? `Rescheduled meeting recorded — no time charged, and ${studentName}'s unassigned pool is untouched.`
+        : `Rescheduled meeting recorded — no time charged. ${studentName} still has ${formatDuration(await remainingWith(profile.id, mentor.id, allocation!.minutes))} left with you.`,
     };
   }
   if (pool) {
     // What the carve just did, in the mentor's terms: these hours are theirs
     // now, and here is what the pool still holds for whoever meets them next.
-    const short = Number((hoursParsed.value - carved).toFixed(2));
+    const short = Number((minutesParsed.value - carved).toFixed(2));
     return {
       ok: true,
       message:
         short > 0
-          ? `Session logged.${stateNote}${goalNote}${meetingNote} ${formatHours(carved)} unassigned hours moved to you — the pool came up ${formatHours(short)} short, so ${studentName} is overdrawn with you.`
-          : `Session logged.${stateNote}${goalNote}${meetingNote} ${formatHours(carved)} of ${studentName}'s unassigned hours moved to you; ${formatHours(poolAfter)} remain in the pool.`,
+          ? `Session logged.${stateNote}${goalNote}${meetingNote} ${formatDuration(carved)} unassigned minutes moved to you — the pool came up ${formatDuration(short)} short, so ${studentName} is overdrawn with you.`
+          : `Session logged.${stateNote}${goalNote}${meetingNote} ${formatDuration(carved)} of ${studentName}'s unassigned minutes moved to you; ${formatDuration(poolAfter)} remain in the pool.`,
     };
   }
-  const remaining = await remainingWith(profile.id, mentor.id, allocation!.hours);
+  const remaining = await remainingWith(profile.id, mentor.id, allocation!.minutes);
   return {
     ok: true,
     message:
       remaining < 0
-        ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
-        : `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
+        ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatDuration(-remaining)} with you.`
+        : `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatDuration(remaining)} left with you.`,
   };
 }
 
@@ -573,17 +578,17 @@ export async function editSession(
     };
   }
 
-  const hoursParsed = parseHoursField(formData.get("hours"), {
+  const minutesParsed = parseMinutesField(formData.get("minutes"), {
     min: 0.01,
-    label: "Hours",
+    label: "Minutes",
   });
-  if ("error" in hoursParsed) return { ok: false, error: hoursParsed.error };
+  if ("error" in minutesParsed) return { ok: false, error: minutesParsed.error };
   const dateParsed = parseDateField(formData.get("date"));
   if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
   const note = String(formData.get("note") ?? "").trim() || null;
   const state = readAttendance(formData.get("attendance"));
   const fields = attendanceFields(state);
-  const kind = readHoursKind(formData.get("hoursKind"));
+  const kind = readHoursKind(formData.get("timeKind"));
 
   // The task can be corrected here, but is not forced: sessions logged before
   // tasks existed have none, and re-picking one to fix a typo in the hours
@@ -602,11 +607,11 @@ export async function editSession(
     state === wasState ? "" : ` Now marked as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
   // Flipping this moves hours into or out of a balance, so it is stated plainly
   // rather than left for someone to notice in a total.
-  const wasKind = hoursKindOf(session);
+  const wasKind = timeKindOf(session);
   const kindNote =
     kind === wasKind
       ? ""
-      : kind === HOURS_KIND.EXTRA
+      : kind === TIME_KIND.EXTRA
         ? " These hours are now extra, on top of the plan — they no longer count against the allocation."
         : " These hours now count against the allocation.";
   const staff = await adminIds();
@@ -614,18 +619,18 @@ export async function editSession(
   const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
   const whose = session.mentorId === actor.id ? "a session" : `${mentorLabel}'s session`;
-  const change = `now ${formatHours(hoursParsed.value)} hours on ${formatDate(dateParsed.value)} (was ${formatHours(session.hours)} on ${formatDate(session.date)})`;
+  const change = `now ${formatMinutes(minutesParsed.value)} on ${formatDate(dateParsed.value)} (was ${formatMinutes(session.minutes)} on ${formatDate(session.date)})`;
 
   await prisma.$transaction(async (tx) => {
     await tx.session.update({
       where: { id: session.id },
       data: {
         assignmentId,
-        hours: hoursParsed.value,
+        minutes: minutesParsed.value,
         date: dateParsed.value,
         note,
         ...fields,
-        ...hoursKindFields(kind),
+        ...timeKindFields(kind),
       },
     });
 
@@ -704,14 +709,14 @@ export async function voidSession(
       type: NOTIFICATION_TYPES.SESSION_VOIDED,
       actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `${actorLabel} voided ${whose} ${formatHours(session.hours)}-hour session from ${formatDate(session.date)}. Those hours are back in the balance.`,
+      message: `${actorLabel} voided ${whose} ${formatMinutes(session.minutes)} session from ${formatDate(session.date)}. That time is back in the balance.`,
     });
     await notify(tx, {
       to: staff,
       type: NOTIFICATION_TYPES.SESSION_VOIDED,
       actorId: actor.id,
       href: notificationHref.adminStudent(session.studentId),
-      message: `${actorLabel} voided ${whose} ${formatHours(session.hours)}-hour session with ${studentName} from ${formatDate(session.date)}; the hours went back.`,
+      message: `${actorLabel} voided ${whose} ${formatMinutes(session.minutes)} session with ${studentName} from ${formatDate(session.date)}; the hours went back.`,
     });
   });
 
@@ -750,8 +755,8 @@ export async function deleteSession(
   const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
   const wasCharging = session.status === SESSION_STATUS.ACTIVE;
-  const what = `${formatHours(session.hours)}-hour session with ${mentorLabel} from ${formatDate(session.date)}`;
-  const hoursNote = wasCharging ? " Those hours are back in the balance." : "";
+  const what = `${formatMinutes(session.minutes)} session with ${mentorLabel} from ${formatDate(session.date)}`;
+  const hoursNote = wasCharging ? " That time is back in the balance." : "";
 
   await prisma.$transaction(async (tx) => {
     await tx.session.delete({ where: { id: session.id } });

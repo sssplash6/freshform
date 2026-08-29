@@ -3,7 +3,7 @@ import { StudentsTable } from "@/components/students-table";
 import { LinkButton } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
 
@@ -34,10 +34,10 @@ export async function ProgramDashboard({
 
   const overall = students.reduce(
     (acc, s) => ({
-      allotted: acc.allotted + s.allottedHours,
-      completed: acc.completed + s.completedHours,
-      missed: acc.missed + s.missedHours,
-      remaining: acc.remaining + s.remainingHours,
+      allotted: acc.allotted + s.allottedMinutes,
+      completed: acc.completed + s.completedMinutes,
+      missed: acc.missed + s.missedMinutes,
+      remaining: acc.remaining + s.remainingMinutes,
     }),
     { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
@@ -58,18 +58,18 @@ export async function ProgramDashboard({
 
       <StatCardGrid>
         <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Hours allotted" value={formatHours(overall.allotted)} />
+        <StatCard label="Time allotted" value={formatDuration(overall.allotted)} />
         <StatCard
-          label="Hours completed"
-          value={formatHours(overall.completed)}
+          label="Time completed"
+          value={formatDuration(overall.completed)}
           tone="brand"
         />
         {overall.missed > 0 && (
-          <StatCard label="Hours missed" value={formatHours(overall.missed)} />
+          <StatCard label="Time missed" value={formatDuration(overall.missed)} />
         )}
         <StatCard
-          label="Hours remaining"
-          value={formatHours(overall.remaining)}
+          label="Time remaining"
+          value={formatDuration(overall.remaining)}
           tone={overall.remaining < 0 ? "danger" : "default"}
         />
       </StatCardGrid>
@@ -83,7 +83,7 @@ export async function ProgramDashboard({
             </LinkButton>
           }
         >
-          Add students by email to start tracking their mentoring hours.
+          Add students by email to start tracking their mentoring time.
         </EmptyState>
       ) : (
         [...byCohort.entries()].map(([cohortName, cohortStudents]) => (

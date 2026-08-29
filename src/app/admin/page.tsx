@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { monogramOf, programTone } from "@/lib/person-tone";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import {
   recentMeetings,
@@ -24,10 +24,10 @@ import {
 function totals(students: StudentWithHours[]) {
   return students.reduce(
     (acc, s) => ({
-      allotted: acc.allotted + s.allottedHours,
-      completed: acc.completed + s.completedHours,
-      missed: acc.missed + s.missedHours,
-      remaining: acc.remaining + s.remainingHours,
+      allotted: acc.allotted + s.allottedMinutes,
+      completed: acc.completed + s.completedMinutes,
+      missed: acc.missed + s.missedMinutes,
+      remaining: acc.remaining + s.remainingMinutes,
     }),
     { allotted: 0, completed: 0, missed: 0, remaining: 0 }
   );
@@ -76,7 +76,7 @@ export default async function AdminHomePage() {
       <PageHeader
         eyebrow="Freshman Academy"
         title="Cross-program dashboard"
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatHours(overall.remaining)} mentoring hours still to deliver.`}
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatDuration(overall.remaining)} mentoring time still to deliver.`}
         actions={
           unassignedMentors > 0 && (
             <Link
@@ -97,7 +97,7 @@ export default async function AdminHomePage() {
           title={`Pending approvals (${pending.length})`}
         >
           These students signed up themselves. Approve them, then allocate
-          their hours from mentors in their program via “Manage”.
+          their time from mentors in their program via “Manage”.
           <ul className="mt-3 divide-y divide-amber-200">
             {pending.map((s) => (
               <li
@@ -132,18 +132,18 @@ export default async function AdminHomePage() {
 
       <StatCardGrid>
         <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Hours allotted" value={formatHours(overall.allotted)} />
+        <StatCard label="Time allotted" value={formatDuration(overall.allotted)} />
         <StatCard
-          label="Hours completed"
-          value={formatHours(overall.completed)}
+          label="Time completed"
+          value={formatDuration(overall.completed)}
           tone="brand"
         />
         {overall.missed > 0 && (
-          <StatCard label="Hours missed" value={formatHours(overall.missed)} />
+          <StatCard label="Time missed" value={formatDuration(overall.missed)} />
         )}
         <StatCard
-          label="Hours remaining"
-          value={formatHours(overall.remaining)}
+          label="Time remaining"
+          value={formatDuration(overall.remaining)}
           tone={overall.remaining < 0 ? "danger" : "default"}
         />
       </StatCardGrid>
@@ -184,12 +184,12 @@ export default async function AdminHomePage() {
                   { label: "Mentors", value: String(mentorCount) },
                   {
                     label: "Hrs left",
-                    value: formatHours(pt.remaining),
+                    value: formatDuration(pt.remaining),
                     danger: pt.remaining < 0,
                     brand: pt.remaining >= 0,
                   },
                 ]}
-                caption={`${formatHours(pt.completed)} of ${formatHours(pt.allotted)} hours completed`}
+                caption={`${formatDuration(pt.completed)} of ${formatDuration(pt.allotted)} completed`}
                 completion={{ completed: pt.completed, allotted: pt.allotted }}
                 tone={programTone(positionById.get(p.id) ?? 0)}
                 monogram={monogramOf(p.name)}

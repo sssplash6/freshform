@@ -16,13 +16,13 @@ const PER_PAGE = 50;
 /** What this feed is for, in the words of the person reading it. */
 const BLURB: Record<string, string> = {
   ADMIN:
-    "Sessions your mentors log, tasks they finish, signups waiting on approval, and every change to a student's hours.",
-  DEPT_LEADER: "Changes to students and hours across your program.",
-  SALES: "Changes to students and hours across your program.",
+    "Sessions your mentors log, tasks they finish, signups waiting on approval, and every change to a student's time.",
+  DEPT_LEADER: "Changes to students and across your program.",
+  SALES: "Changes to students and across your program.",
   MENTOR:
-    "Tasks an admin assigns you, hours granted for your students, and deadlines coming up.",
+    "Tasks an admin assigns you, time granted for your students, and deadlines coming up.",
   STUDENT:
-    "Every session your mentors log, every change to your hours, and deadlines before they pass.",
+    "Every session your mentors log, every change to your time, and deadlines before they pass.",
 };
 
 export default async function NotificationsPage({
@@ -109,7 +109,7 @@ export default async function NotificationsPage({
       {/* The signed-in way to switch the weekly email off. The other way is the
           link in its own footer, for people who won't sign in to say stop. */}
       <Panel tone="neutral">
-        <PanelHeader eyebrow="By email" title="Weekly hours summary" />
+        <PanelHeader eyebrow="By email" title="Weekly time summary" />
         <form
           action={setWeeklyDigest}
           className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-4 sm:p-5"
@@ -124,8 +124,8 @@ export default async function NotificationsPage({
             <span className="text-muted-fg">
               Every Monday, a summary of the hours{" "}
               {user.role === ROLES.STUDENT
-                ? "you used last week and the hours you still have to book, with their deadlines."
-                : "delivered last week and the hours still to deliver, with the deadlines they fall under."}
+                ? "you used last week and the time you still have to book, with their deadlines."
+                : "delivered last week and the still to deliver, with the deadlines they fall under."}
             </span>
           </label>
           <Button type="submit" variant="secondary" size="sm">

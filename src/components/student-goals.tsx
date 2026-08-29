@@ -3,7 +3,7 @@ import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { ASSIGNMENT_PROGRESS } from "@/lib/constants";
-import { formatHours } from "@/lib/format";
+import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { LedgerAssignment } from "@/lib/queries";
 
@@ -13,7 +13,7 @@ import type { LedgerAssignment } from "@/lib/queries";
  * know what is being worked on for them, by whom, and how far along it is.
  *
  * So: cards grouped by state rather than a table sorted by position, each with a
- * bar that fills as hours are logged. Active work leads, finished work collapses
+ * bar that fills as time is logged. Active work leads, finished work collapses
  * to a quiet checked line at the bottom, because a plan reads forward.
  */
 function GoalCard({
@@ -23,9 +23,9 @@ function GoalCard({
   goal: LedgerAssignment;
   index: number;
 }) {
-  const limit = goal.hourLimit ?? 0;
-  const pct = limit > 0 ? Math.min(100, Math.round((goal.loggedHours / limit) * 100)) : 0;
-  const over = limit > 0 && goal.loggedHours > limit;
+  const limit = goal.minuteLimit ?? 0;
+  const pct = limit > 0 ? Math.min(100, Math.round((goal.loggedMinutes / limit) * 100)) : 0;
+  const over = limit > 0 && goal.loggedMinutes > limit;
 
   return (
     <li
@@ -66,15 +66,15 @@ function GoalCard({
           </div>
           <p className="mt-2 text-xs text-muted-fg">
             <span className="font-semibold tabular-nums text-ink">
-              {formatHours(goal.loggedHours)}
+              {formatMinutes(goal.loggedMinutes)}
             </span>{" "}
-            of {formatHours(limit)} hours so far
+            of {formatMinutes(limit)} so far
           </p>
         </>
       ) : (
         <p className="mt-3 text-xs text-muted-fg">
-          {goal.loggedHours > 0
-            ? `${formatHours(goal.loggedHours)} hours so far`
+          {goal.loggedMinutes > 0
+            ? `${formatMinutes(goal.loggedMinutes)} so far`
             : "Not started yet"}
         </p>
       )}
@@ -113,7 +113,7 @@ export function StudentGoals({
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="Nothing planned yet">
           Your team sets out the work they&apos;ll do with you here — essays,
-          recommendation letters, reviews — each with the hours it should take.
+          recommendation letters, reviews — each with the time it should take.
         </EmptyState>
       ) : (
         <div className="space-y-5 px-4 py-4 sm:px-5">
@@ -168,7 +168,7 @@ export function StudentGoals({
                     </span>
                     {g.mentor && <PersonChip person={g.mentor} size="sm" />}
                     <span className="text-xs tabular-nums text-muted-fg">
-                      {formatHours(g.loggedHours)}h
+                      {formatMinutes(g.loggedMinutes)}
                     </span>
                   </li>
                 ))}

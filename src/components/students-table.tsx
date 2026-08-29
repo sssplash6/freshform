@@ -6,7 +6,7 @@ import { TelegramHandle } from "@/components/telegram-handle";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import type { StudentWithHours } from "@/lib/queries";
 
 /**
@@ -87,28 +87,28 @@ export function StudentsTable({
             )}
           </Td>
           <Td label="Allotted" align="right" className="tabular-nums">
-            {formatHours(s.allottedHours)}
+            {formatDuration(s.allottedMinutes)}
           </Td>
           <Td label="Completed" align="right" className="tabular-nums">
-            {formatHours(s.completedHours)}
+            {formatDuration(s.completedMinutes)}
           </Td>
           <Td
             label="Missed"
             align="right"
             className={`tabular-nums ${
-              s.missedHours > 0 ? "text-amber-700" : "text-muted-fg"
+              s.missedMinutes > 0 ? "text-amber-700" : "text-muted-fg"
             }`}
           >
-            {s.missedHours > 0 ? formatHours(s.missedHours) : "—"}
+            {s.missedMinutes > 0 ? formatDuration(s.missedMinutes) : "—"}
           </Td>
           <Td
             label="Remaining"
             align="right"
             className={`font-medium tabular-nums ${
-              s.remainingHours < 0 ? "text-red-700" : "text-ink"
+              s.remainingMinutes < 0 ? "text-red-700" : "text-ink"
             }`}
           >
-            {formatHours(s.remainingHours)}
+            {formatDuration(s.remainingMinutes)}
           </Td>
         </Tr>
       ))}

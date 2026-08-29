@@ -40,7 +40,12 @@ borders; a panel's color goes in a rule across its top and a tint in its header.
 
 ## Type and spacing
 
-Geist is the single product typeface. Numbers use tabular figures. Push scale
+Geist is the single product typeface. Numbers use tabular figures. Durations
+are minutes: one meeting or one task budget reads as a plain minute count
+("90 min"), and only roll-up totals — an allotment, a balance — split into hours
+and minutes ("18h 20m"), because nobody reads "1100 minutes remaining" as an
+amount of time. A figure always carries its own unit, so no label or suffix
+should repeat it. Push scale
 contrast: a page's `h1` and its lead statistic should be unmistakably larger
 than everything around them, and small-caps eyebrow labels should be genuinely
 small. Data stays dense enough for staff work without turning every statistic

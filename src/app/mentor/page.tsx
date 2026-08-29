@@ -22,7 +22,7 @@ import {
 import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorMeetings, recentMeetings } from "@/lib/queries";
@@ -90,7 +90,7 @@ function ProgramToggleIsland({
             Hrs done
           </dt>
           <dd className="text-xl font-bold tabular-nums text-accent-ink">
-            {formatHours(completed)}
+            {formatDuration(completed)}
           </dd>
         </div>
         <div>
@@ -102,7 +102,7 @@ function ProgramToggleIsland({
               remaining < 0 ? "text-red-700" : "text-ink"
             }`}
           >
-            {formatHours(remaining)}
+            {formatDuration(remaining)}
           </dd>
         </div>
       </dl>
@@ -134,7 +134,7 @@ export default async function MentorHomePage({
     );
   }
 
-  // A mentor's students are the ones an admin allocated hours to FROM this
+  // A mentor's students are the ones an admin allocated time to FROM this
   // mentor — plus, further down, students in their programs holding unassigned
   // hours, which any mentor may log against (logging carves them to whoever
   // did the meeting).
@@ -172,14 +172,14 @@ export default async function MentorHomePage({
       prisma.session.groupBy({
         by: ["studentId", "attended"],
         where: { mentorId: user.id, ...CHARGED_SESSION },
-        _sum: { hours: true },
+        _sum: { minutes: true },
       }),
       // The headline tallies, which DO want the out-of-plan hours — they are
       // hours this mentor delivered — so the split comes back in the grouping.
       prisma.session.groupBy({
         by: ["attended", "withinPlan"],
         where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
-        _sum: { hours: true },
+        _sum: { minutes: true },
         _count: true,
       }),
       recentMeetings({ mentorId: user.id, take: 8 }),
@@ -219,7 +219,7 @@ export default async function MentorHomePage({
   const usedByStudent = new Map<string, number>();
   const missedByStudent = new Map<string, number>();
   for (const s of mySessionSums) {
-    const hrs = s._sum.hours ?? 0;
+    const hrs = s._sum.minutes ?? 0;
     usedByStudent.set(s.studentId, (usedByStudent.get(s.studentId) ?? 0) + hrs);
     if (!s.attended) {
       missedByStudent.set(
@@ -234,18 +234,18 @@ export default async function MentorHomePage({
     const expired = deadlinePassed(a.deadline);
     return {
       profile: a.student,
-      allocated: a.hours,
+      allocated: a.minutes,
       completed: used - missed,
       missed,
       // Unused hours on an expired allocation are forfeited.
-      remaining: expired ? Math.min(0, a.hours - used) : a.hours - used,
+      remaining: expired ? Math.min(0, a.minutes - used) : a.minutes - used,
       deadline: a.deadline,
       expired,
       approved: a.student.user.status === USER_STATUS.ACTIVE,
     };
   });
 
-  // Students in this mentor's programs holding live unassigned hours: loggable
+  // Students in this mentor's programs holding live unassigned time: loggable
   // by any mentor there, so they belong on the list before any are theirs.
   // Skipped once the mentor holds their own allocation (their row already
   // exists — their sessions draw their own hours, not the pool), and once the
@@ -259,7 +259,7 @@ export default async function MentorHomePage({
   const mine = new Set(allocations.map((a) => a.studentId));
   for (const p of poolAllocations) {
     if (mine.has(p.studentId)) continue;
-    if (p.hours <= 0 || deadlinePassed(p.deadline)) continue;
+    if (p.minutes <= 0 || deadlinePassed(p.deadline)) continue;
     if (!inScope(p.student)) continue;
     students.push({
       profile: p.student,
@@ -270,20 +270,20 @@ export default async function MentorHomePage({
       deadline: p.deadline,
       expired: false,
       approved: p.student.user.status === USER_STATUS.ACTIVE,
-      pool: p.hours,
+      pool: p.minutes,
     });
   }
 
   // Mentor-wide delivered vs. missed hours and total session count.
-  const deliveredHours = delivered
+  const deliveredMinutes = delivered
     .filter((d) => d.withinPlan && d.attended)
-    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
-  const missedHours = delivered
+    .reduce((sum, d) => sum + (d._sum.minutes ?? 0), 0);
+  const missedMinutes = delivered
     .filter((d) => d.withinPlan && !d.attended)
-    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
-  const extraHours = delivered
+    .reduce((sum, d) => sum + (d._sum.minutes ?? 0), 0);
+  const extraMinutes = delivered
     .filter((d) => !d.withinPlan)
-    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
+    .reduce((sum, d) => sum + (d._sum.minutes ?? 0), 0);
   const sessionsLogged = delivered.reduce((sum, d) => sum + d._count, 0);
 
   // One toggle island per assigned program, plus "all programs".
@@ -347,17 +347,17 @@ export default async function MentorHomePage({
         <StatCard label="Students" value={String(students.length)} />
         <StatCard label="Sessions logged" value={String(sessionsLogged)} />
         <StatCard
-          label="Hours delivered"
-          value={formatHours(deliveredHours)}
+          label="Time delivered"
+          value={formatDuration(deliveredMinutes)}
           tone="brand"
         />
-        {missedHours > 0 && (
-          <StatCard label="Hours missed" value={formatHours(missedHours)} />
+        {missedMinutes > 0 && (
+          <StatCard label="Time missed" value={formatDuration(missedMinutes)} />
         )}
-        {extraHours > 0 && (
+        {extraMinutes > 0 && (
           <StatCard
-            label="Hours beyond plan"
-            value={formatHours(extraHours)}
+            label="Time beyond plan"
+            value={formatDuration(extraMinutes)}
             tone="muted"
           />
         )}
@@ -408,8 +408,8 @@ export default async function MentorHomePage({
       {visible.length === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           {selected
-            ? "No students have hours allocated with you in this program yet."
-            : "No students have hours allocated with you yet. An admin assigns those."}
+            ? "No students have time allocated with you in this program yet."
+            : "No students have time allocated with you yet. An admin assigns those."}
         </p>
       ) : (
         [...byProgram.entries()].map(([programId, group]) => (
@@ -420,9 +420,9 @@ export default async function MentorHomePage({
               title={group.name}
               caption={`${group.students.length} student${
                 group.students.length === 1 ? "" : "s"
-              } · ${formatHours(
+              } · ${formatDuration(
                 group.students.reduce((sum, s) => sum + s.remaining, 0),
-              )} hours remaining with you`}
+              )} remaining with you`}
             />
             <Table columns={studentColumns} framed={false}>
               {group.students.map((s, i) => (
@@ -441,7 +441,7 @@ export default async function MentorHomePage({
                         {!s.approved && <Chip tone="amber">Pending approval</Chip>}
                         {s.pool != null && (
                           <Chip tone="gray">
-                            {formatHours(s.pool)}h unassigned
+                            {formatDuration(s.pool)} unassigned
                           </Chip>
                         )}
                       </span>
@@ -469,10 +469,10 @@ export default async function MentorHomePage({
                     align="right"
                     className="tabular-nums"
                   >
-                    {formatHours(s.allocated)}
+                    {formatDuration(s.allocated)}
                   </Td>
                   <Td label="Completed" align="right" className="tabular-nums">
-                    {formatHours(s.completed)}
+                    {formatDuration(s.completed)}
                   </Td>
                   <Td
                     label="Missed"
@@ -481,7 +481,7 @@ export default async function MentorHomePage({
                       s.missed > 0 ? "text-amber-700" : "text-muted-fg"
                     }`}
                   >
-                    {s.missed > 0 ? formatHours(s.missed) : "—"}
+                    {s.missed > 0 ? formatDuration(s.missed) : "—"}
                   </Td>
                   <Td
                     label="Remaining"
@@ -490,7 +490,7 @@ export default async function MentorHomePage({
                       s.remaining < 0 ? "text-red-700" : "text-ink"
                     }`}
                   >
-                    {formatHours(s.remaining)}
+                    {formatDuration(s.remaining)}
                   </Td>
                   <Td label="Use by">
                     <Deadline deadline={s.deadline} />
@@ -533,8 +533,8 @@ export default async function MentorHomePage({
             label: s.profile.user.name ?? s.profile.user.email,
             hint:
               s.pool != null
-                ? `${formatHours(s.pool)}h unassigned — logging makes them yours · ${s.profile.program.name} · ${s.profile.user.email}`
-                : `${formatHours(s.remaining)}h left with you · ${s.profile.program.name} · ${s.profile.user.email}`,
+                ? `${formatDuration(s.pool)} unassigned — logging makes them yours · ${s.profile.program.name} · ${s.profile.user.email}`
+                : `${formatDuration(s.remaining)} left with you · ${s.profile.program.name} · ${s.profile.user.email}`,
             goals: goalsByStudent.get(s.profile.id) ?? [],
           }))}
       />

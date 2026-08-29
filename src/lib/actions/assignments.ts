@@ -12,11 +12,11 @@ import {
   NOTIFICATION_TYPES,
   ROLES,
 } from "@/lib/constants";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { notify, notificationHref } from "@/lib/notify";
 import { parseTaskField } from "@/lib/tasks";
-import { parseHoursField, type ActionState } from "@/lib/actions/shared";
+import { parseMinutesField, type ActionState } from "@/lib/actions/shared";
 
 /**
  * The plan half of a student's ledger: which mentor is doing what task, with
@@ -42,7 +42,7 @@ function parseFields(
   | { error: string }
   | {
       purpose: string;
-      hourLimit: number | null;
+      minuteLimit: number | null;
       deadline: string | null;
       note: string | null;
       progress: string;
@@ -59,12 +59,12 @@ function parseFields(
 
   // Blank means "not budgeted yet", which is a normal state for a row an admin
   // is still thinking about — only a non-empty value has to be a valid number.
-  const rawLimit = String(formData.get("hourLimit") ?? "").trim();
-  let hourLimit: number | null = null;
+  const rawLimit = String(formData.get("minuteLimit") ?? "").trim();
+  let minuteLimit: number | null = null;
   if (rawLimit) {
-    const parsed = parseHoursField(rawLimit, { min: 0, label: "The hour limit" });
+    const parsed = parseMinutesField(rawLimit, { min: 0, label: "The hour limit" });
     if ("error" in parsed) return { error: parsed.error };
-    hourLimit = parsed.value;
+    minuteLimit = parsed.value;
   }
 
   // Free text on purpose: the team writes both "August 7" and "March-May".
@@ -85,7 +85,7 @@ function parseFields(
 
   return {
     purpose,
-    hourLimit,
+    minuteLimit,
     deadline: deadline || null,
     note: note || null,
     progress,
@@ -147,7 +147,7 @@ export async function updateAssignment(
       href: notificationHref.mentorStudent(existing.studentId),
       message:
         mentorId === existing.mentorId
-          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.hourLimit != null ? ` — now ${formatHours(fields.hourLimit)} hours` : ""}${fields.deadline ? `, due ${fields.deadline}` : ""}.`
+          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.minuteLimit != null ? ` — now ${formatDuration(fields.minuteLimit)}` : ""}${fields.deadline ? `, due ${fields.deadline}` : ""}.`
           : `"${fields.purpose}" for ${studentName} was reassigned.`,
     });
   });

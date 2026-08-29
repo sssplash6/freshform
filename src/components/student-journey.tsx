@@ -8,7 +8,7 @@ import {
   chargesAllocation,
   SESSION_STATUS,
 } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes } from "@/lib/format";
 import { personTone } from "@/lib/person-tone";
 import { cn } from "@/lib/cn";
 import type { LedgerSession } from "@/lib/queries";
@@ -30,10 +30,10 @@ import type { LedgerSession } from "@/lib/queries";
  */
 export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
   const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
-  const total = active.filter(chargesAllocation).reduce((sum, s) => sum + s.hours, 0);
+  const total = active.filter(chargesAllocation).reduce((sum, s) => sum + s.minutes, 0);
   const extra = active
     .filter((s) => !s.withinPlan)
-    .reduce((sum, s) => sum + s.hours, 0);
+    .reduce((sum, s) => sum + s.minutes, 0);
 
   return (
     <Panel tone="log">
@@ -44,8 +44,8 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
         caption={
           active.length === 0
             ? undefined
-            : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(total)} hours${
-                extra > 0 ? ` · ${formatHours(extra)} extra` : ""
+            : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatDuration(total)}${
+                extra > 0 ? ` · ${formatDuration(extra)} extra` : ""
               }`
         }
       />
@@ -99,7 +99,7 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                           : "font-semibold text-accent-ink",
                       )}
                     >
-                      {formatHours(s.hours)}h
+                      {formatMinutes(s.minutes)}
                     </span>
                   </div>
 
@@ -121,14 +121,14 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                       ) : (
                         <>
                           {attendanceOf(s) === ATTENDANCE.RESCHEDULED ? (
-                            <Chip tone="gray">Rescheduled, no hours charged</Chip>
+                            <Chip tone="gray">Rescheduled, no time charged</Chip>
                           ) : attendanceOf(s) === ATTENDANCE.LATE ? (
                             <Chip tone="amber">You came late</Chip>
                           ) : attendanceOf(s) === ATTENDANCE.ABSENT ? (
                             <Chip tone="amber">Missed, hours still charged</Chip>
                           ) : null}
                           {!s.withinPlan && (
-                            <Chip tone="green">Extra — none of your hours used</Chip>
+                            <Chip tone="green">Extra — none of your used</Chip>
                           )}
                         </>
                       )}

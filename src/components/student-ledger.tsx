@@ -4,7 +4,7 @@ import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
 
 type Totals = {
@@ -13,7 +13,7 @@ type Totals = {
   missed: number;
   forfeited: number;
   remaining: number;
-  /** Hours delivered outside the plan — charged to no allocation. */
+  /** Time delivered outside the plan — charged to no allocation. */
   extra: number;
 };
 
@@ -61,33 +61,32 @@ export function StudentLedger({
   return (
     <div className="space-y-6">
       <StatCardGrid>
-        <StatCard label="Hours allotted" value={formatHours(totals.allotted)} />
+        <StatCard label="Time allotted" value={formatDuration(totals.allotted)} />
         <StatCard
-          label="Hours completed"
-          value={formatHours(totals.completed)}
+          label="Time completed"
+          value={formatDuration(totals.completed)}
           tone="brand"
         />
         {totals.missed > 0 && (
-          <StatCard label="Missed" value={formatHours(totals.missed)} />
+          <StatCard label="Missed" value={formatDuration(totals.missed)} />
         )}
         {totals.forfeited > 0 && (
           <StatCard
             label="Expired unused"
-            value={formatHours(totals.forfeited)}
+            value={formatDuration(totals.forfeited)}
             tone="danger"
           />
         )}
         {totals.extra > 0 && (
           <StatCard
             label="Extra, beyond plan"
-            value={formatHours(totals.extra)}
+            value={formatDuration(totals.extra)}
             tone="muted"
           />
         )}
         <StatCard
-          label="Hours remaining"
-          value={formatHours(totals.remaining)}
-          suffix="h"
+          label="Time remaining"
+          value={formatDuration(totals.remaining)}
           tone={totals.remaining < 0 ? "danger" : "default"}
           lead
         />
@@ -119,7 +118,7 @@ export function StudentLedger({
         mentors={mentors}
         openTasksByMentor={openTasksByMentor}
         showAmountPaid={showAmountPaid}
-        hoursAllotted={totals.allotted}
+        minutesAllotted={totals.allotted}
         manage={manage}
         mentorBase={mentorBase}
       />

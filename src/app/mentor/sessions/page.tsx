@@ -8,11 +8,11 @@ import {
   ATTENDANCE,
   ATTENDANCE_META,
   attendanceOf,
-  hoursKindOf,
+  timeKindOf,
   SESSION_STATUS,
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
-import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -85,7 +85,7 @@ export default async function MentorSessionsPage({
       prisma.session.groupBy({
         by: ["attended", "withinPlan"],
         where: { ...where, status: SESSION_STATUS.ACTIVE },
-        _sum: { hours: true },
+        _sum: { minutes: true },
         _count: true,
       }),
       // Filter choices come from the sessions themselves, so a mentor only ever
@@ -134,23 +134,23 @@ export default async function MentorSessionsPage({
   // Hours charged vs. hours given: an out-of-plan session is time this mentor
   // spent, so it counts in the session tally, but it drew nobody's balance
   // down and so is stated apart from the hours total.
-  const activeHours = byAttendance
+  const activeMinutes = byAttendance
     .filter((row) => row.withinPlan)
-    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
-  const extraHours = byAttendance
+    .reduce((sum, row) => sum + (row._sum.minutes ?? 0), 0);
+  const extraMinutes = byAttendance
     .filter((row) => !row.withinPlan)
-    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
+    .reduce((sum, row) => sum + (row._sum.minutes ?? 0), 0);
   const activeCount = byAttendance.reduce((sum, row) => sum + row._count, 0);
-  const missedHours = byAttendance
+  const missedMinutes = byAttendance
     .filter((row) => row.withinPlan && !row.attended)
-    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
+    .reduce((sum, row) => sum + (row._sum.minutes ?? 0), 0);
 
   const params = { student, program, from, to };
 
   const columns: Column[] = [
     { label: "Date" },
     { label: "Student" },
-    { label: "Hours", align: "right" },
+    { label: "Duration", align: "right" },
     { label: "Task" },
     { label: "Notes" },
     { label: "Status" },
@@ -162,13 +162,13 @@ export default async function MentorSessionsPage({
       <div>
         <h1 className="text-2xl font-bold text-ink">My sessions</h1>
         <p className="mt-1.5 text-base text-muted-fg">
-          {formatHours(activeHours)} active hours logged across {activeCount}{" "}
+          {formatDuration(activeMinutes)} active hours logged across {activeCount}{" "}
           sessions
-          {missedHours > 0
-            ? `, including ${formatHours(missedHours)} missed to no-shows`
+          {missedMinutes > 0
+            ? `, including ${formatDuration(missedMinutes)} missed to no-shows`
             : ""}
-          {extraHours > 0
-            ? `, plus ${formatHours(extraHours)} given outside the plan`
+          {extraMinutes > 0
+            ? `, plus ${formatDuration(extraMinutes)} given outside the plan`
             : ""}
           .
         </p>
@@ -256,13 +256,13 @@ export default async function MentorSessionsPage({
                           {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
                         </span>
                       </Td>
-                      <Td label="Hours" align="right" className="tabular-nums">
+                      <Td label="Duration" align="right" className="tabular-nums">
                         <span
                           className={
                             s.withinPlan ? undefined : "text-muted-fg line-through"
                           }
                         >
-                          {formatHours(s.hours)}
+                          {formatMinutes(s.minutes)}
                         </span>
                       </Td>
                       <Td
@@ -302,10 +302,10 @@ export default async function MentorSessionsPage({
                           <SessionRowActions
                             session={{
                               id: s.id,
-                              hours: s.hours,
+                              minutes: s.minutes,
                               date: toDateInputValue(s.date),
                               attendance: attendanceOf(s),
-                              hoursKind: hoursKindOf(s),
+                              timeKind: timeKindOf(s),
                               note: s.note,
                               assignmentId: s.assignmentId,
                             }}

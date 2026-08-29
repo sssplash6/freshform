@@ -7,17 +7,28 @@ export type ActionState =
   | { ok: false; error: string }
   | null;
 
-/** Parse a decimal-hours form field. Returns an error string or the value. */
-export function parseHoursField(
+/**
+ * Parse a whole-minutes form field. Returns an error string or the value.
+ *
+ * Whole minutes only: the ledger stores integers so that sums are exact, and
+ * "22.5 minutes" is not a thing anybody means. A decimal is rejected rather
+ * than silently rounded — a mentor who typed 1.5 meant an hour and a half and
+ * needs to be told the box now wants 90.
+ */
+export function parseMinutesField(
   raw: FormDataEntryValue | null,
   { min, label }: { min: number; label: string }
 ): { value: number } | { error: string } {
-  const n = Number.parseFloat(String(raw ?? "").trim());
-  if (!Number.isFinite(n)) return { error: `${label} must be a number.` };
+  const text = String(raw ?? "").trim();
+  const n = Number(text);
+  if (!text || !Number.isFinite(n)) return { error: `${label} must be a number of minutes.` };
+  if (!Number.isInteger(n)) {
+    return { error: `${label} must be whole minutes — 90, not 1.5.` };
+  }
   if (n < min) return { error: `${label} must be at least ${min}.` };
-  if (n > 10000) return { error: `${label} is implausibly large.` };
-  // Avoid float noise like 0.30000000000000004 accumulating in sums.
-  return { value: Number(n.toFixed(2)) };
+  // 600000 minutes is a little over a year of continuous meetings.
+  if (n > 600000) return { error: `${label} is implausibly large.` };
+  return { value: n };
 }
 
 /** Parse a required YYYY-MM-DD date field to a UTC-midnight Date. */

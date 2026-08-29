@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorOverview, mentorPrograms } from "@/lib/queries";
@@ -75,12 +75,12 @@ export default async function AdminMentorDetailPage({
   const name = mentor.name ?? mentor.email;
   const rated = feedback._count > 0 && feedback._avg.rating != null;
   const shownMeetings = overview.sessions.slice(0, LOG_LIMIT);
-  const loggedHours = totals.delivered + totals.missed;
+  const loggedMinutes = totals.delivered + totals.missed;
 
   const logCaption =
     totals.sessions === 0
       ? `Nothing logged over ${win.label}`
-      : `${totals.sessions} meeting${totals.sessions === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours${
+      : `${totals.sessions} meeting${totals.sessions === 1 ? "" : "s"} · ${formatDuration(loggedMinutes)}${
           overview.sessions.length > shownMeetings.length
             ? ` · showing the ${LOG_LIMIT} most recent`
             : ""
@@ -117,7 +117,7 @@ export default async function AdminMentorDetailPage({
             </span>
           }
           // Deliberately just who they are and since when. The student count and
-          // the hours still to deliver are read off the stat strip below, and a
+          // the still to deliver are read off the stat strip below, and a
           // banner that repeats them makes the same number look like two facts.
           subtitle={
             <>
@@ -159,7 +159,7 @@ export default async function AdminMentorDetailPage({
       <Panel tone="total">
         <PanelHeader
           tone="total"
-          eyebrow="Hours"
+          eyebrow="Time"
           title="Delivery record"
           caption={`Delivered and missed cover ${win.label}; allocated and remaining are balances as of today`}
         />
@@ -179,19 +179,19 @@ export default async function AdminMentorDetailPage({
           </p>
           <StatCardGrid framed={false} className="pt-4">
             <StatCard
-              label="Hours delivered"
-              value={formatHours(totals.delivered)}
+              label="Time delivered"
+              value={formatDuration(totals.delivered)}
               tone="brand"
               lead
             />
             <StatCard label="Meetings" value={String(totals.sessions)} />
             {totals.missed > 0 && (
-              <StatCard label="Hours missed" value={formatHours(totals.missed)} />
+              <StatCard label="Time missed" value={formatDuration(totals.missed)} />
             )}
             <StatCard label="Students" value={String(totals.students)} />
             <StatCard
-              label="Hours remaining"
-              value={formatHours(totals.remaining)}
+              label="Time remaining"
+              value={formatDuration(totals.remaining)}
               tone={totals.remaining < 0 ? "danger" : "default"}
             />
             {rated && (
@@ -210,8 +210,8 @@ export default async function AdminMentorDetailPage({
           </p>
         </div>
         {overview.byProgram.length === 0 ? (
-          <EmptyState framed={false} title="No hours here yet">
-            Once this mentor holds a student&apos;s hours or logs a session,
+          <EmptyState framed={false} title="No time here yet">
+            Once this mentor holds a student&apos;s time or logs a session,
             each program they work in gets a line here.
           </EmptyState>
         ) : (
@@ -257,7 +257,7 @@ export default async function AdminMentorDetailPage({
                           tone={row.remaining < 0 ? "danger" : "accent"}
                           ariaValueNow={gone}
                           ariaValueMax={row.allocated}
-                          ariaLabel={`Hours used in ${row.name}`}
+                          ariaLabel={`Time used in ${row.name}`}
                         />
                       )}
                     </Td>
@@ -276,7 +276,7 @@ export default async function AdminMentorDetailPage({
                       align="right"
                       className="font-semibold tabular-nums text-ink"
                     >
-                      {formatHours(row.delivered)}
+                      {formatDuration(row.delivered)}
                     </Td>
                     <Td
                       label="Missed"
@@ -285,10 +285,10 @@ export default async function AdminMentorDetailPage({
                         row.missed > 0 ? "text-amber-700" : "text-muted-fg"
                       }`}
                     >
-                      {row.missed > 0 ? formatHours(row.missed) : "—"}
+                      {row.missed > 0 ? formatDuration(row.missed) : "—"}
                     </Td>
                     <Td label="Allocated" align="right" className="tabular-nums">
-                      {formatHours(row.allocated)}
+                      {formatDuration(row.allocated)}
                     </Td>
                     <Td
                       label="Remaining"
@@ -297,7 +297,7 @@ export default async function AdminMentorDetailPage({
                         row.remaining < 0 ? "text-red-700" : "text-ink"
                       }`}
                     >
-                      {formatHours(row.remaining)}
+                      {formatDuration(row.remaining)}
                     </Td>
                   </Tr>
                 );
@@ -307,14 +307,14 @@ export default async function AdminMentorDetailPage({
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas px-4 py-3 text-xs sm:px-5">
               <span className="text-muted-fg">
                 <span className="font-semibold tabular-nums text-ink">
-                  {formatHours(totals.delivered)}
+                  {formatDuration(totals.delivered)}
                 </span>{" "}
-                hours delivered over {win.label}
+                delivered over {win.label}
                 {totals.missed > 0 && (
                   <>
                     {" · "}
                     <span className="font-semibold tabular-nums text-amber-700">
-                      {formatHours(totals.missed)}
+                      {formatDuration(totals.missed)}
                     </span>{" "}
                     missed
                   </>
@@ -322,18 +322,18 @@ export default async function AdminMentorDetailPage({
               </span>
               <span className="text-muted-fg">
                 <span className="font-semibold tabular-nums text-ink">
-                  {formatHours(totals.remaining)}
+                  {formatDuration(totals.remaining)}
                 </span>{" "}
                 of{" "}
                 <span className="font-semibold tabular-nums text-ink">
-                  {formatHours(totals.allocated)}
+                  {formatDuration(totals.allocated)}
                 </span>{" "}
-                allocated hours still to deliver
+                allocated time still to deliver
                 {totals.forfeited > 0 && (
                   <>
                     {" · "}
                     <span className="font-semibold tabular-nums text-red-700">
-                      {formatHours(totals.forfeited)}
+                      {formatDuration(totals.forfeited)}
                     </span>{" "}
                     expired unused
                   </>
@@ -359,13 +359,13 @@ export default async function AdminMentorDetailPage({
       <Panel tone="total">
         <PanelHeader
           tone="total"
-          eyebrow="Holding hours from this mentor"
+          eyebrow="Holding time from this mentor"
           title="Students"
           caption="Current balances — the period above doesn't move these"
         />
         {overview.students.length === 0 ? (
           <EmptyState framed={false} title="No students yet">
-            An admin allocates a student&apos;s hours from a mentor on the
+            An admin allocates a student&apos;s time from a mentor on the
             student&apos;s own page; those students appear here.
           </EmptyState>
         ) : (
@@ -403,10 +403,10 @@ export default async function AdminMentorDetailPage({
                   </Td>
                 )}
                 <Td label="Allocated" align="right" className="tabular-nums">
-                  {formatHours(s.allocated)}
+                  {formatDuration(s.allocated)}
                 </Td>
                 <Td label="Completed" align="right" className="tabular-nums">
-                  {formatHours(s.completed)}
+                  {formatDuration(s.completed)}
                 </Td>
                 <Td
                   label="Missed"
@@ -415,7 +415,7 @@ export default async function AdminMentorDetailPage({
                     s.missed > 0 ? "text-amber-700" : "text-muted-fg"
                   }`}
                 >
-                  {s.missed > 0 ? formatHours(s.missed) : "—"}
+                  {s.missed > 0 ? formatDuration(s.missed) : "—"}
                 </Td>
                 <Td
                   label="Remaining"
@@ -424,7 +424,7 @@ export default async function AdminMentorDetailPage({
                     s.remaining < 0 ? "text-red-700" : "text-ink"
                   }`}
                 >
-                  {formatHours(s.remaining)}
+                  {formatDuration(s.remaining)}
                 </Td>
                 <Td label="Use by" className="whitespace-nowrap">
                   <Deadline deadline={s.deadline} />

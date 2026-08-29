@@ -14,7 +14,7 @@ const labelClass =
 
 /**
  * The one way hours reach a student: a grant, with the mentor and task
- * optionally named on it. Hours alone land in the student's unassigned pool
+ * optionally named on it. Time alone lands in the student's unassigned pool
  * until an admin decides who does what; naming a mentor puts them on that
  * mentor's ledger, and naming a task makes it that piece of work's budget.
  *
@@ -43,7 +43,7 @@ export function AssignTaskForm({
 
   return (
     <form action={action}>
-      <h3 className="text-sm font-semibold text-ink">Allocate hours</h3>
+      <h3 className="text-sm font-semibold text-ink">Allocate time</h3>
       <p className="mt-1 text-xs text-muted-fg">
         The hours go to the student. Name a mentor to put them on their
         ledger, and a task to make these hours its budget — or leave either for
@@ -77,22 +77,22 @@ export function AssignTaskForm({
           openTasks={openTasksByMentor[mentorId] ?? []}
           hint={
             (openTasksByMentor[mentorId]?.length ?? 0) > 0
-              ? "Picking a task they already have open adds these hours to its budget."
+              ? "Picking a task they already have open adds this time to its budget."
               : undefined
           }
         />
 
         <label className="min-w-0">
           <span className={labelClass}>
-            Hours <span className="text-accent-ink">*</span>
+            Minutes <span className="text-accent-ink">*</span>
           </span>
           <Input
-            name="hours"
+            name="minutes"
             type="number"
-            min="0.01"
-            step="any"
+            min="1"
+            step="1"
             required
-            placeholder="3"
+            placeholder="180"
             className="mt-1"
           />
         </label>
@@ -140,7 +140,7 @@ export function AssignTaskForm({
       </div>
 
       <div className="mt-3.5">
-        <SubmitButton pendingText="Allocating…">Allocate hours</SubmitButton>
+        <SubmitButton pendingText="Allocating…">Allocate time</SubmitButton>
       </div>
       <ActionFeedback state={state} />
     </form>

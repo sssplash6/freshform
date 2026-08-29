@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
-import { HoursKindPicker } from "@/components/forms/hours-kind-picker";
+import { TimeKindPicker } from "@/components/forms/time-kind-picker";
 import { PencilIcon } from "@/components/icons";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
@@ -39,13 +39,13 @@ export function SessionRowActions({
 }: {
   session: {
     id: string;
-    hours: number;
+    minutes: number;
     date: string;
     /** One of the four states in lib/constants.ts ATTENDANCE. */
     attendance: string;
-    /** PLAN or EXTRA — see HOURS_KIND. Correctable, since a mis-tick here moves
+    /** PLAN or EXTRA — see TIME_KIND. Correctable, since a mis-tick here moves
      *  hours into or out of the student's balance. */
-    hoursKind: string;
+    timeKind: string;
     note: string | null;
     assignmentId: string | null;
   };
@@ -176,14 +176,14 @@ export function SessionRowActions({
 
               <div className="flex gap-2">
                 <label className={`${labelClass} w-20 shrink-0`}>
-                  Hours
+                  Minutes
                   <input
-                    name="hours"
+                    name="minutes"
                     type="number"
-                    min="0.01"
-                    step="any"
+                    min="1"
+                    step="1"
                     required
-                    defaultValue={session.hours}
+                    defaultValue={session.minutes}
                     className={inputClass}
                   />
                 </label>
@@ -212,7 +212,7 @@ export function SessionRowActions({
 
               <AttendancePicker defaultValue={session.attendance} compact />
 
-              <HoursKindPicker defaultValue={session.hoursKind} compact />
+              <TimeKindPicker defaultValue={session.timeKind} compact />
 
               <SubmitButton size="sm" pendingText="Saving…">
                 Save changes

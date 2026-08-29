@@ -9,7 +9,7 @@ export type Column = { label?: ReactNode; align?: "right" };
  * and — below `sm` — no table at all.
  *
  * A phone cannot show nine columns. It could scroll them sideways, and that is
- * what this did: the student's name stayed visible while their hours, their
+ * what this did: the student's name stayed visible while their time, their
  * deadline and every action sat off the right edge, reachable only by a swipe
  * nothing on screen suggested. So under `sm` each row becomes a small stack of
  * labelled lines — every field on screen, in reading order, no swipe. Above it,

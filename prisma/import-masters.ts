@@ -78,7 +78,13 @@ const prisma = new PrismaClient({ adapter });
 
 const log = (line = "") => console.log(line);
 /** Same rounding the app's own hour fields use, so sums stay clean. */
-const hours = (n: number) => Number(n.toFixed(2));
+/**
+ * The sheet's decimal hours as the whole minutes the ledger stores. Same
+ * conversion the durations_in_minutes migration used on the existing rows, so a
+ * re-import lines up with what is already there rather than landing a minute
+ * out.
+ */
+const toMinutes = (n: number) => Math.round(n * 60);
 const notes: string[] = [];
 const note = (line: string) => notes.push(line);
 
@@ -440,8 +446,8 @@ async function main() {
           t.mentorId === mentor.id &&
           t.purpose === purpose &&
           (t.deadline ?? "") === (task.deadline ?? "") &&
-          (t.hourLimit ?? null) ===
-            (task.hourLimit == null ? null : hours(task.hourLimit))
+          (t.minuteLimit ?? null) ===
+            (task.hourLimit == null ? null : toMinutes(task.hourLimit))
       );
       if (already) {
         skippedTasks += 1;
@@ -450,12 +456,12 @@ async function main() {
 
       log(
         `  + task  ${purpose.slice(0, 44).padEnd(44)} ${mentor.label.padEnd(20)}` +
-          `${task.hourLimit != null ? `${task.hourLimit}h` : "—"}`.padEnd(6) +
+          `${task.hourLimit != null ? `${toMinutes(task.hourLimit)}m` : "—"}`.padEnd(6) +
           `${(task.deadline ?? "—").padEnd(12)} ${state.progress}${state.pinned ? " (pinned)" : ""}`
       );
       if (combined) log(`          note: ${combined.slice(0, 110)}`);
       if (purpose === UNTITLED) {
-        note(`${fullName}: ${task.hourLimit ?? 0}h with ${mentor.label} had no purpose written in the sheet — imported as "${UNTITLED}"`);
+        note(`${fullName}: ${toMinutes(task.hourLimit ?? 0)} min with ${mentor.label} had no purpose written in the sheet — imported as "${UNTITLED}"`);
       }
 
       if (WRITE && profile) {
@@ -464,7 +470,7 @@ async function main() {
             studentId: profile.id,
             mentorId: mentor.id,
             purpose,
-            hourLimit: task.hourLimit == null ? null : hours(task.hourLimit),
+            minuteLimit: task.hourLimit == null ? null : toMinutes(task.hourLimit),
             deadline: task.deadline,
             note: combined,
             progress: state.progress,
@@ -497,7 +503,7 @@ async function main() {
       const mentor = mentors.get(session.consultant)!;
       if (!session.date) {
         note(
-          `${fullName}: ${hours(session.hours)}h with ${mentor.label} has no date in the sheet (row ${session.row}) — NOT imported. ` +
+          `${fullName}: ${toMinutes(session.hours)} min with ${mentor.label} has no date in the sheet (row ${session.row}) — NOT imported. ` +
             `Fill the date in and re-run, or log it in the app.`
         );
         unimported += 1;
@@ -507,7 +513,7 @@ async function main() {
       const already = existingSessions.find(
         (s) =>
           s.mentorId === mentor.id &&
-          s.hours === hours(session.hours) &&
+          s.minutes === toMinutes(session.hours) &&
           s.date.getTime() === date.getTime() &&
           (s.note ?? "") === (session.note ?? "")
       );
@@ -519,14 +525,14 @@ async function main() {
       const attended = !isNoShow(session.note);
       const task = matchTask(session, importedTasks, mentor.id);
       log(
-        `  + ${session.date}  ${String(hours(session.hours)).padStart(5)}h  ${mentor.label.padEnd(20)}` +
+        `  + ${session.date}  ${String(toMinutes(session.hours)).padStart(5)}m  ${mentor.label.padEnd(20)}` +
           `${attended ? "" : "NO-SHOW  "}→ ${task ? task.purpose.slice(0, 34) : "(no task — link it in the app)"}`
       );
       if (!task) {
-        note(`${fullName}: ${session.date} ${hours(session.hours)}h with ${mentor.label} has no task — a mentor can attach one with "Correct"`);
+        note(`${fullName}: ${session.date} ${toMinutes(session.hours)} min with ${mentor.label} has no task — a mentor can attach one with "Correct"`);
       }
       if (!attended) {
-        note(`${fullName}: ${session.date} ${hours(session.hours)}h with ${mentor.label} imported as a no-show ("${session.note}")`);
+        note(`${fullName}: ${session.date} ${toMinutes(session.hours)} min with ${mentor.label} imported as a no-show ("${session.note}")`);
       }
 
       if (WRITE && profile) {
@@ -535,7 +541,7 @@ async function main() {
             studentId: profile.id,
             mentorId: mentor.id,
             assignmentId: task && !task.id.startsWith("(new)") ? task.id : null,
-            hours: hours(session.hours),
+            minutes: toMinutes(session.hours),
             date,
             attended,
             note: session.note,
@@ -580,7 +586,7 @@ async function main() {
         .filter((s) => mentors.get(s.consultant)!.label === mentorLabel)
         .reduce((sum, s) => sum + s.hours, 0);
       log(
-        `    ${mentorLabel.padEnd(20)} ${row.hours.toFixed(2)}h budgeted, ${loggedWith.toFixed(2)}h already logged` +
+        `    ${mentorLabel.padEnd(20)} ${toMinutes(row.hours)} min budgeted, ${toMinutes(loggedWith)} min already logged` +
           `   use by ${row.latest ?? "—"}`
       );
     }
@@ -619,7 +625,7 @@ async function main() {
   }
   log(
     WRITE
-      ? "\nNext: allocate each student's hours per mentor in the app (Master's → Students → open one → Allocate hours), using the numbers above."
+      ? "\nNext: allocate each student's minutes per mentor in the app (Master's → Students → open one → Allocate time), using the numbers above."
       : "\nNothing was written. Re-run with IMPORT_CONFIRM=WRITE to import."
   );
 }

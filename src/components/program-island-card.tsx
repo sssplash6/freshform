@@ -110,7 +110,7 @@ export function ProgramIslandCard({
           pct={Math.round((completion.completed / completion.allotted) * 100)}
           ariaValueNow={completion.completed}
           ariaValueMax={completion.allotted}
-          ariaLabel={`${name} hours completed`}
+          ariaLabel={`${name} completed`}
         />
       )}
       <p className="mt-3 text-xs text-muted-fg">{caption}</p>

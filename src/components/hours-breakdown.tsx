@@ -1,12 +1,12 @@
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 /**
- * Where a student's hours actually went, as one bar and its key.
+ * Where a student's time actually went, as one bar and its key.
  *
  * The ring answers "how many left?"; this answers the question underneath it,
  * which the numbers alone made people do arithmetic for: an allotment splits
- * into hours delivered, hours charged for meetings missed, hours lost to a
+ * into delivered, hours charged for meetings missed, hours lost to a
  * deadline, and hours still there. Reading those four out of a strip of stat
  * cards meant holding four figures at once and subtracting; as segments of one
  * bar the proportions are the answer.
@@ -19,7 +19,7 @@ import { cn } from "@/lib/cn";
 type Segment = {
   key: string;
   label: string;
-  hours: number;
+  minutes: number;
   /** Bar fill. */
   fill: string;
   /** Legend swatch + figure color. */
@@ -48,28 +48,28 @@ export function HoursBreakdown({
     {
       key: "completed",
       label: "Delivered",
-      hours: completed,
+      minutes: completed,
       fill: "bg-accent",
       ink: "text-accent-ink",
     },
     {
       key: "missed",
       label: "Missed, charged",
-      hours: missed,
+      minutes: missed,
       fill: "bg-amber-400",
       ink: "text-amber-700",
     },
     {
       key: "forfeited",
       label: "Expired unused",
-      hours: forfeited,
+      minutes: forfeited,
       fill: "bg-red-400",
       ink: "text-red-700",
     },
     {
       key: "remaining",
       label: overdrawn ? "Overdrawn" : "Still yours",
-      hours: overdrawn ? -remaining : remaining,
+      minutes: overdrawn ? -remaining : remaining,
       fill: overdrawn ? "bg-red-500" : "bg-line",
       ink: overdrawn ? "text-red-700" : "text-ink",
     },
@@ -81,7 +81,7 @@ export function HoursBreakdown({
   const drawn = completed + missed + forfeited;
   const span = Math.max(allotted, drawn + (overdrawn ? -remaining : 0), 0.01);
 
-  const shown = segments.filter((s) => s.hours > 0.001);
+  const shown = segments.filter((s) => s.minutes > 0.001);
 
   return (
     <div className={className}>
@@ -90,7 +90,7 @@ export function HoursBreakdown({
           <div
             key={s.key}
             className={cn("h-full", s.fill)}
-            style={{ width: `${(s.hours / span) * 100}%` }}
+            style={{ width: `${(s.minutes / span) * 100}%` }}
           />
         ))}
       </div>
@@ -103,8 +103,7 @@ export function HoursBreakdown({
             Allotted
           </dt>
           <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-ink">
-            {formatHours(allotted)}
-            <span className="ml-1 text-xs font-medium text-muted-fg">h</span>
+            {formatDuration(allotted)}
           </dd>
         </div>
         {shown.map((s) => (
@@ -122,8 +121,7 @@ export function HoursBreakdown({
                 s.ink,
               )}
             >
-              {formatHours(s.hours)}
-              <span className="ml-1 text-xs font-medium text-muted-fg">h</span>
+              {formatDuration(s.minutes)}
             </dd>
           </div>
         ))}
@@ -133,8 +131,7 @@ export function HoursBreakdown({
               Extra, beyond plan
             </dt>
             <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-ink">
-              {formatHours(extra)}
-              <span className="ml-1 text-xs font-medium text-muted-fg">h</span>
+              {formatDuration(extra)}
             </dd>
           </div>
         )}
@@ -142,7 +139,7 @@ export function HoursBreakdown({
 
       {extra > 0 && (
         <p className="mt-2.5 text-xs text-muted-fg">
-          {formatHours(extra)} hours were given on top of the allotment and drew
+          {formatDuration(extra)} were given on top of the allotment and drew
           none of it down, so they sit outside the bar.
         </p>
       )}

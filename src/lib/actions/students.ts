@@ -14,14 +14,14 @@ import {
   USER_STATUS,
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
-import { formatDate, formatHours, formatMoney } from "@/lib/format";
+import { formatDate, formatDuration, formatMoney } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { parseOptionalTaskField } from "@/lib/tasks";
 import {
   EMAIL_RE,
   normalizeEmail,
   parseDateField,
-  parseHoursField,
+  parseMinutesField,
   parseLinkField,
   type ActionState,
 } from "@/lib/actions/shared";
@@ -404,7 +404,7 @@ export async function setStudentEmail(
     return { ok: false, error: `${email} already has an account.` };
   }
 
-  // A real address means the weekly hours email can reach them, so it goes back
+  // A real address means the weekly summary email can reach them, so it goes back
   // to the app's default. A placeholder had it switched off on the way in.
   const reachable = !email.endsWith("@import.invalid");
   const firstRealAddress =
@@ -482,7 +482,7 @@ export async function moveStudent(
       type: NOTIFICATION_TYPES.ENROLLMENT_MOVED,
       actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `Your enrollment was moved from ${from} to ${to}. Your hours and session history came with you.`,
+      message: `Your enrollment was moved from ${from} to ${to}. Your time and session history came with you.`,
     });
   });
 
@@ -524,7 +524,7 @@ export async function deleteStudent(
   await prisma.$transaction(async (tx) => {
     await tx.hourAllotmentChange.deleteMany({ where: { studentId: profile.id } });
     await tx.hourAllocation.deleteMany({ where: { studentId: profile.id } });
-    // The tasks their hours bought. Nothing was logged against them (no
+    // The tasks their time bought. Nothing was logged against them (no
     // sessions, checked above), so no delivered hours are at stake.
     await tx.assignment.deleteMany({ where: { studentId: profile.id } });
     await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
@@ -667,7 +667,7 @@ export async function setMentorAllocation(
   // "set" replaces the allocation (a correction); "add" grants more hours on top
   // of whatever the student already holds with this mentor.
   const mode = String(formData.get("mode") ?? "set");
-  const parsed = parseHoursField(formData.get("hours"), {
+  const parsed = parseMinutesField(formData.get("minutes"), {
     min: 0,
     label: "Allocated hours",
   });
@@ -727,10 +727,10 @@ export async function setMentorAllocation(
     : await prisma.hourAllocation.findFirst({
         where: { studentId: profile.id, mentorId: null },
       });
-  const oldHours = existing?.hours ?? 0;
-  const newHours =
-    mode === "add" ? Number((oldHours + enteredHours).toFixed(2)) : enteredHours;
-  const granted = Number((newHours - oldHours).toFixed(2));
+  const oldMinutes = existing?.minutes ?? 0;
+  const newMinutes =
+    mode === "add" ? Number((oldMinutes + enteredHours).toFixed(2)) : enteredHours;
+  const granted = Number((newMinutes - oldMinutes).toFixed(2));
 
   // Every grant from one mentor lands in the same pool, which has one use-by
   // date, so topping up keeps whichever date is LATER: hours already granted
@@ -753,7 +753,7 @@ export async function setMentorAllocation(
       : enteredPaid;
   const sameAmount = !isMasters || oldPaid === newPaid;
 
-  if (newHours === oldHours && sameDeadline && sameAmount) {
+  if (newMinutes === oldMinutes && sameDeadline && sameAmount) {
     return { ok: true, message: "No change: allocation is already at that value." };
   }
 
@@ -801,7 +801,7 @@ export async function setMentorAllocation(
       await tx.hourAllocation.update({
         where: { id: existing.id },
         data: {
-          hours: newHours,
+          minutes: newMinutes,
           deadline,
           // A new deadline restarts the reminder cycle.
           ...(sameDeadline ? {} : { deadlineStage: null }),
@@ -813,7 +813,7 @@ export async function setMentorAllocation(
         data: {
           studentId: profile.id,
           mentorId,
-          hours: newHours,
+          minutes: newMinutes,
           deadline,
           ...(isMasters ? { amountPaid: newPaid } : {}),
         },
@@ -834,7 +834,7 @@ export async function setMentorAllocation(
         orderBy: { position: "asc" },
       });
       if (open) {
-        const budget = Number(((open.hourLimit ?? 0) + granted).toFixed(2));
+        const budget = Number(((open.minuteLimit ?? 0) + granted).toFixed(2));
         // A note written with a top-up is added to what the task already says,
         // since the earlier instruction is usually still true.
         const note =
@@ -843,7 +843,7 @@ export async function setMentorAllocation(
             : open.note;
         await tx.assignment.update({
           where: { id: open.id },
-          data: { hourLimit: budget, note },
+          data: { minuteLimit: budget, note },
         });
         // A raised budget can reopen work the old limit had finished.
         await syncGoalProgress(tx, open.id);
@@ -859,7 +859,7 @@ export async function setMentorAllocation(
             studentId: profile.id,
             mentorId,
             purpose: task,
-            hourLimit: granted,
+            minuteLimit: granted,
             note: taskNote,
             // The date THIS grant was aimed at, which the pooled use-by date can
             // outlive once other hours are added to the same mentor.
@@ -875,13 +875,13 @@ export async function setMentorAllocation(
             type: NOTIFICATION_TYPES.GOAL_ASSIGNED,
             actorId: actor.id,
             href: notificationHref.mentorStudent(profile.id),
-            message: `New task for ${studentName}: "${task}", budgeted ${formatHours(granted)} hours to use by ${formatDate(enteredDeadline)}. Log your sessions against it.`,
+            message: `New task for ${studentName}: "${task}", budgeted ${formatDuration(granted)} to use by ${formatDate(enteredDeadline)}. Log your sessions against it.`,
           });
         }
       }
     }
 
-    if (newHours !== oldHours) {
+    if (newMinutes !== oldMinutes) {
       const forTask = task ? ` for "${task}"` : "";
       if (mentorId) {
         await notify(tx, {
@@ -889,7 +889,7 @@ export async function setMentorAllocation(
           type: NOTIFICATION_TYPES.HOURS_GRANTED,
           actorId: actor.id,
           href: notificationHref.mentorStudent(profile.id),
-          message: `Your hours with ${studentName} are now ${formatHours(newHours)} (was ${formatHours(oldHours)})${forTask}, to use by ${formatDate(deadline)}.`,
+          message: `Your time with ${studentName} are now ${formatDuration(newMinutes)} (was ${formatDuration(oldMinutes)})${forTask}, to use by ${formatDate(deadline)}.`,
         });
       }
       await tx.hourAllotmentChange.create({
@@ -897,8 +897,8 @@ export async function setMentorAllocation(
           studentId: profile.id,
           mentorId,
           changedById: actor.id,
-          oldHours,
-          newHours,
+          oldMinutes,
+          newMinutes,
         },
       });
     }
@@ -913,10 +913,10 @@ export async function setMentorAllocation(
       href: notificationHref.studentHome(),
       message:
         granted > 0
-          ? `You were granted ${formatHours(granted)} more hours${withMentor}${task ? ` for "${task}"` : ""} (now ${formatHours(newHours)}${mentorLabel ? " with them" : ""}).${deadlineNote}`
+          ? `You were granted ${formatDuration(granted)} more hours${withMentor}${task ? ` for "${task}"` : ""} (now ${formatDuration(newMinutes)}${mentorLabel ? " with them" : ""}).${deadlineNote}`
           : granted < 0
-            ? `Your hours${withMentor} were adjusted from ${formatHours(oldHours)} to ${formatHours(newHours)}.${deadlineNote}`
-            : `The deadline for your hours${withMentor} was updated to ${formatDate(deadline)}.`,
+            ? `Your time${withMentor} were adjusted from ${formatDuration(oldMinutes)} to ${formatDuration(newMinutes)}.${deadlineNote}`
+            : `The deadline for your time${withMentor} was updated to ${formatDate(deadline)}.`,
     });
 
     return outcome;
@@ -928,13 +928,13 @@ export async function setMentorAllocation(
   const taskSummary = taskOutcome
     ? taskOutcome.created
       ? mentorLabel
-        ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatHours(taskOutcome.budget)} hours.`
-        : ` "${taskOutcome.task}" is planned, budgeted ${formatHours(taskOutcome.budget)} hours — pick its mentor from the task's ⋮ menu.`
-      : ` "${taskOutcome.task}" is now budgeted ${formatHours(taskOutcome.budget)} hours.`
+        ? ` "${taskOutcome.task}" is now on ${mentorLabel}'s list, budgeted ${formatDuration(taskOutcome.budget)}.`
+        : ` "${taskOutcome.task}" is planned, budgeted ${formatDuration(taskOutcome.budget)} — pick its mentor from the task's ⋮ menu.`
+      : ` "${taskOutcome.task}" is now budgeted ${formatDuration(taskOutcome.budget)}.`
     : "";
   return {
     ok: true,
-    message: `${profile.user.email} now has ${formatHours(newHours)} hours ${mentorLabel ? `with ${mentorLabel}` : "unassigned"}, to use by ${formatDate(deadline)}${paidNote}.${taskSummary}`,
+    message: `${profile.user.email} now has ${formatDuration(newMinutes)} ${mentorLabel ? `with ${mentorLabel}` : "unassigned"}, to use by ${formatDate(deadline)}${paidNote}.${taskSummary}`,
   };
 }
 
@@ -972,7 +972,7 @@ export async function removeMentorAllocation(
       ok: false,
       error: mentorId
         ? "That mentor isn't allocated to this student."
-        : "This student has no unassigned hours.",
+        : "This student has no unassigned time.",
     };
   }
 
@@ -985,7 +985,7 @@ export async function removeMentorAllocation(
       return {
         ok: false,
         error:
-          "This mentor has logged sessions with the student, so their hours can't be removed. Void the sessions first if it must go.",
+          "This mentor has logged sessions with the student, so their time can't be removed. Void the sessions first if it must go.",
       };
     }
   }
@@ -997,7 +997,7 @@ export async function removeMentorAllocation(
     await tx.hourAllotmentChange.deleteMany({
       where: { studentId: profileId, mentorId },
     });
-    // Their tasks go with their hours: nothing was logged against them (no
+    // Their tasks go with their time: nothing was logged against them (no
     // sessions, checked above), and a task nobody holds hours for is a line the
     // mentor can't act on.
     await tx.assignment.deleteMany({ where: { studentId: profileId, mentorId } });
@@ -1008,8 +1008,8 @@ export async function removeMentorAllocation(
       actorId: actor.id,
       href: notificationHref.studentHome(),
       message: mentorLabel
-        ? `Your hours with ${mentorLabel} were removed. They're no longer one of your mentors.`
-        : `Your unassigned hours were removed.`,
+        ? `Your time with ${mentorLabel} were removed. They're no longer one of your mentors.`
+        : `Your unassigned time were removed.`,
     });
   });
 
@@ -1017,7 +1017,7 @@ export async function removeMentorAllocation(
   return {
     ok: true,
     message: mentorLabel
-      ? `${mentorLabel} removed from this student, along with the tasks their hours were for.`
-      : `The unassigned hours were removed, along with the tasks they were for.`,
+      ? `${mentorLabel} removed from this student, along with the tasks their time were for.`
+      : `The unassigned time were removed, along with the tasks they were for.`,
   };
 }

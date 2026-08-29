@@ -1,8 +1,34 @@
 /** Client-safe formatting helpers. */
 
-/** 1.5 → "1.5", 2 → "2", 0.333333 → "0.33" (hours are any-decimal floats). */
-export function formatHours(n: number): string {
-  return Number(n.toFixed(2)).toString();
+/**
+ * One duration, in the unit the team speaks: 90 → "90 min".
+ *
+ * For a single meeting or one task's budget, the raw minute count is the most
+ * useful thing on the page — it is what the mentor typed in, it sorts and
+ * compares at a glance, and there is no arithmetic between what is stored and
+ * what is read. Roll-up totals get `formatDuration` instead, where a
+ * four-figure minute count stops meaning anything.
+ */
+export function formatMinutes(n: number): string {
+  return `${Math.round(n)} min`;
+}
+
+/**
+ * A roll-up total, where minutes alone stop being readable: 45 → "45 min",
+ * 60 → "1h", 1100 → "18h 20m".
+ *
+ * Nobody reads "1100 minutes remaining" as an amount of time, so anything past
+ * an hour splits — but under an hour it stays in the same words as everything
+ * else on the page rather than becoming "0h 45m".
+ */
+export function formatDuration(n: number): string {
+  const total = Math.round(n);
+  const sign = total < 0 ? "-" : "";
+  const abs = Math.abs(total);
+  if (abs < 60) return `${sign}${abs} min`;
+  const hours = Math.floor(abs / 60);
+  const minutes = abs % 60;
+  return minutes === 0 ? `${sign}${hours}h` : `${sign}${hours}h ${minutes}m`;
 }
 
 /** Money in US dollars: 1200 → "$1,200", 1200.5 → "$1,200.50". */

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "freshlog",
-  description: "Track mentoring hours, sessions, and feedback.",
+  description: "Track mentoring time, sessions, and feedback.",
 };
 
 export default function RootLayout({

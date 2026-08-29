@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 
-import { HOURS_KIND, HOURS_KIND_META } from "@/lib/constants";
+import { TIME_KIND, TIME_KIND_META } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 
-const ORDER: string[] = [HOURS_KIND.PLAN, HOURS_KIND.EXTRA];
+const ORDER: string[] = [TIME_KIND.PLAN, TIME_KIND.EXTRA];
 
 /**
  * Whose hours these are — the student's allocation, or the mentor's own time
@@ -17,8 +17,8 @@ const ORDER: string[] = [HOURS_KIND.PLAN, HOURS_KIND.EXTRA];
  * ordinary answer. The chosen option spells out its consequence underneath
  * rather than expecting anyone to remember which one moves a balance.
  */
-export function HoursKindPicker({
-  defaultValue = HOURS_KIND.PLAN,
+export function TimeKindPicker({
+  defaultValue = TIME_KIND.PLAN,
   compact = false,
 }: {
   defaultValue?: string;
@@ -26,7 +26,7 @@ export function HoursKindPicker({
   compact?: boolean;
 }) {
   const [value, setValue] = useState(
-    defaultValue in HOURS_KIND_META ? defaultValue : HOURS_KIND.PLAN,
+    defaultValue in TIME_KIND_META ? defaultValue : TIME_KIND.PLAN,
   );
 
   return (
@@ -54,18 +54,18 @@ export function HoursKindPicker({
             >
               <input
                 type="radio"
-                name="hoursKind"
+                name="timeKind"
                 value={kind}
                 checked={active}
                 onChange={() => setValue(kind)}
                 className="sr-only"
               />
-              {HOURS_KIND_META[kind].label}
+              {TIME_KIND_META[kind].label}
             </label>
           );
         })}
       </div>
-      <p className="mt-1.5 text-xs text-muted-fg">{HOURS_KIND_META[value].hint}</p>
+      <p className="mt-1.5 text-xs text-muted-fg">{TIME_KIND_META[value].hint}</p>
     </fieldset>
   );
 }

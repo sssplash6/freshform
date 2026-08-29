@@ -29,7 +29,7 @@ export default async function UnsubscribePage({
       {
         title: "You're unsubscribed",
         blurb:
-          "No more weekly hours emails. Your hours and deadlines are unchanged — you can still see them any time by signing in.",
+          "No more weekly summary emails. Your time and deadlines are unchanged — you can still see them any time by signing in.",
       }
     ) : state === "invalid" || !armed ? (
       {
@@ -38,7 +38,7 @@ export default async function UnsubscribePage({
           "It may have been broken by your email client, or it may be from before a security change. Sign in and use the toggle on your notifications page instead.",
       }
     ) : (
-      { title: "Turn off weekly hours emails?", blurb: "" }
+      { title: "Turn off weekly summary emails?", blurb: "" }
     );
 
   return (
@@ -54,8 +54,8 @@ export default async function UnsubscribePage({
           {armed && !state ? (
             <>
               <p className="mt-2.5 text-[15px] leading-relaxed text-muted-fg">
-                You&apos;ll stop getting the Monday email about hours you&apos;ve
-                used and hours still to book. Deadline reminders inside the app
+                You&apos;ll stop getting the Monday email about time you&apos;ve
+                used and time still to book. Deadline reminders inside the app
                 carry on.
               </p>
               <form action={unsubscribeWeekly} className="mt-5 flex flex-wrap gap-2">

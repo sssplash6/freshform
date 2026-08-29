@@ -38,7 +38,7 @@ export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS]
  *   ATTENDED     the meeting happened          hours charged, delivered
  *   LATE         it happened, they were late   hours charged, delivered
  *   ABSENT       they didn't come              hours charged, tallied as missed
- *   RESCHEDULED  the meeting moved             no hours charged at all
+ *   RESCHEDULED  the meeting moved             no time charged at all
  *
  * Stored across `attended`, `late` and `status` (see attendanceOf), so the hours
  * engine keeps working off ACTIVE sessions without knowing this vocabulary.
@@ -72,7 +72,7 @@ export const ATTENDANCE_META: Record<
   RESCHEDULED: {
     label: "Rescheduled",
     hint: "The meeting moved, so no hours are charged.",
-    chip: "Rescheduled, no hours charged",
+    chip: "Rescheduled, no time charged",
     tone: "gray",
   },
 };
@@ -118,37 +118,37 @@ export function attendanceFields(state: string): {
  * Stored as `Session.withinPlan`. The rule about what EXTRA does to the ledger
  * lives in `chargesAllocation()` (lib/hours.ts), not here.
  */
-export const HOURS_KIND = {
+export const TIME_KIND = {
   PLAN: "PLAN",
   EXTRA: "EXTRA",
 } as const;
 
-export type HoursKind = (typeof HOURS_KIND)[keyof typeof HOURS_KIND];
+export type TimeKind = (typeof TIME_KIND)[keyof typeof TIME_KIND];
 
-export const HOURS_KIND_META: Record<
+export const TIME_KIND_META: Record<
   string,
   { label: string; hint: string; chip?: string; tone?: "amber" | "gray" }
 > = {
   PLAN: {
-    label: "Counts toward their hours",
+    label: "Counts toward their time",
     hint: "The usual case — these hours come out of what the student holds with you.",
   },
   EXTRA: {
-    label: "Extra, beyond their hours",
+    label: "Extra, beyond their time",
     hint: "Work on top of the plan. It shows in the log and against the task, but charges nothing to their balance.",
-    chip: "Extra — no hours charged",
+    chip: "Extra — no time charged",
     tone: "gray",
   },
 };
 
 /** How a stored session reads back as one of the two kinds. */
-export function hoursKindOf(session: { withinPlan: boolean }): HoursKind {
-  return session.withinPlan ? HOURS_KIND.PLAN : HOURS_KIND.EXTRA;
+export function timeKindOf(session: { withinPlan: boolean }): TimeKind {
+  return session.withinPlan ? TIME_KIND.PLAN : TIME_KIND.EXTRA;
 }
 
 /** The column one of the two kinds writes. */
-export function hoursKindFields(kind: string): { withinPlan: boolean } {
-  return { withinPlan: kind !== HOURS_KIND.EXTRA };
+export function timeKindFields(kind: string): { withinPlan: boolean } {
+  return { withinPlan: kind !== TIME_KIND.EXTRA };
 }
 
 /**
@@ -268,7 +268,7 @@ export const NOTIFICATION_META: Record<
   string,
   { label: string; tone: "brand" | "accent" | "plan" | "success" | "warning" }
 > = {
-  HOURS_GRANTED: { label: "Hours", tone: "accent" },
+  HOURS_GRANTED: { label: "Time", tone: "accent" },
   SESSION_LOGGED: { label: "Session logged", tone: "brand" },
   SESSION_EDITED: { label: "Session corrected", tone: "warning" },
   SESSION_VOIDED: { label: "Session voided", tone: "warning" },

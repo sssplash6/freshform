@@ -12,7 +12,7 @@ import type { Prisma } from "@/generated/prisma/client";
 /**
  * Students with their derived hour totals, in one round trip per collection
  * (profiles + grouped sums over allocations and ACTIVE sessions), not one
- * query per student. allottedHours = sum of the student's per-mentor
+ * query per student. allottedMinutes = sum of the student's per-mentor
  * allocations.
  *
  * `slice` narrows it to one page. The derived totals are then computed for that
@@ -42,7 +42,7 @@ export async function studentsWithHours(
       select: {
         studentId: true,
         mentorId: true,
-        hours: true,
+        minutes: true,
         deadline: true,
         amountPaid: true,
       },
@@ -50,7 +50,7 @@ export async function studentsWithHours(
     prisma.session.groupBy({
       by: ["studentId", "mentorId", "attended", "withinPlan"],
       where: { status: SESSION_STATUS.ACTIVE, studentId: { in: ids } },
-      _sum: { hours: true },
+      _sum: { minutes: true },
     }),
   ]);
 
@@ -63,7 +63,7 @@ export async function studentsWithHours(
   const extraById = new Map<string, number>();
   const usedByPair = new Map<string, number>();
   for (const s of sessionSums) {
-    const hrs = s._sum.hours ?? 0;
+    const hrs = s._sum.minutes ?? 0;
     if (!s.withinPlan) {
       extraById.set(s.studentId, (extraById.get(s.studentId) ?? 0) + hrs);
       continue;
@@ -84,13 +84,13 @@ export async function studentsWithHours(
   const forfeitedById = new Map<string, number>();
   const paidById = new Map<string, number>();
   for (const a of allocations) {
-    allottedById.set(a.studentId, (allottedById.get(a.studentId) ?? 0) + a.hours);
+    allottedById.set(a.studentId, (allottedById.get(a.studentId) ?? 0) + a.minutes);
     if (a.amountPaid != null) {
       paidById.set(a.studentId, (paidById.get(a.studentId) ?? 0) + a.amountPaid);
     }
     if (a.deadline.getTime() < now) {
       const used = usedByPair.get(`${a.studentId}:${a.mentorId}`) ?? 0;
-      const forfeited = Math.max(0, a.hours - used);
+      const forfeited = Math.max(0, a.minutes - used);
       if (forfeited > 0) {
         forfeitedById.set(
           a.studentId,
@@ -107,13 +107,13 @@ export async function studentsWithHours(
     const forfeited = forfeitedById.get(profile.id) ?? 0;
     return {
       ...profile,
-      allottedHours: allotted,
-      completedHours: used - missed,
-      missedHours: missed,
-      extraHours: extraById.get(profile.id) ?? 0,
-      forfeitedHours: forfeited,
+      allottedMinutes: allotted,
+      completedMinutes: used - missed,
+      missedMinutes: missed,
+      extraMinutes: extraById.get(profile.id) ?? 0,
+      forfeitedMinutes: forfeited,
       amountPaid: paidById.get(profile.id) ?? 0,
-      remainingHours: allotted - used - forfeited,
+      remainingMinutes: allotted - used - forfeited,
     };
   });
 }
@@ -144,7 +144,7 @@ export async function studentLedger(studentProfileId: string) {
   ]);
 
   // Hours actually delivered against each goal, so a plan can be read against
-  // reality. ACTIVE only: voided sessions returned their hours. Out-of-plan
+  // reality. ACTIVE only: voided sessions returned their time. Out-of-plan
   // hours DO count here — a task's hour limit budgets the work, and work done
   // for free is still work done on the essay.
   const loggedByGoal = new Map<string, number>();
@@ -152,7 +152,7 @@ export async function studentLedger(studentProfileId: string) {
     if (!session.assignmentId || session.status !== SESSION_STATUS.ACTIVE) continue;
     loggedByGoal.set(
       session.assignmentId,
-      (loggedByGoal.get(session.assignmentId) ?? 0) + session.hours
+      (loggedByGoal.get(session.assignmentId) ?? 0) + session.minutes
     );
   }
 
@@ -160,7 +160,7 @@ export async function studentLedger(studentProfileId: string) {
     sessions,
     assignments: assignments.map((a) => ({
       ...a,
-      loggedHours: loggedByGoal.get(a.id) ?? 0,
+      loggedMinutes: loggedByGoal.get(a.id) ?? 0,
     })),
   };
 }
@@ -259,14 +259,14 @@ export async function programTasks(programId: string) {
       status: SESSION_STATUS.ACTIVE,
       assignmentId: { in: tasks.map((t) => t.id) },
     },
-    _sum: { hours: true },
+    _sum: { minutes: true },
   });
   const loggedById = new Map(
-    logged.map((l) => [l.assignmentId ?? "", l._sum.hours ?? 0])
+    logged.map((l) => [l.assignmentId ?? "", l._sum.minutes ?? 0])
   );
 
   return tasks
-    .map((task) => ({ ...task, loggedHours: loggedById.get(task.id) ?? 0 }))
+    .map((task) => ({ ...task, loggedMinutes: loggedById.get(task.id) ?? 0 }))
     .sort((a, b) => {
       // Stable sort, so unfinished work floats up and each student's own order
       // survives underneath.
@@ -403,7 +403,7 @@ export async function mentorOverview(
     prisma.session.groupBy({
       by: ["studentId", "attended"],
       where: { mentorId, ...CHARGED_SESSION },
-      _sum: { hours: true },
+      _sum: { minutes: true },
     }),
     prisma.session.findMany({
       where: { mentorId, ...inProgram, ...inWindow },
@@ -419,7 +419,7 @@ export async function mentorOverview(
   const usedByStudent = new Map<string, number>();
   const missedByStudent = new Map<string, number>();
   for (const s of lifetimeSums) {
-    const hrs = s._sum.hours ?? 0;
+    const hrs = s._sum.minutes ?? 0;
     usedByStudent.set(s.studentId, (usedByStudent.get(s.studentId) ?? 0) + hrs);
     if (!s.attended) {
       missedByStudent.set(
@@ -437,12 +437,12 @@ export async function mentorOverview(
     const expired = deadlinePassed(a.deadline);
     return {
       student: a.student,
-      allocated: a.hours,
+      allocated: a.minutes,
       used,
       completed: used - missed,
       missed,
-      remaining: expired ? Math.min(0, a.hours - used) : a.hours - used,
-      forfeited: expired ? Math.max(0, a.hours - used) : 0,
+      remaining: expired ? Math.min(0, a.minutes - used) : a.minutes - used,
+      forfeited: expired ? Math.max(0, a.minutes - used) : 0,
       expired,
       deadline: a.deadline,
       amountPaid: a.amountPaid,
@@ -498,9 +498,9 @@ export async function mentorOverview(
   for (const s of active) {
     const row = rowFor(s.student.programId, s.student.program.name);
     row.sessions += 1;
-    if (!s.withinPlan) row.extra += s.hours;
-    else if (s.attended) row.delivered += s.hours;
-    else row.missed += s.hours;
+    if (!s.withinPlan) row.extra += s.minutes;
+    else if (s.attended) row.delivered += s.minutes;
+    else row.missed += s.minutes;
   }
 
   const sum = (pick: (row: ProgramRow) => number) =>
@@ -527,7 +527,7 @@ export type MentorOverview = Awaited<ReturnType<typeof mentorOverview>>;
 
 /**
  * The distinct mentors working in a program (assigned program-wide or to any
- * of its cohorts) — the pool an admin may allocate a student's hours from.
+ * of its cohorts) — the pool an admin may allocate a student's time from.
  */
 export async function mentorsInProgram(programId: string) {
   const assignments = await prisma.mentorAssignment.findMany({

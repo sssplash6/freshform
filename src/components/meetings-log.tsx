@@ -12,11 +12,11 @@ import {
   ATTENDANCE_META,
   attendanceOf,
   chargesAllocation,
-  HOURS_KIND_META,
-  hoursKindOf,
+  TIME_KIND_META,
+  timeKindOf,
   SESSION_STATUS,
 } from "@/lib/constants";
-import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/lib/format";
 
 /**
  * Structural, not Prisma-derived: the same table serves one student's ledger
@@ -24,7 +24,7 @@ import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
  */
 export type LoggedMeeting = {
   id: string;
-  hours: number;
+  minutes: number;
   date: Date;
   attended: boolean;
   late: boolean;
@@ -61,7 +61,7 @@ export type ManageMeetings = {
  * this data by logging sessions, which is what the amber panel tone says.
  *
  * Voided sessions stay listed but greyed with a struck-through duration: they
- * are part of the history even though their hours went back.
+ * are part of the history even though their time went back.
  */
 export function MeetingsLog({
   sessions,
@@ -95,12 +95,12 @@ export function MeetingsLog({
   // part of the history, not of the hours — and neither are out-of-plan hours,
   // which are called out beside the total rather than folded into it.
   const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
-  const loggedHours = active
+  const loggedMinutes = active
     .filter(chargesAllocation)
-    .reduce((sum, s) => sum + s.hours, 0);
-  const extraHours = active
+    .reduce((sum, s) => sum + s.minutes, 0);
+  const extraMinutes = active
     .filter((s) => !s.withinPlan)
-    .reduce((sum, s) => sum + s.hours, 0);
+    .reduce((sum, s) => sum + s.minutes, 0);
   const withStudent = sessions.some((s) => s.student);
   // On a mentor's own log every row is them, so the Team column would just
   // repeat one name down the page. Drop it unless the log spans people.
@@ -132,8 +132,8 @@ export function MeetingsLog({
     caption ??
     (active.length === 0
       ? "Nothing logged yet"
-      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours${
-          extraHours > 0 ? ` · ${formatHours(extraHours)} extra` : ""
+      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatDuration(loggedMinutes)}${
+          extraMinutes > 0 ? ` · ${formatDuration(extraMinutes)} extra` : ""
         }`);
 
   return (
@@ -207,7 +207,7 @@ export function MeetingsLog({
                         : "font-semibold tabular-nums text-ink"
                     }
                   >
-                    {formatHours(s.hours)}
+                    {formatMinutes(s.minutes)}
                   </span>
                 </Td>
                 <Td
@@ -250,7 +250,7 @@ export function MeetingsLog({
                           )}
                           {!s.withinPlan && (
                             <Chip tone="gray">
-                              {HOURS_KIND_META[hoursKindOf(s)].chip}
+                              {TIME_KIND_META[timeKindOf(s)].chip}
                             </Chip>
                           )}
                         </>
@@ -264,10 +264,10 @@ export function MeetingsLog({
                       <SessionRowActions
                         session={{
                           id: s.id,
-                          hours: s.hours,
+                          minutes: s.minutes,
                           date: toDateInputValue(s.date),
                           attendance: state,
-                          hoursKind: hoursKindOf(s),
+                          timeKind: timeKindOf(s),
                           note: s.note,
                           assignmentId: s.assignment?.id ?? null,
                         }}

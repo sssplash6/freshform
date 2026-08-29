@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ASSIGNMENT_PROGRESS, ASSIGNMENT_PROGRESS_LABELS } from "@/lib/constants";
-import { formatHours } from "@/lib/format";
+import { formatDuration, formatMinutes } from "@/lib/format";
 import type { LedgerAssignment } from "@/lib/queries";
 
 const PROGRESS_TONE: Record<string, ChipTone> = {
@@ -20,7 +20,7 @@ const PROGRESS_TONE: Record<string, ChipTone> = {
 /**
  * The right half of the tracking spreadsheet: the tasks each mentor is doing
  * for this student, each with its hour budget, its timeline and how far along it
- * is. Tasks are born with the hours an admin allocates for them, and every
+ * is. Tasks are born with the time an admin allocates for them, and every
  * session a mentor logs names one — so this panel is the plan the meetings log
  * is delivering against. Only an admin writes here, which is what the violet
  * panel tone says; mentors and students read the same rows without the ⋮
@@ -31,7 +31,7 @@ const PROGRESS_TONE: Record<string, ChipTone> = {
  * logged against a task; a row an admin has stated by hand reads "pinned",
  * which is the only reason hours would stop moving it.
  *
- * `hoursAllotted` is the hours actually granted across the student's mentors.
+ * `minutesAllotted` is the hours actually granted across the student's mentors.
  * Comparing it against the budgeted total is the whole point of showing both
  * halves on one page: it catches a plan that promises more than was paid for.
  */
@@ -41,7 +41,7 @@ export function AssignmentsPanel({
   mentors,
   openTasksByMentor,
   showAmountPaid = false,
-  hoursAllotted,
+  minutesAllotted,
   manage = false,
   mentorBase,
 }: {
@@ -52,17 +52,17 @@ export function AssignmentsPanel({
   openTasksByMentor?: Record<string, OpenTask[]>;
   /** Master's records what was paid for the hours a task is given. */
   showAmountPaid?: boolean;
-  hoursAllotted: number;
+  minutesAllotted: number;
   manage?: boolean;
   /** Base path (admin only) that makes each Mentor chip link to them. */
   mentorBase?: string;
 }) {
-  const planned = assignments.reduce((sum, a) => sum + (a.hourLimit ?? 0), 0);
-  const logged = assignments.reduce((sum, a) => sum + a.loggedHours, 0);
+  const planned = assignments.reduce((sum, a) => sum + (a.minuteLimit ?? 0), 0);
+  const logged = assignments.reduce((sum, a) => sum + a.loggedMinutes, 0);
   const done = assignments.filter(
     (a) => a.progress === ASSIGNMENT_PROGRESS.DONE,
   ).length;
-  const overPlanned = planned > hoursAllotted;
+  const overPlanned = planned > minutesAllotted;
 
   const columns: Column[] = [
     { label: "Task" },
@@ -78,19 +78,19 @@ export function AssignmentsPanel({
     <Panel tone="plan">
       <PanelHeader
         tone="plan"
-        eyebrow="What the hours are for"
+        eyebrow="What the time is for"
         title="Tasks"
         caption={
           assignments.length === 0
             ? "Nothing assigned yet"
-            : `${done} of ${assignments.length} done · ${formatHours(planned)} hours budgeted`
+            : `${done} of ${assignments.length} done · ${formatDuration(planned)} budgeted`
         }
       />
 
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="No tasks yet">
           {manage
-            ? "Allocate the first hours below — naming the mentor and the task can wait until you know them."
+            ? "Allocate the first minutes below — naming the mentor and the task can wait until you know them."
             : "An admin sets out the work planned for this student here."}
         </EmptyState>
       ) : (
@@ -133,24 +133,24 @@ export function AssignmentsPanel({
                     label="Logged"
                     align="right"
                     className={`tabular-nums ${
-                      a.hourLimit != null && a.loggedHours > a.hourLimit
+                      a.minuteLimit != null && a.loggedMinutes > a.minuteLimit
                         ? "font-semibold text-amber-700"
-                        : a.loggedHours > 0
+                        : a.loggedMinutes > 0
                           ? "text-ink"
                           : "text-muted-fg"
                     }`}
                   >
-                    {a.loggedHours > 0 ? `${formatHours(a.loggedHours)}h` : "—"}
+                    {a.loggedMinutes > 0 ? formatMinutes(a.loggedMinutes) : "—"}
                   </Td>
                   <Td
                     label="Budget"
                     align="right"
                     className="font-semibold tabular-nums text-ink"
                   >
-                    {a.hourLimit == null ? (
+                    {a.minuteLimit == null ? (
                       <span className="font-normal text-muted-fg">—</span>
                     ) : (
-                      `${formatHours(a.hourLimit)}h`
+                      formatMinutes(a.minuteLimit)
                     )}
                   </Td>
                   <Td label="Deadline" className="whitespace-nowrap">
@@ -163,7 +163,7 @@ export function AssignmentsPanel({
                       </Chip>
                       {a.progressManual && (
                         <span
-                          title="Set by hand — logged hours no longer move this"
+                          title="Set by hand — logged time no longer moves this"
                           aria-label="Set by hand"
                           className="text-[11px] text-muted-fg"
                         >
@@ -179,7 +179,7 @@ export function AssignmentsPanel({
                           id: a.id,
                           purpose: a.purpose,
                           mentorId: a.mentorId,
-                          hourLimit: a.hourLimit,
+                          minuteLimit: a.minuteLimit,
                           deadline: a.deadline,
                           note: a.note,
                           progress: a.progress,
@@ -197,22 +197,22 @@ export function AssignmentsPanel({
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas px-4 py-3 text-xs sm:px-5">
             <span className="text-muted-fg">
               <span className="font-semibold tabular-nums text-ink">
-                {formatHours(logged)}
+                {formatDuration(logged)}
               </span>{" "}
               hours logged against{" "}
               <span className="font-semibold tabular-nums text-ink">
-                {formatHours(planned)}
+                {formatDuration(planned)}
               </span>{" "}
               budgeted, of{" "}
               <span className="font-semibold tabular-nums text-ink">
-                {formatHours(hoursAllotted)}
+                {formatDuration(minutesAllotted)}
               </span>{" "}
               allotted
             </span>
             {overPlanned && (
               <span className="font-medium text-amber-700">
                 Budgeted work exceeds the hours this student holds by{" "}
-                {formatHours(planned - hoursAllotted)}.
+                {formatDuration(planned - minutesAllotted)}.
               </span>
             )}
           </div>

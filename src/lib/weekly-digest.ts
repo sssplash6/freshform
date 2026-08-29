@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { canActAsMentor, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { renderEmail, type Section } from "@/lib/email/layout";
 import { appUrl, emailConfigured, sendAll, type Mail } from "@/lib/email/send";
 import { unsubscribeUrl } from "@/lib/email/unsubscribe";
@@ -49,7 +49,7 @@ type Pairing = {
   deadline: Date;
   /** Hours drawn down: delivered plus no-shows, which are charged. */
   used: number;
-  /** Hours delivered in the last week only. */
+  /** Time delivered in the last week only. */
   deliveredThisWeek: number;
   missedThisWeek: number;
   /** Last week's out-of-plan hours: delivered, but charged to no allocation. */
@@ -82,7 +82,7 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
       select: {
         studentId: true,
         mentorId: true,
-        hours: true,
+        minutes: true,
         attended: true,
         withinPlan: true,
         date: true,
@@ -103,11 +103,11 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
     const k = key(s.studentId, s.mentorId);
     // Out-of-plan hours draw nothing down, so they stay out of `used` — the
     // digest's whole subject is hours at risk of expiring unused.
-    if (s.withinPlan) bump(used, k, s.hours);
+    if (s.withinPlan) bump(used, k, s.minutes);
     if (s.date.getTime() >= weekAgo.getTime()) {
-      if (!s.withinPlan) bump(extraWeek, k, s.hours);
-      else if (s.attended) bump(deliveredWeek, k, s.hours);
-      else bump(missedWeek, k, s.hours);
+      if (!s.withinPlan) bump(extraWeek, k, s.minutes);
+      else if (s.attended) bump(deliveredWeek, k, s.minutes);
+      else bump(missedWeek, k, s.minutes);
     }
   }
 
@@ -125,15 +125,15 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
         ? (a.mentor.name ?? a.mentor.email)
         : "no mentor yet",
       programName: a.student.program.name,
-      allocated: a.hours,
+      allocated: a.minutes,
       deadline: a.deadline,
       used: drawn,
       deliveredThisWeek: deliveredWeek.get(k) ?? 0,
       missedThisWeek: missedWeek.get(k) ?? 0,
       extraThisWeek: extraWeek.get(k) ?? 0,
       expired,
-      forfeited: expired ? Math.max(0, a.hours - drawn) : 0,
-      remaining: expired ? Math.min(0, a.hours - drawn) : a.hours - drawn,
+      forfeited: expired ? Math.max(0, a.minutes - drawn) : 0,
+      remaining: expired ? Math.min(0, a.minutes - drawn) : a.minutes - drawn,
     };
   });
 }
@@ -173,7 +173,7 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
 
   const sections: Section[] = [];
 
-  const missedHours = redeemed.reduce((sum, p) => sum + p.missedThisWeek, 0);
+  const missedMinutes = redeemed.reduce((sum, p) => sum + p.missedThisWeek, 0);
   sections.push({
     heading: "Last week",
     lines:
@@ -181,10 +181,10 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
         ? ["No sessions were logged for you last week."]
         : [
             // Says both numbers rather than one: a no-show draws hours down too,
-            // so "2.5 hours used" while 3.5 left the balance is not the truth.
-            missedHours > 0
-              ? `${formatHours(redeemedHours)} hours delivered, and ${formatHours(missedHours)}h charged for a missed session.`
-              : `${formatHours(redeemedHours)} hours across ${redeemed.length} ${redeemed.length === 1 ? "mentor" : "mentors"}.`,
+            // so "2.5 used" while 3.5 left the balance is not the truth.
+            missedMinutes > 0
+              ? `${formatDuration(redeemedHours)} delivered, and ${formatDuration(missedMinutes)} charged for a missed session.`
+              : `${formatDuration(redeemedHours)} across ${redeemed.length} ${redeemed.length === 1 ? "mentor" : "mentors"}.`,
           ],
     rows: redeemed.map((p) => {
       // A week that was only a no-show would otherwise headline as "0h", which
@@ -192,11 +192,11 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
       const onlyMissed = p.deliveredThisWeek === 0 && p.missedThisWeek > 0;
       return {
         label: p.mentorLabel,
-        value: `${formatHours(onlyMissed ? p.missedThisWeek : p.deliveredThisWeek)}h`,
+        value: `${formatDuration(onlyMissed ? p.missedThisWeek : p.deliveredThisWeek)}`,
         muted: onlyMissed
           ? "charged for a missed session"
           : p.missedThisWeek > 0
-            ? `plus ${formatHours(p.missedThisWeek)}h charged for a missed session`
+            ? `plus ${formatDuration(p.missedThisWeek)} charged for a missed session`
             : undefined,
         tone: onlyMissed ? ("urgent" as const) : undefined,
       };
@@ -206,10 +206,10 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
   if (live.length > 0) {
     sections.push({
       heading: "Still yours to use",
-      lines: [`${formatHours(totalRemaining)} hours in total.`],
+      lines: [`${formatDuration(totalRemaining)} in total.`],
       rows: [...live].sort(soonest).map((p) => ({
         label: p.mentorLabel,
-        value: `${formatHours(p.remaining)}h`,
+        value: `${formatDuration(p.remaining)}`,
         muted: deadlinePhrase(p.deadline, now),
         // Expiring, not lost — amber. Red below is for hours already gone.
         tone:
@@ -224,11 +224,11 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
     sections.push({
       heading: "Expired unused",
       lines: [
-        "These hours passed their deadline and can no longer be booked. Talk to your program contact if you think that's wrong.",
+        "This time passed its deadline and can no longer be booked. Talk to your program contact if you think that's wrong.",
       ],
       rows: justExpired.map((p) => ({
         label: p.mentorLabel,
-        value: `${formatHours(p.forfeited)}h`,
+        value: `${formatDuration(p.forfeited)}`,
         muted: `deadline was ${formatDate(p.deadline)}`,
         tone: "lost" as const,
       })),
@@ -237,18 +237,18 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
 
   const urgent = expiringSoon[0];
   const subject = urgent
-    ? `${formatHours(urgent.remaining)}h with ${urgent.mentorLabel} ${deadlinePhrase(urgent.deadline, now)}`
+    ? `${formatDuration(urgent.remaining)} with ${urgent.mentorLabel} ${deadlinePhrase(urgent.deadline, now)}`
     : totalRemaining > 0
-      ? `You have ${formatHours(totalRemaining)} hours left to book`
-      : "Your hours last week";
+      ? `You have ${formatDuration(totalRemaining)} left to book`
+      : "Your time last week";
 
   const to = mine[0];
   const { html, text } = renderEmail({
     preheader: urgent
       ? `Book them before ${formatDate(urgent.deadline)}.`
-      : `${formatHours(totalRemaining)} hours still available.`,
+      : `${formatDuration(totalRemaining)} still available.`,
     title: subject,
-    intro: `Your mentoring hours in ${to.programName}, as of ${formatDate(now)}.`,
+    intro: `Your mentoring time in ${to.programName}, as of ${formatDate(now)}.`,
     sections,
     cta:
       live.length > 0
@@ -259,7 +259,7 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
           }
         : undefined,
     unsubscribeUrl: unsubscribeUrl(to.studentUserId),
-    footerNote: "You're getting this because you have mentoring hours with Freshman Academy.",
+    footerNote: "You're getting this because you have mentoring time with Freshman Academy.",
   });
 
   return {
@@ -289,8 +289,8 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     return null;
   }
 
-  const deliveredHours = logged.reduce((sum, p) => sum + p.deliveredThisWeek, 0);
-  const missedHours = logged.reduce((sum, p) => sum + p.missedThisWeek, 0);
+  const deliveredMinutes = logged.reduce((sum, p) => sum + p.deliveredThisWeek, 0);
+  const missedMinutes = logged.reduce((sum, p) => sum + p.missedThisWeek, 0);
   const owed = live.reduce((sum, p) => sum + p.remaining, 0);
 
   const sections: Section[] = [
@@ -300,19 +300,19 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
         logged.length === 0
           ? ["No sessions logged last week."]
           : [
-              missedHours > 0
-                ? `${formatHours(deliveredHours)} hours delivered, and ${formatHours(missedHours)}h charged for a missed session.`
-                : `${formatHours(deliveredHours)} hours across ${logged.length} ${logged.length === 1 ? "student" : "students"}.`,
+              missedMinutes > 0
+                ? `${formatDuration(deliveredMinutes)} delivered, and ${formatDuration(missedMinutes)} charged for a missed session.`
+                : `${formatDuration(deliveredMinutes)} across ${logged.length} ${logged.length === 1 ? "student" : "students"}.`,
             ],
       rows: logged.map((p) => {
         const onlyMissed = p.deliveredThisWeek === 0 && p.missedThisWeek > 0;
         return {
           label: p.studentLabel,
-          value: `${formatHours(onlyMissed ? p.missedThisWeek : p.deliveredThisWeek)}h`,
+          value: `${formatDuration(onlyMissed ? p.missedThisWeek : p.deliveredThisWeek)}`,
           muted: onlyMissed
-            ? `${p.programName} · no-show, hours still charged`
+            ? `${p.programName} · no-show, time still charged`
             : p.missedThisWeek > 0
-              ? `${p.programName} · plus ${formatHours(p.missedThisWeek)}h for a no-show`
+              ? `${p.programName} · plus ${formatDuration(p.missedThisWeek)} for a no-show`
               : p.programName,
           tone: onlyMissed ? ("urgent" as const) : undefined,
         };
@@ -324,11 +324,11 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     sections.push({
       heading: "Still to deliver",
       lines: [
-        `${formatHours(owed)} hours across ${live.length} ${live.length === 1 ? "student" : "students"}, soonest deadline first.`,
+        `${formatDuration(owed)} across ${live.length} ${live.length === 1 ? "student" : "students"}, soonest deadline first.`,
       ],
       rows: [...live].sort(soonest).map((p) => ({
         label: p.studentLabel,
-        value: `${formatHours(p.remaining)}h`,
+        value: `${formatDuration(p.remaining)}`,
         muted: `${p.programName} · ${deadlinePhrase(p.deadline, now)}`,
         tone:
           p.deadline.getTime() - now.getTime() <= SOON_MS
@@ -342,11 +342,11 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     sections.push({
       heading: "Expired unused",
       lines: [
-        "These deadlines passed with hours unspent, so no new sessions can be logged against them.",
+        "These deadlines passed with time unspent, so no new sessions can be logged against them.",
       ],
       rows: justExpired.map((p) => ({
         label: p.studentLabel,
-        value: `${formatHours(p.forfeited)}h`,
+        value: `${formatDuration(p.forfeited)}`,
         muted: `deadline was ${formatDate(p.deadline)}`,
         tone: "lost" as const,
       })),
@@ -355,16 +355,16 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
 
   const subject =
     expiringSoon.length > 0
-      ? `${expiringSoon.length} ${expiringSoon.length === 1 ? "student's hours expire" : "students' hours expire"} within two weeks`
+      ? `${expiringSoon.length} ${expiringSoon.length === 1 ? "student's time expire" : "students' time expires"} within two weeks`
       : owed > 0
-        ? `${formatHours(owed)} hours still to deliver`
-        : "Your week in hours";
+        ? `${formatDuration(owed)} still to deliver`
+        : "Your week in minutes";
 
   const { html, text } = renderEmail({
     preheader:
       expiringSoon.length > 0
         ? `Soonest: ${expiringSoon[0].studentLabel}, ${formatDate(expiringSoon[0].deadline)}.`
-        : `${formatHours(deliveredHours)} hours delivered last week.`,
+        : `${formatDuration(deliveredMinutes)} delivered last week.`,
     title: subject,
     intro: `Your mentoring week, as of ${formatDate(now)}.`,
     sections,

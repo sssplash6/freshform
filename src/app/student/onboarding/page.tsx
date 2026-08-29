@@ -55,7 +55,7 @@ export default async function StudentOnboardingPage() {
         </h1>
         <p className="mt-1.5 text-base text-muted-fg">
           Tell us who you are and which program you&apos;re in. An admin will
-          review your registration and allocate your mentoring hours.
+          review your registration and allocate your mentoring time.
         </p>
       </div>
       <div className="rounded-xl border border-line bg-surface p-6">

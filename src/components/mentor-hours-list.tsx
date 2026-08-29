@@ -3,7 +3,7 @@ import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 type MentorHours = {
@@ -19,7 +19,7 @@ type MentorHours = {
 };
 
 /**
- * The student's hours with each mentor, as a calm ledger meter: the remaining
+ * The student's time with each mentor, as a calm ledger meter: the remaining
  * balance leads, a thin orange bar shows how much of the allotment has been
  * used (orange = hours/progress per DESIGN.md), and the exact "used / total"
  * plus any use-by date sit underneath. Approachable for external students
@@ -34,7 +34,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
       <PanelHeader
         tone="total"
         eyebrow="Your team"
-        title="Hours with each mentor"
+        title="Time with each mentor"
         caption={
           mentorCount === 0
             ? undefined
@@ -43,7 +43,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
       />
       {items.length === 0 ? (
         <EmptyState framed={false} title="No mentor hours yet">
-          An admin will allocate your mentoring hours soon. They&apos;ll appear
+          An admin will allocate your mentoring time soon. They&apos;ll appear
           here.
         </EmptyState>
       ) : (
@@ -74,7 +74,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                       overdrawn ? "text-red-700" : "text-ink",
                     )}
                   >
-                    {formatHours(overdrawn ? -m.remaining : m.remaining)}
+                    {formatDuration(overdrawn ? -m.remaining : m.remaining)}
                   </span>{" "}
                   {overdrawn ? "h over" : "h left"}
                 </span>
@@ -85,16 +85,16 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                 tone={overdrawn || m.expired ? "danger" : "accent"}
                 ariaValueNow={used}
                 ariaValueMax={m.allocated}
-                ariaLabel={`Hours used with ${m.mentor ? (m.mentor.name ?? m.mentor.email) : "your unassigned pool"}`}
+                ariaLabel={`Time used with ${m.mentor ? (m.mentor.name ?? m.mentor.email) : "your unassigned pool"}`}
               />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
                 <span className="tabular-nums">
-                  {formatHours(used)} of {formatHours(m.allocated)} hours used
-                  {m.missed > 0 ? ` · ${formatHours(m.missed)} missed` : ""}
+                  {formatDuration(used)} of {formatDuration(m.allocated)} used
+                  {m.missed > 0 ? ` · ${formatDuration(m.missed)} missed` : ""}
                   {m.forfeited > 0 ? (
                     <span className="text-red-700">
                       {" "}
-                      · {formatHours(m.forfeited)} expired unused
+                      · {formatDuration(m.forfeited)} expired unused
                     </span>
                   ) : (
                     ""

@@ -5,9 +5,17 @@
 // `src/lib/constants.ts` and enforced in application code. When migrating to
 // Postgres, these columns can be converted to real enums.
 //
-// NOTE ON DERIVED VALUES: allotted / completed / remaining hours are computed
+// NOTE ON DERIVED VALUES: allotted / completed / remaining time is computed
 // from HourAllocation rows vs. ACTIVE sessions (see src/lib/hours.ts).
-// They are intentionally NOT stored as columns.
+// It is intentionally NOT stored as columns.
+//
+// NOTE ON UNITS: every duration in this schema is a whole number of MINUTES.
+// They were decimal hours until Aug 29 2026; the migration converted each one
+// as round(hours * 60), which recovered the whole minutes they had been
+// rounded down from. Integers, so sums are exact and the float-noise guards
+// the old code carried around are gone. The `HourAllocation` /
+// `HourAllotmentChange` model names keep their history — renaming the tables
+// would buy nothing the columns don't already say.
 
 generator client {
   provider = "prisma-client"
@@ -156,7 +164,7 @@ model StudentProfile {
 // student (an essay, a recommendation letter, a general review), each with its
 // own hour limit and status. HourAllocation stays the hours ledger that
 // sessions draw down and deadlines forfeit; an Assignment is the plan on top,
-// so `hourLimit` is a budget for that piece of work, not a grant of hours.
+// so `minuteLimit` is a budget for that piece of work, not a grant of time.
 model Assignment {
   id        String  @id @default(cuid())
   studentId String
@@ -164,7 +172,7 @@ model Assignment {
   // on anyone's list. An admin picks the consultant later via the row's edit.
   mentorId  String?
   purpose   String // what this work is: "Main essay", "Recommendation letters"
-  hourLimit Float? // hours this piece of work should take; null = not budgeted
+  minuteLimit Int? // minutes this piece of work should take; null = not budgeted
   // When the work is due, as free text on purpose: the tracking sheet holds both
   // "Aug 7" and "March-May". Not the same thing as HourAllocation.deadline,
   // which is a hard date that forfeits the hours it carries.
@@ -174,9 +182,9 @@ model Assignment {
   // exactly this into its Progress cells next to the state, so a status word
   // alone would have dropped the half that matters on import.
   note String?
-  // NOT_STARTED | IN_PROGRESS | DONE. Normally DERIVED from hours logged against
+  // NOT_STARTED | IN_PROGRESS | DONE. Normally DERIVED from time logged against
   // this goal (see lib/goal-progress.ts): the first session moves it to
-  // IN_PROGRESS, reaching hourLimit moves it to DONE.
+  // IN_PROGRESS, reaching minuteLimit moves it to DONE.
   progress String @default("NOT_STARTED")
   // Set when an ADMIN states the progress by hand, which pins it: work finished
   // under budget is done even though the hours say otherwise, and auto-sync must
@@ -197,13 +205,13 @@ model Assignment {
   @@index([studentId, position])
 }
 
-// Hours an admin granted a student FROM a specific mentor (only admins may
-// change this, audited via HourAllotmentChange). A student's total allotment
-// is the sum of their allocations; sessions logged by a mentor draw down
-// that mentor's allocation.
+// Mentoring time an admin granted a student FROM a specific mentor, in minutes
+// (only admins may change this, audited via HourAllotmentChange). A student's
+// total allotment is the sum of their allocations; sessions logged by a mentor
+// draw down that mentor's allocation.
 //
-// mentorId null = the student's UNASSIGNED pool: hours granted before a
-// consultant was chosen. They count toward the allotment and expire like any
+// mentorId null = the student's UNASSIGNED pool: time granted before a
+// consultant was chosen. It counts toward the allotment and expires like any
 // other allocation, but nobody can log against them until they're moved to a
 // mentor. NOTE: SQLite treats NULLs as distinct in unique indexes, so "one
 // pool row per student" is enforced in setMentorAllocation, not here.
@@ -211,9 +219,9 @@ model HourAllocation {
   id        String    @id @default(cuid())
   studentId String
   mentorId  String?
-  hours     Float
-  amountPaid Float? // total the student paid for these hours; collected only for Master's Program allocations (null elsewhere)
-  deadline  DateTime // required date the hours must be used by; shown to student and mentor. Once it passes, unused hours are FORFEITED and no new sessions may be logged against the allocation.
+  minutes   Int
+  amountPaid Float? // total the student paid for this time; collected only for Master's Program allocations (null elsewhere)
+  deadline  DateTime // required date the time must be used by; shown to student and mentor. Once it passes, unused minutes are FORFEITED and no new sessions may be logged against the allocation.
   deadlineStage String? // reminder bookkeeping: null | UPCOMING_SENT | PASSED_SENT; reset when the deadline changes
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -224,8 +232,8 @@ model HourAllocation {
   @@unique([studentId, mentorId])
 }
 
-// A completed mentoring session logged by a mentor. ACTIVE sessions draw down
-// the student's hours; VOIDED sessions do not count.
+// A completed mentoring session logged by a mentor, in minutes. ACTIVE sessions
+// draw down the student's time; VOIDED sessions do not count.
 model Session {
   id        String   @id @default(cuid())
   studentId String
@@ -235,24 +243,24 @@ model Session {
   // still happened and still has to be loggable — and the sessions logged before
   // tasks existed keep their history instead of being backfilled with a guess.
   assignmentId String?
-  hours     Float
+  minutes   Int
   date      DateTime
-  attended  Boolean  @default(true) // was the student present? false = no-show; the hours are still charged but tallied as "missed"
-  late      Boolean  @default(false) // the student turned up, but late — a label on the meeting, not on the hours
+  attended  Boolean  @default(true) // was the student present? false = no-show; the time is still charged but tallied as "missed"
+  late      Boolean  @default(false) // the student turned up, but late — a label on the meeting, not on the time
   note      String? // what was covered, in the mentor's words (one field, optional)
-  // ACTIVE | VOIDED | RESCHEDULED. Only ACTIVE sessions draw hours down: a
-  // voided one gave them back, and a rescheduled one never delivered anything —
+  // ACTIVE | VOIDED | RESCHEDULED. Only ACTIVE sessions draw time down: a
+  // voided one gave it back, and a rescheduled one never delivered anything —
   // it is a record that the meeting moved.
   status    String   @default("ACTIVE")
-  // Does this meeting come OUT of the hours the student was allocated?
+  // Does this meeting come OUT of the time the student was allocated?
   //
-  //   true  (default)  in-plan: the hours draw the allocation down, as always
+  //   true  (default)  in-plan: the minutes draw the allocation down, as always
   //   false            out-of-plan: extra work beyond what was granted. It is
   //                    logged, visible and counted toward the task it served,
   //                    but it charges no allocation and moves no balance.
   //
   // Nothing reads this column raw — `chargesAllocation()` in lib/constants.ts is
-  // the one place the rule lives, so "does out-of-plan spend hours?" stays a
+  // the one place the rule lives, so "does out-of-plan spend time?" stays a
   // single decision rather than a filter copied into a dozen queries.
   withinPlan Boolean @default(true)
   createdAt DateTime @default(now())
@@ -260,7 +268,7 @@ model Session {
 
   student    StudentProfile @relation(fields: [studentId], references: [id])
   mentor     User           @relation("SessionMentor", fields: [mentorId], references: [id])
-  // SetNull, not Cascade: deleting a goal must never delete the hours that were
+  // SetNull, not Cascade: deleting a goal must never delete the time that was
   // already delivered against it. The session survives, minus its goal.
   assignment Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
   // The scheduled meeting this session delivered, when it came from one.
@@ -294,7 +302,7 @@ model Interview {
   // new question, and an old "I'll be there" is not an answer to it.
   status      String   @default("PROPOSED")
   respondedAt DateTime? // when the student confirmed or declined
-  // Set when the meeting turned into logged hours, which is what retires it
+  // Set when the meeting turned into logged time, which is what retires it
   // from the upcoming list. Unique: one session per scheduled meeting.
   sessionId String? @unique
   createdAt DateTime @default(now())
@@ -310,14 +318,14 @@ model Interview {
   @@index([mentorId, scheduledAt])
 }
 
-// Audit log of admin changes to a student's per-mentor hour allocation.
+// Audit log of admin changes to a student's per-mentor allocation, in minutes.
 model HourAllotmentChange {
   id          String   @id @default(cuid())
   studentId   String
   mentorId    String? // the mentor whose allocation was changed; null = the unassigned pool
   changedById String
-  oldHours    Float
-  newHours    Float
+  oldMinutes  Int
+  newMinutes  Int
   createdAt   DateTime @default(now())
 
   student   StudentProfile @relation(fields: [studentId], references: [id])

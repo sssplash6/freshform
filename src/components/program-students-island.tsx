@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
 
 /**
@@ -25,8 +25,8 @@ export function ProgramStudentsIsland({
 }) {
   const totals = students.reduce(
     (acc, s) => ({
-      allotted: acc.allotted + s.allottedHours,
-      completed: acc.completed + s.completedHours,
+      allotted: acc.allotted + s.allottedMinutes,
+      completed: acc.completed + s.completedMinutes,
     }),
     { allotted: 0, completed: 0 }
   );
@@ -45,7 +45,7 @@ export function ProgramStudentsIsland({
             program.name
           )
         }
-        caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`}
+        caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatDuration(totals.completed)} of ${formatDuration(totals.allotted)} completed`}
       />
       <StudentsTable
         students={students}

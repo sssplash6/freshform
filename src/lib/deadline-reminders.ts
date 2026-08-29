@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { notify, notificationHref } from "@/lib/notify";
 import { CHARGED_SESSION, NOTIFICATION_TYPES } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 
 const UPCOMING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -49,16 +49,16 @@ export async function ensureDeadlineReminders() {
           // allocation down, so counting them would understate what is at risk
           // of expiring and silence a reminder that should have gone out.
           where: { ...CHARGED_SESSION, OR: pairs },
-          _sum: { hours: true },
+          _sum: { minutes: true },
         });
   const usedBy = new Map(
-    sums.map((s) => [`${s.studentId}:${s.mentorId}`, s._sum.hours ?? 0])
+    sums.map((s) => [`${s.studentId}:${s.mentorId}`, s._sum.minutes ?? 0])
   );
 
   for (const a of due) {
     const deadline = a.deadline;
     const passed = deadline.getTime() < now.getTime();
-    const remaining = a.hours - (usedBy.get(`${a.studentId}:${a.mentorId}`) ?? 0);
+    const remaining = a.minutes - (usedBy.get(`${a.studentId}:${a.mentorId}`) ?? 0);
     // Unassigned pool: nothing draws it down and there is no mentor to tell,
     // but the student's reminder still has to go out — those hours expire too.
     const mentorLabel = a.mentor ? (a.mentor.name ?? a.mentor.email) : null;
@@ -91,8 +91,8 @@ export async function ensureDeadlineReminders() {
         type: NOTIFICATION_TYPES.HOURS_DEADLINE,
         href: notificationHref.studentHome(),
         message: passed
-          ? `Your ${date} deadline for hours${withMentor} has passed — ${formatHours(remaining)} unused hours have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
-          : `Reminder: use your ${formatHours(remaining)} remaining hours${withMentor} by ${date}, or they expire.`,
+          ? `Your ${date} deadline for time${withMentor} has passed — ${formatDuration(remaining)} unused minutes have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
+          : `Reminder: use your ${formatDuration(remaining)} remaining${withMentor} by ${date}, or they expire.`,
       });
       if (a.mentorId) {
         await notify(tx, {
@@ -100,8 +100,8 @@ export async function ensureDeadlineReminders() {
           type: NOTIFICATION_TYPES.HOURS_DEADLINE,
           href: notificationHref.mentorStudent(a.studentId),
           message: passed
-            ? `${studentLabel}'s ${date} deadline passed with ${formatHours(remaining)} hours unused — those hours have expired and no new sessions can be logged against them.`
-            : `${studentLabel} has ${formatHours(remaining)} hours with you to use by ${date} before they expire — help them book in time.`,
+            ? `${studentLabel}'s ${date} deadline passed with ${formatDuration(remaining)} unused — that time has expired and no new sessions can be logged against them.`
+            : `${studentLabel} has ${formatDuration(remaining)} with you to use by ${date} before they expire — help them book in time.`,
         });
       }
     });

@@ -1,6 +1,6 @@
 # Freshman Academy — Mentoring Hours
 
-Internal, role-based web app that tracks students' mentoring hours. Students
+Internal, role-based web app that tracks students' mentoring time, in minutes. Students
 are granted hours by admins, book sessions with mentors through external
 Calendly links, and mentors log completed sessions, which draws down the
 student's balance. Mentors also schedule interviews ahead of time, which the
@@ -91,13 +91,20 @@ prisma/                  schema, migrations, seed
 src/lib/auth.ts          Auth.js config + sign-in gate
 src/lib/dal.ts           server-side auth: getCurrentUser / requireRole
 src/lib/actions/         all mutations (server actions, permission-checked)
-src/lib/queries.ts       derived-hours queries
+src/lib/queries.ts       derived-time queries
 src/proxy.ts             optimistic redirect to /login (Next 16 middleware)
 src/app/<role>/          role-scoped pages behind requireRole layouts
 ```
 
-Completed and remaining hours are **derived** from `ACTIVE` sessions vs.
-`allottedHours` — never stored as counters. Voiding a session returns its
+Every duration in the ledger is a whole number of **minutes**. They were
+decimal hours until Aug 29 2026; migration `durations_in_minutes` converted each
+one as `round(hours × 60)`, which recovered the whole minutes the spreadsheet
+values had been rounded from. Integers, so sums are exact. A single meeting or
+task budget reads as plain minutes ("90 min"); roll-up totals read as hours and
+minutes ("18h 20m") — `formatMinutes` and `formatDuration` in `src/lib/format.ts`.
+
+Completed and remaining time is **derived** from `ACTIVE` sessions vs.
+`allottedMinutes` — never stored as counters. Voiding a session returns its
 hours automatically. Every allotment change writes an `HourAllotmentChange`
 audit row.
 

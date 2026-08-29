@@ -166,7 +166,7 @@ export default async function AdminProgramSettingsPage({
         />
         {pairings.length === 0 ? (
           <EmptyState framed={false} title="No mentors assigned">
-            Assign one below, or allocate a student hours from any mentor and
+            Assign one below, or allocate a student time from any mentor and
             they join this program automatically.
           </EmptyState>
         ) : (

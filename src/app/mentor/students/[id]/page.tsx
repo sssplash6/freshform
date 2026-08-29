@@ -21,7 +21,7 @@ import {
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { deadlinePassed } from "@/lib/deadlines";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
@@ -39,7 +39,7 @@ import {
  * and who else is working on what. Read-only on the plan, which only admins set.
  *
  * Only reachable for students the mentor has an allocation or a session with —
- * or ones holding live unassigned hours, which any mentor may log against
+ * or ones holding live unassigned time, which any mentor may log against
  * (the logged hours become theirs).
  */
 export default async function MentorStudentDetailPage({
@@ -94,28 +94,28 @@ export default async function MentorStudentDetailPage({
     !allocation &&
     poolScope &&
     poolRow &&
-    poolRow.hours > 0 &&
+    poolRow.minutes > 0 &&
     !deadlinePassed(poolRow.deadline)
       ? poolRow
       : null;
 
   // Not this mentor's student — no hours together, no history together, and no
-  // unassigned hours a session could claim.
+  // unassigned time a session could claim.
   if (!allocation && mySessions.length === 0 && !pool) notFound();
 
-  const allocated = allocation?.hours ?? 0;
+  const allocated = allocation?.minutes ?? 0;
   const myActive = mySessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
   // Only charging sessions move this balance; hours given out of plan are
   // counted beside it, never inside it.
   const used = myActive
     .filter(chargesAllocation)
-    .reduce((sum, s) => sum + s.hours, 0);
+    .reduce((sum, s) => sum + s.minutes, 0);
   const missed = myActive
     .filter((s) => chargesAllocation(s) && !s.attended)
-    .reduce((sum, s) => sum + s.hours, 0);
+    .reduce((sum, s) => sum + s.minutes, 0);
   const extra = myActive
     .filter((s) => !s.withinPlan)
-    .reduce((sum, s) => sum + s.hours, 0);
+    .reduce((sum, s) => sum + s.minutes, 0);
   const completed = used - missed;
   // Once the deadline passes, unused hours are forfeited and no more sessions
   // can be logged against the allocation.
@@ -163,7 +163,7 @@ export default async function MentorStudentDetailPage({
             {allocation?.deadline && (
               <>
                 <br />
-                Your hours with them run to{" "}
+                Your time with them run to{" "}
                 <Deadline deadline={allocation.deadline} />
               </>
             )}
@@ -172,26 +172,25 @@ export default async function MentorStudentDetailPage({
       />
 
       <StatCardGrid>
-        <StatCard label="Allocated to you" value={formatHours(allocated)} />
+        <StatCard label="Allocated to you" value={formatDuration(allocated)} />
         <StatCard
           label="Completed with you"
-          value={formatHours(completed)}
+          value={formatDuration(completed)}
           tone="brand"
         />
         {missed > 0 && (
-          <StatCard label="Missed (no-show)" value={formatHours(missed)} />
+          <StatCard label="Missed (no-show)" value={formatDuration(missed)} />
         )}
         {extra > 0 && (
           <StatCard
             label="Extra, beyond plan"
-            value={formatHours(extra)}
+            value={formatDuration(extra)}
             tone="muted"
           />
         )}
         <StatCard
           label="Remaining with you"
-          value={formatHours(remaining)}
-          suffix="h"
+          value={formatDuration(remaining)}
           tone={remaining < 0 ? "danger" : "default"}
           lead
         />
@@ -240,7 +239,7 @@ export default async function MentorStudentDetailPage({
       <AssignmentsPanel
         assignments={ledger.assignments}
         studentProfileId={profile.id}
-        hoursAllotted={hours.allotted}
+        minutesAllotted={hours.allotted}
       />
 
       {!approved ? (
@@ -248,8 +247,8 @@ export default async function MentorStudentDetailPage({
           Sessions can be logged for this student once they&apos;re approved.
         </Callout>
       ) : expired ? (
-        <Callout tone="danger" title="These hours have expired">
-          Your hours with them ran out on{" "}
+        <Callout tone="danger" title="This time has expired">
+          Your time with them ran out on{" "}
           {allocation ? formatDate(allocation.deadline) : ""} and can no longer
           be logged against. Ask an admin to extend the deadline or allocate new
           hours.
@@ -257,8 +256,8 @@ export default async function MentorStudentDetailPage({
       ) : (
         <>
           {pool && (
-            <Callout tone="brand" title="Unassigned hours available">
-              This student holds {formatHours(pool.hours)} hours no mentor
+            <Callout tone="brand" title="Unassigned time available">
+              This student holds {formatDuration(pool.minutes)} no mentor
               was named for, usable until {formatDate(pool.deadline)}. Log a
               session below and the hours you log become yours.
             </Callout>
@@ -269,8 +268,8 @@ export default async function MentorStudentDetailPage({
                 profileId: profile.id,
                 label: profile.user.name ?? profile.user.email,
                 hint: pool
-                  ? `${formatHours(pool.hours)}h unassigned — logging makes them yours`
-                  : `${formatHours(remaining)}h left with you`,
+                  ? `${formatDuration(pool.minutes)} unassigned — logging makes them yours`
+                  : `${formatDuration(remaining)} left with you`,
                 goals: ledger.assignments
                   .filter(
                     (a) => a.mentorId === mentor.id || a.mentorId === null

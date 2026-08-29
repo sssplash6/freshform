@@ -20,7 +20,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ASSIGNMENT_PROGRESS, ROLES, USER_STATUS } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
-import { formatDate, formatHours, formatMoney, toDateInputValue } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
@@ -81,7 +81,7 @@ export default async function AdminStudentDetailPage({
 
   // Assigning a task works for any mentor: one who already holds hours here gets
   // topped up, one who doesn't is pulled into the program by the same action.
-  // What they hold is right below in Hours by mentor, so the picker stays names.
+  // What they hold is right below in Time by mentor, so the picker stays names.
 
   // Their open tasks, so granting more hours for work already underway tops that
   // budget up instead of starting a second row with the same name.
@@ -95,8 +95,8 @@ export default async function AdminStudentDetailPage({
     (openTasksByMentor[task.mentorId ?? ""] ??= []).push({
       purpose: task.purpose,
       hint:
-        task.hourLimit != null
-          ? `${formatHours(task.loggedHours)} of ${formatHours(task.hourLimit)}h`
+        task.minuteLimit != null
+          ? `${formatMinutes(task.loggedMinutes)} of ${formatMinutes(task.minuteLimit)}`
           : "no budget yet",
     });
   }
@@ -149,7 +149,7 @@ export default async function AdminStudentDetailPage({
           title="Approve this student"
           action={<ApproveStudentButtons studentProfileId={profile.id} />}
         >
-          Until approved, the student can&apos;t use their hours and mentors
+          Until approved, the student can&apos;t use their time and mentors
           can&apos;t log sessions for them.
         </Callout>
       )}
@@ -190,12 +190,12 @@ export default async function AdminStudentDetailPage({
         <PanelHeader
           tone="total"
           eyebrow="Granted by an admin"
-          title="Hours by mentor"
+          title="Time by mentor"
           caption="What sessions draw down, and the date each pool expires"
         />
         {hours.perMentor.length === 0 ? (
-          <EmptyState framed={false} title="No hours yet">
-            Hours appear here as they&apos;re granted in the panel above — under
+          <EmptyState framed={false} title="No time yet">
+            Time appears here as they&apos;re granted in the panel above — under
             their mentor, or unassigned until one is chosen.
           </EmptyState>
         ) : (
@@ -234,10 +234,10 @@ export default async function AdminStudentDetailPage({
                   )}
                 </Td>
                 <Td label="Allocated" align="right" className="tabular-nums">
-                  {formatHours(m.allocated)}
+                  {formatDuration(m.allocated)}
                 </Td>
                 <Td label="Completed" align="right" className="tabular-nums">
-                  {formatHours(m.completed)}
+                  {formatDuration(m.completed)}
                 </Td>
                 <Td
                   label="Missed"
@@ -246,7 +246,7 @@ export default async function AdminStudentDetailPage({
                     m.missed > 0 ? "text-amber-700" : "text-muted-fg"
                   }`}
                 >
-                  {m.missed > 0 ? formatHours(m.missed) : "—"}
+                  {m.missed > 0 ? formatDuration(m.missed) : "—"}
                 </Td>
                 <Td
                   label="Remaining"
@@ -255,7 +255,7 @@ export default async function AdminStudentDetailPage({
                     m.remaining < 0 ? "text-red-700" : "text-ink"
                   }`}
                 >
-                  {formatHours(m.remaining)}
+                  {formatDuration(m.remaining)}
                 </Td>
                 <Td label="Use by">
                   <Deadline deadline={m.deadline} />
@@ -272,9 +272,9 @@ export default async function AdminStudentDetailPage({
                     mentorLabel={
                       m.mentor
                         ? (m.mentor.name ?? m.mentor.email)
-                        : "the unassigned hours"
+                        : "the unassigned time"
                     }
-                    currentHours={m.allocated}
+                    currentMinutes={m.allocated}
                     currentDeadline={toDateInputValue(m.deadline)}
                     openTasks={openTasksByMentor[m.mentor?.id ?? ""] ?? []}
                     showAmountPaid={isMasters}
@@ -305,7 +305,7 @@ export default async function AdminStudentDetailPage({
         <PanelHeader
           eyebrow="Audit trail"
           title="Allocation history"
-          caption="Every change to this student's hours, and who made it"
+          caption="Every change to this student's time, and who made it"
         />
         {profile.allotmentChanges.length === 0 ? (
           <EmptyState framed={false}>No allocation changes yet.</EmptyState>
@@ -320,7 +320,7 @@ export default async function AdminStudentDetailPage({
                   {c.changedBy.name ?? c.changedBy.email} set{" "}
                   {c.mentor ? (
                     <>
-                      hours with{" "}
+                      with{" "}
                       <Link
                         href={`/admin/mentors/${c.mentor.id}`}
                         className="font-medium text-ink hover:text-brand"
@@ -329,11 +329,11 @@ export default async function AdminStudentDetailPage({
                       </Link>
                     </>
                   ) : (
-                    "unassigned hours"
+                    "unassigned time"
                   )}
                   :{" "}
                   <span className="tabular-nums">
-                    {formatHours(c.oldHours)} → {formatHours(c.newHours)}
+                    {formatDuration(c.oldMinutes)} → {formatDuration(c.newMinutes)}
                   </span>
                 </span>
               </li>

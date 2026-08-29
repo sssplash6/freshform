@@ -37,7 +37,7 @@ export default async function LoginPage({
           </div>
           <h1 className="text-2xl font-bold text-ink">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-fg">
-            Sign in to see your mentoring hours and book your next session.
+            Sign in to see your mentoring time and book your next session.
           </p>
         </div>
 

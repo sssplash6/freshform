@@ -36,7 +36,7 @@ type AssignmentFields = {
   purpose: string;
   /** Null = no mentor chosen yet; the edit below is where one is picked. */
   mentorId: string | null;
-  hourLimit: number | null;
+  minuteLimit: number | null;
   deadline: string | null;
   note: string | null;
   progress: string;
@@ -134,8 +134,8 @@ export function AssignmentRowActions({
                 </div>
                 <p className="mt-1 text-xs text-muted-fg">
                   {assignment.progressManual
-                    ? "Set by hand, so logged hours no longer move it."
-                    : "Following the logged hours. Setting it here pins it."}
+                    ? "Set by hand, so logged time no longer moves it."
+                    : "Following the logged time. Setting it here pins it."}
                 </p>
                 <form
                   action={progressAction}
@@ -251,13 +251,13 @@ export function AssignmentRowActions({
                   </div>
                   <div className="flex gap-2">
                     <label className={`${labelClass} flex-1`}>
-                      Hour limit
+                      Minute limit
                       <input
-                        name="hourLimit"
+                        name="minuteLimit"
                         type="number"
                         min="0"
-                        step="any"
-                        defaultValue={assignment.hourLimit ?? ""}
+                        step="1"
+                        defaultValue={assignment.minuteLimit ?? ""}
                         className={inputClass}
                       />
                     </label>

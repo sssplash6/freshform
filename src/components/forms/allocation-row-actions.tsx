@@ -26,7 +26,7 @@ export function AllocationRowActions({
   studentProfileId,
   mentorId,
   mentorLabel,
-  currentHours,
+  currentMinutes,
   currentDeadline,
   openTasks = [],
   showAmountPaid = false,
@@ -35,7 +35,7 @@ export function AllocationRowActions({
   studentProfileId: string;
   mentorId: string;
   mentorLabel: string;
-  currentHours: number;
+  currentMinutes: number;
   currentDeadline: string | null;
   /** This mentor's open tasks with the student, for a raise that grants hours. */
   openTasks?: OpenTask[];
@@ -44,9 +44,9 @@ export function AllocationRowActions({
 }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [hours, setHours] = useState(String(currentHours));
+  const [minutes, setMinutes] = useState(String(currentMinutes));
   // A raise grants hours, and hours arriving name the work they are for.
-  const granting = Number(hours) > currentHours;
+  const granting = Number(minutes) > currentMinutes;
   const [setState, setAction] = useActionState(setMentorAllocation, null);
   const [delState, delAction] = useActionState(
     removeMentorAllocation,
@@ -90,7 +90,7 @@ export function AllocationRowActions({
       <button
         ref={triggerRef}
         type="button"
-        aria-label={`Manage hours with ${mentorLabel}`}
+        aria-label={`Manage time with ${mentorLabel}`}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
@@ -120,14 +120,14 @@ export function AllocationRowActions({
               Correct this allocation
             </p>
             <label className="block text-xs font-medium text-muted-fg">
-              Total hours
+              Total minutes
               <input
-                name="hours"
+                name="minutes"
                 type="number"
                 min="0"
-                step="any"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
+                step="1"
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
                 className={inputClass}
               />
             </label>
@@ -176,7 +176,7 @@ export function AllocationRowActions({
               {confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="text-muted-fg">
-                    {mentorId ? "Remove this mentor?" : "Remove these hours?"}
+                    {mentorId ? "Remove this mentor?" : "Remove this time?"}
                   </span>
                   <SubmitButton
                     variant="dangerSolid"
@@ -199,7 +199,7 @@ export function AllocationRowActions({
                   onClick={() => setConfirmDelete(true)}
                   className="text-xs font-medium text-red-700 transition-colors hover:underline"
                 >
-                  {mentorId ? "Remove mentor" : "Remove hours"}
+                  {mentorId ? "Remove mentor" : "Remove time"}
                 </button>
               )}
             </form>

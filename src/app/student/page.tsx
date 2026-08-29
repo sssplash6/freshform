@@ -12,7 +12,7 @@ import { Callout } from "@/components/ui/callout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
@@ -45,13 +45,13 @@ export default async function StudentHomePage() {
         <PageHeader
           eyebrow={enrollmentLabel}
           title="Registration received"
-          subtitle="You're on the list. There's one step left before your hours appear."
+          subtitle="You're on the list. There's one step left before your time appear."
           tone="warm"
           monogram={initials(user.name, user.email)}
         />
         <Callout tone="brand">
           An admin is reviewing your registration. Once approved, your mentoring
-          hours will be allocated and appear here.
+          time will be allocated and appear here.
         </Callout>
       </div>
     );
@@ -93,8 +93,8 @@ export default async function StudentHomePage() {
               </h1>
               <p className="mt-2 max-w-md text-[15px] text-muted-fg">
                 {hours.remaining > 0
-                  ? `You have ${formatHours(hours.remaining)} mentoring hours left to use${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
-                  : "Your mentoring hours are all used up. Talk to your program contact about topping up."}
+                  ? `You have ${formatDuration(hours.remaining)} mentoring time left to use${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
+                  : "Your mentoring time are all used up. Talk to your program contact about topping up."}
               </p>
 
               <Link
@@ -138,14 +138,14 @@ export default async function StudentHomePage() {
 
       {hours.remaining < 0 && (
         <Callout tone="danger" title="You're over your allotment">
-          You&apos;ve used {formatHours(-hours.remaining)} hours more than you
+          You&apos;ve used {formatDuration(-hours.remaining)} more than you
           were given. Talk to your program contact about topping up.
         </Callout>
       )}
 
       {hours.forfeited > 0 && (
-        <Callout tone="danger" title="Some hours expired">
-          {formatHours(hours.forfeited)} of your hours passed their deadline
+        <Callout tone="danger" title="Some time expired">
+          {formatDuration(hours.forfeited)} of your time passed their deadline
           unused and can no longer be used. Talk to your program contact if you
           need them reinstated.
         </Callout>

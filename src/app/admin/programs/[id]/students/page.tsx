@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { formatHours } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, toProgramOptions } from "@/lib/queries";
 
 /**
- * Who is in the program: one row per student with their hours, each row opening
+ * Who is in the program: one row per student with their time, each row opening
  * that student's own page. Registering more students sits under the list, since
  * reading it is the common visit and adding to it the occasional one.
  */
@@ -27,8 +27,8 @@ export default async function AdminProgramStudentsPage({
   const students = await studentsWithHours({ programId: program.id });
   const totals = students.reduce(
     (acc, s) => ({
-      allotted: acc.allotted + s.allottedHours,
-      completed: acc.completed + s.completedHours,
+      allotted: acc.allotted + s.allottedMinutes,
+      completed: acc.completed + s.completedMinutes,
     }),
     { allotted: 0, completed: 0 }
   );
@@ -44,7 +44,7 @@ export default async function AdminProgramStudentsPage({
           caption={
             students.length === 0
               ? "Nobody enrolled yet"
-              : `${students.length} student${students.length === 1 ? "" : "s"} · ${formatHours(totals.completed)} of ${formatHours(totals.allotted)} hours completed`
+              : `${students.length} student${students.length === 1 ? "" : "s"} · ${formatDuration(totals.completed)} of ${formatDuration(totals.allotted)} completed`
           }
         />
         <StudentsTable
