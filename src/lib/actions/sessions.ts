@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/dal";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   ATTENDANCE,
@@ -10,12 +11,18 @@ import {
   attendanceFields,
   attendanceOf,
   canActAsMentor,
+  CHARGED_SESSION,
+  HOURS_KIND,
+  HOURS_KIND_META,
+  hoursKindFields,
+  hoursKindOf,
+  INTERVIEW_STATUS,
   NOTIFICATION_TYPES,
   ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatHours, formatMeetingWhen } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { adminIds, notify, notificationHref } from "@/lib/notify";
 import {
@@ -32,6 +39,71 @@ import {
 function readAttendance(raw: FormDataEntryValue | null): string {
   const value = String(raw ?? "").trim().toUpperCase();
   return value in ATTENDANCE_META ? value : ATTENDANCE.ATTENDED;
+}
+
+/**
+ * Whether these hours come out of the student's allocation. Defaults to in-plan
+ * for the same reason attendance defaults to Attended: a form that somehow
+ * arrives without the field should record the ordinary case, and the ordinary
+ * case is a meeting the student paid for.
+ */
+function readHoursKind(raw: FormDataEntryValue | null): string {
+  const value = String(raw ?? "").trim().toUpperCase();
+  return value in HOURS_KIND_META ? value : HOURS_KIND.PLAN;
+}
+
+/** Midnight UTC on the day of `d`. */
+function dayStart(d: Date): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  );
+}
+
+/**
+ * Retire the diary entry this session delivered, if there was one: a meeting
+ * the same mentor had scheduled with the same student on the same day, still
+ * open, not already tied to a session. Matching on the DAY rather than asking
+ * the mentor to pick one keeps logging a single form — they already told us who
+ * and when — and the worst a wrong match can do is close a meeting that did in
+ * fact happen that day.
+ *
+ * Skipped for a rescheduled session: nothing was delivered, so the meeting is
+ * still owed an outcome.
+ */
+async function closeScheduledMeeting(
+  tx: Prisma.TransactionClient,
+  {
+    studentId,
+    mentorId,
+    date,
+    sessionId,
+  }: { studentId: string; mentorId: string; date: Date; sessionId: string }
+) {
+  const from = dayStart(date);
+  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+  const meeting = await tx.interview.findFirst({
+    where: {
+      studentId,
+      mentorId,
+      sessionId: null,
+      status: {
+        in: [
+          INTERVIEW_STATUS.PROPOSED,
+          INTERVIEW_STATUS.CONFIRMED,
+          INTERVIEW_STATUS.DECLINED,
+        ],
+      },
+      scheduledAt: { gte: from, lt: to },
+    },
+    orderBy: { scheduledAt: "asc" },
+  });
+  if (!meeting) return null;
+
+  await tx.interview.update({
+    where: { id: meeting.id },
+    data: { status: INTERVIEW_STATUS.HELD, sessionId },
+  });
+  return meeting;
 }
 
 async function requireActiveMentor() {
@@ -51,7 +123,7 @@ async function remainingWith(
     where: {
       studentId: studentProfileId,
       mentorId,
-      status: SESSION_STATUS.ACTIVE,
+      ...CHARGED_SESSION,
     },
     _sum: { hours: true },
   });
@@ -124,6 +196,8 @@ export async function logSession(
   const state = readAttendance(formData.get("attendance"));
   const fields = attendanceFields(state);
   const rescheduled = state === ATTENDANCE.RESCHEDULED;
+  const kind = readHoursKind(formData.get("hoursKind"));
+  const withinPlan = hoursKindFields(kind).withinPlan;
 
   const profile = await prisma.studentProfile.findUnique({
     where: { id: studentProfileId },
@@ -158,23 +232,30 @@ export async function logSession(
   // the student's program (and cohort, where the assignment is cohort-scoped):
   // without this, any mentor anywhere could log against any student's pool and
   // carve its hours to themselves.
-  const poolScope = pool
-    ? await prisma.mentorAssignment.findFirst({
-        where: {
-          mentorId: mentor.id,
-          programId: profile.programId,
-          OR: [
-            { cohortId: null },
-            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
-          ],
-        },
-      })
-    : null;
-  if (!allocation && !(pool && poolScope)) {
+  //
+  // Working in the student's program is also the WHOLE authorization for an
+  // out-of-plan log: those hours claim nothing from anybody, so demanding an
+  // allocation first would be asking an admin to grant hours that are, by
+  // definition, not being spent.
+  const scope =
+    !allocation && (pool || !withinPlan)
+      ? await prisma.mentorAssignment.findFirst({
+          where: {
+            mentorId: mentor.id,
+            programId: profile.programId,
+            OR: [
+              { cohortId: null },
+              ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+            ],
+          },
+        })
+      : null;
+  if (withinPlan ? !allocation && !(pool && scope) : !allocation && !scope) {
     return {
       ok: false,
-      error:
-        "No hours were allocated to you for that student, and they hold no unassigned hours you can log against. Ask an admin to allocate hours first.",
+      error: withinPlan
+        ? "No hours were allocated to you for that student, and they hold no unassigned hours you can log against. Ask an admin to allocate hours first, or log this as extra hours."
+        : "You aren't assigned to that student's program, so you can't log hours for them.",
     };
   }
 
@@ -182,11 +263,15 @@ export async function logSession(
   // further sessions can be logged against this allocation. A rescheduled
   // meeting charges nothing, but recording one against expired hours would still
   // be recording work on a pool that is closed.
-  const source = allocation ?? pool!;
-  if (source.deadline.getTime() < Date.now()) {
+  //
+  // Out-of-plan hours are exempt, and deliberately so: an expired deadline means
+  // the student's remaining hours are gone, not that a mentor who kept helping
+  // them afterwards has nowhere to record it.
+  const source = withinPlan ? (allocation ?? pool!) : null;
+  if (source && source.deadline.getTime() < Date.now()) {
     return {
       ok: false,
-      error: `These hours expired on ${formatDate(source.deadline)} and can no longer be logged against. Ask an admin to extend the deadline or allocate new hours.`,
+      error: `These hours expired on ${formatDate(source.deadline)} and can no longer be logged against. Ask an admin to extend the deadline, allocate new hours, or log this as extra hours.`,
     };
   }
 
@@ -208,8 +293,8 @@ export async function logSession(
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = profile.user.name ?? profile.user.email;
 
-  const { sync, carved, poolAfter } = await prisma.$transaction(async (tx) => {
-    await tx.session.create({
+  const { sync, carved, poolAfter, meeting } = await prisma.$transaction(async (tx) => {
+    const session = await tx.session.create({
       data: {
         studentId: profile.id,
         mentorId: mentor.id,
@@ -218,8 +303,21 @@ export async function logSession(
         date: dateParsed.value,
         note,
         ...fields,
+        ...hoursKindFields(kind),
       },
     });
+
+    // A meeting that was in the diary for that day has now happened, whoever
+    // paid for it: it leaves the upcoming list and points at the hours it
+    // became. A rescheduled session delivered nothing, so it retires nothing.
+    const meeting = rescheduled
+      ? null
+      : await closeScheduledMeeting(tx, {
+          studentId: profile.id,
+          mentorId: mentor.id,
+          date: dateParsed.value,
+          sessionId: session.id,
+        });
 
     // The carve, when logging from the pool: what the session charges becomes
     // this mentor's own allocation, and the pool shrinks by the same amount. A
@@ -231,9 +329,11 @@ export async function logSession(
     // read is stale by now if two mentors log at once, and computing from it
     // would let both carve the same hours. A pool an admin removed mid-flight
     // reads as empty — the session still logs, nothing moves.
+    // Out-of-plan hours charge nothing, so there is nothing to carve: the pool
+    // still belongs to whoever meets the student on the plan.
     let carved = 0;
     let poolAfter = 0;
-    if (pool && !rescheduled) {
+    if (pool && !rescheduled && withinPlan) {
       const freshPool = await tx.hourAllocation.findUnique({
         where: { id: pool.id },
       });
@@ -315,9 +415,11 @@ export async function logSession(
       href: notificationHref.studentHome(),
       message: rescheduled
         ? `${mentorLabel} recorded that your ${formatHours(hoursParsed.value)}-hour meeting on ${formatDate(dateParsed.value)}${forTask} was rescheduled. No hours were charged.`
-        : state === ATTENDANCE.ABSENT
-          ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
-          : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
+        : !withinPlan
+          ? `${mentorLabel} logged ${formatHours(hoursParsed.value)} extra hours on ${formatDate(dateParsed.value)}${toward} — work on top of your plan, so none of your hours were used.`
+          : state === ATTENDANCE.ABSENT
+            ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}-hour no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
+            : `${mentorLabel} logged a ${formatHours(hoursParsed.value)}-hour session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,
     });
 
     // Staff watch delivery across every program, so a logged session is news
@@ -330,9 +432,11 @@ export async function logSession(
       message:
         (rescheduled
           ? `${mentorLabel} rescheduled a ${formatHours(hoursParsed.value)}h meeting with ${studentName} on ${formatDate(dateParsed.value)}${forTask} — no hours charged.`
-          : state === ATTENDANCE.ABSENT
-            ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
-            : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
+          : !withinPlan
+            ? `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward} as EXTRA — outside the plan, so no allocation was charged.`
+            : state === ATTENDANCE.ABSENT
+              ? `${mentorLabel} recorded a ${formatHours(hoursParsed.value)}h no-show for ${studentName} on ${formatDate(dateParsed.value)}${forTask}.`
+              : `${mentorLabel} logged ${formatHours(hoursParsed.value)}h with ${studentName} on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? " (came late)" : ""}.`) +
         // The hand-off is news an admin would otherwise reconstruct from the
         // allocation history: the pool chose its mentor.
         (carved > 0
@@ -349,7 +453,7 @@ export async function logSession(
         message: `"${synced.purpose}" for ${studentName} is complete: ${formatHours(synced.loggedHours)} of ${formatHours(synced.hourLimit ?? 0)} planned hours logged.`,
       });
     }
-    return { sync: synced, carved, poolAfter };
+    return { sync: synced, carved, poolAfter, meeting };
   });
 
   revalidatePath("/", "layout");
@@ -363,6 +467,19 @@ export async function logSession(
     : sync?.changed
       ? ` "${sync.purpose}" is now in progress.`
       : "";
+  // The diary entry this closed, so an automatic tidy-up is never something the
+  // mentor discovers later by finding it gone.
+  const meetingNote = meeting
+    ? ` Your scheduled meeting on ${formatMeetingWhen(meeting.scheduledAt, meeting.hasTime)} is marked as held.`
+    : "";
+  // Out-of-plan first: none of the balance arithmetic below applies to hours
+  // that were never going to move a balance.
+  if (!withinPlan) {
+    return {
+      ok: true,
+      message: `Logged as extra hours.${stateNote}${goalNote}${meetingNote} ${formatHours(hoursParsed.value)} hours on top of the plan, so ${studentName}'s balance is unchanged.`,
+    };
+  }
   if (rescheduled) {
     return {
       ok: true,
@@ -379,8 +496,8 @@ export async function logSession(
       ok: true,
       message:
         short > 0
-          ? `Session logged.${stateNote}${goalNote} ${formatHours(carved)} unassigned hours moved to you — the pool came up ${formatHours(short)} short, so ${studentName} is overdrawn with you.`
-          : `Session logged.${stateNote}${goalNote} ${formatHours(carved)} of ${studentName}'s unassigned hours moved to you; ${formatHours(poolAfter)} remain in the pool.`,
+          ? `Session logged.${stateNote}${goalNote}${meetingNote} ${formatHours(carved)} unassigned hours moved to you — the pool came up ${formatHours(short)} short, so ${studentName} is overdrawn with you.`
+          : `Session logged.${stateNote}${goalNote}${meetingNote} ${formatHours(carved)} of ${studentName}'s unassigned hours moved to you; ${formatHours(poolAfter)} remain in the pool.`,
     };
   }
   const remaining = await remainingWith(profile.id, mentor.id, allocation!.hours);
@@ -388,8 +505,8 @@ export async function logSession(
     ok: true,
     message:
       remaining < 0
-        ? `Session logged.${stateNote}${goalNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
-        : `Session logged.${stateNote}${goalNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
+        ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatHours(-remaining)} hours with you.`
+        : `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatHours(remaining)} hours left with you.`,
   };
 }
 
@@ -466,6 +583,7 @@ export async function editSession(
   const note = String(formData.get("note") ?? "").trim() || null;
   const state = readAttendance(formData.get("attendance"));
   const fields = attendanceFields(state);
+  const kind = readHoursKind(formData.get("hoursKind"));
 
   // The task can be corrected here, but is not forced: sessions logged before
   // tasks existed have none, and re-picking one to fix a typo in the hours
@@ -482,6 +600,15 @@ export async function editSession(
   const wasState = attendanceOf(session);
   const attendanceNote =
     state === wasState ? "" : ` Now marked as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
+  // Flipping this moves hours into or out of a balance, so it is stated plainly
+  // rather than left for someone to notice in a total.
+  const wasKind = hoursKindOf(session);
+  const kindNote =
+    kind === wasKind
+      ? ""
+      : kind === HOURS_KIND.EXTRA
+        ? " These hours are now extra, on top of the plan — they no longer count against the allocation."
+        : " These hours now count against the allocation.";
   const staff = await adminIds();
   const actorLabel = actor.name ?? actor.email;
   const mentorLabel = session.mentor.name ?? session.mentor.email;
@@ -498,6 +625,7 @@ export async function editSession(
         date: dateParsed.value,
         note,
         ...fields,
+        ...hoursKindFields(kind),
       },
     });
 
@@ -517,14 +645,14 @@ export async function editSession(
       type: NOTIFICATION_TYPES.SESSION_EDITED,
       actorId: actor.id,
       href: notificationHref.studentHome(),
-      message: `${actorLabel} corrected ${whose}: ${change}.${attendanceNote}`,
+      message: `${actorLabel} corrected ${whose}: ${change}.${attendanceNote}${kindNote}`,
     });
     await notify(tx, {
       to: staff,
       type: NOTIFICATION_TYPES.SESSION_EDITED,
       actorId: actor.id,
       href: notificationHref.adminStudent(session.studentId),
-      message: `${actorLabel} corrected ${whose} with ${studentName}: ${change}.${attendanceNote}`,
+      message: `${actorLabel} corrected ${whose} with ${studentName}: ${change}.${attendanceNote}${kindNote}`,
     });
   });
 

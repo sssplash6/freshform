@@ -7,7 +7,15 @@ import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { ATTENDANCE, ATTENDANCE_META, attendanceOf, SESSION_STATUS } from "@/lib/constants";
+import {
+  ATTENDANCE,
+  ATTENDANCE_META,
+  attendanceOf,
+  chargesAllocation,
+  HOURS_KIND_META,
+  hoursKindOf,
+  SESSION_STATUS,
+} from "@/lib/constants";
 import { formatDate, formatHours, toDateInputValue } from "@/lib/format";
 
 /**
@@ -22,6 +30,8 @@ export type LoggedMeeting = {
   late: boolean;
   note: string | null;
   status: string;
+  /** False = logged out of plan: delivered, but charged to no allocation. */
+  withinPlan: boolean;
   mentor: { id: string; name: string | null; email: string };
   /** Present only on cross-student logs, where a Student column is needed. */
   student?: { id: string; user: { name: string | null; email: string } } | null;
@@ -82,9 +92,15 @@ export function MeetingsLog({
   moreLabel?: string;
 }) {
   // The tally counts what was actually charged: rescheduled and voided rows are
-  // part of the history, not of the hours.
+  // part of the history, not of the hours — and neither are out-of-plan hours,
+  // which are called out beside the total rather than folded into it.
   const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
-  const loggedHours = active.reduce((sum, s) => sum + s.hours, 0);
+  const loggedHours = active
+    .filter(chargesAllocation)
+    .reduce((sum, s) => sum + s.hours, 0);
+  const extraHours = active
+    .filter((s) => !s.withinPlan)
+    .reduce((sum, s) => sum + s.hours, 0);
   const withStudent = sessions.some((s) => s.student);
   // On a mentor's own log every row is them, so the Team column would just
   // repeat one name down the page. Drop it unless the log spans people.
@@ -116,7 +132,9 @@ export function MeetingsLog({
     caption ??
     (active.length === 0
       ? "Nothing logged yet"
-      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours`);
+      : `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatHours(loggedHours)} hours${
+          extraHours > 0 ? ` · ${formatHours(extraHours)} extra` : ""
+        }`);
 
   return (
     <Panel tone="log">
@@ -179,9 +197,12 @@ export function MeetingsLog({
                   </Td>
                 )}
                 <Td label="Duration" align="right">
+                  {/* Struck through when the hours moved no balance — voided,
+                      rescheduled, or given out of plan. The number still reads,
+                      because the time was still spent. */}
                   <span
                     className={
-                      voided || state === ATTENDANCE.RESCHEDULED
+                      voided || !chargesAllocation(s)
                         ? "text-muted-fg line-through tabular-nums"
                         : "font-semibold tabular-nums text-ink"
                     }
@@ -216,14 +237,23 @@ export function MeetingsLog({
                   </div>
                   {/* What kind of meeting it was, when it wasn't the ordinary
                       kind. Voiding wins: those hours went back. */}
-                  {(voided || state !== ATTENDANCE.ATTENDED) && (
-                    <div className="mt-1.5">
+                  {(voided || state !== ATTENDANCE.ATTENDED || !s.withinPlan) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {voided ? (
                         <Chip tone="gray">Voided, hours returned</Chip>
                       ) : (
-                        <Chip tone={ATTENDANCE_META[state].tone ?? "gray"}>
-                          {ATTENDANCE_META[state].chip}
-                        </Chip>
+                        <>
+                          {state !== ATTENDANCE.ATTENDED && (
+                            <Chip tone={ATTENDANCE_META[state].tone ?? "gray"}>
+                              {ATTENDANCE_META[state].chip}
+                            </Chip>
+                          )}
+                          {!s.withinPlan && (
+                            <Chip tone="gray">
+                              {HOURS_KIND_META[hoursKindOf(s)].chip}
+                            </Chip>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -237,6 +267,7 @@ export function MeetingsLog({
                           hours: s.hours,
                           date: toDateInputValue(s.date),
                           attendance: state,
+                          hoursKind: hoursKindOf(s),
                           note: s.note,
                           assignmentId: s.assignment?.id ?? null,
                         }}

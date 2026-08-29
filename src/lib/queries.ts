@@ -1,7 +1,11 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { ASSIGNMENT_PROGRESS, SESSION_STATUS } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  CHARGED_SESSION,
+  SESSION_STATUS,
+} from "@/lib/constants";
 import { deadlinePassed } from "@/lib/deadlines";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -44,19 +48,26 @@ export async function studentsWithHours(
       },
     }),
     prisma.session.groupBy({
-      by: ["studentId", "mentorId", "attended"],
+      by: ["studentId", "mentorId", "attended", "withinPlan"],
       where: { status: SESSION_STATUS.ACTIVE, studentId: { in: ids } },
       _sum: { hours: true },
     }),
   ]);
 
-  // Used = every active session (present + no-show); missed = the no-show
+  // Used = every CHARGING session (present + no-show); missed = the no-show
   // subset. usedByPair drives per-allocation forfeiture on expired deadlines.
+  // Out-of-plan hours are counted apart: they were delivered, but they draw
+  // nothing down, so folding them in here would understate every balance.
   const usedById = new Map<string, number>();
   const missedById = new Map<string, number>();
+  const extraById = new Map<string, number>();
   const usedByPair = new Map<string, number>();
   for (const s of sessionSums) {
     const hrs = s._sum.hours ?? 0;
+    if (!s.withinPlan) {
+      extraById.set(s.studentId, (extraById.get(s.studentId) ?? 0) + hrs);
+      continue;
+    }
     usedById.set(s.studentId, (usedById.get(s.studentId) ?? 0) + hrs);
     usedByPair.set(
       `${s.studentId}:${s.mentorId}`,
@@ -99,6 +110,7 @@ export async function studentsWithHours(
       allottedHours: allotted,
       completedHours: used - missed,
       missedHours: missed,
+      extraHours: extraById.get(profile.id) ?? 0,
       forfeitedHours: forfeited,
       amountPaid: paidById.get(profile.id) ?? 0,
       remainingHours: allotted - used - forfeited,
@@ -132,7 +144,9 @@ export async function studentLedger(studentProfileId: string) {
   ]);
 
   // Hours actually delivered against each goal, so a plan can be read against
-  // reality. ACTIVE only: voided sessions returned their hours.
+  // reality. ACTIVE only: voided sessions returned their hours. Out-of-plan
+  // hours DO count here — a task's hour limit budgets the work, and work done
+  // for free is still work done on the essay.
   const loggedByGoal = new Map<string, number>();
   for (const session of sessions) {
     if (!session.assignmentId || session.status !== SESSION_STATUS.ACTIVE) continue;
@@ -154,6 +168,42 @@ export async function studentLedger(studentProfileId: string) {
 export type LedgerSession = Awaited<
   ReturnType<typeof studentLedger>
 >["sessions"][number];
+
+/**
+ * One student's scheduled meetings, whoever booked them, newest date first.
+ * Everyone who can see the student sees all of them — the same reasoning as the
+ * meetings log: a mentor picking up an essay should know the student already
+ * has a mock interview on Thursday with someone else.
+ *
+ * Callers bucket these with `splitMeetings` (lib/interviews.ts) rather than
+ * filtering by date here, so "upcoming" means the same thing on every page.
+ */
+export async function studentMeetings(studentProfileId: string) {
+  return prisma.interview.findMany({
+    where: { studentId: studentProfileId },
+    include: { mentor: true },
+    orderBy: { scheduledAt: "desc" },
+  });
+}
+
+export type StudentMeeting = Awaited<
+  ReturnType<typeof studentMeetings>
+>[number];
+
+/**
+ * A mentor's own diary: every meeting they have on the books, with the student
+ * on it. Not date-filtered for the same reason as `studentMeetings` — the
+ * overdue ones are exactly what a mentor's dashboard needs to surface.
+ */
+export async function mentorMeetings(mentorId: string) {
+  return prisma.interview.findMany({
+    where: { mentorId },
+    include: { mentor: true, student: { include: { user: true } } },
+    orderBy: { scheduledAt: "desc" },
+  });
+}
+
+export type MentorMeeting = Awaited<ReturnType<typeof mentorMeetings>>[number];
 
 /**
  * The most recent meetings across students, for the log that leads a dashboard.
@@ -348,11 +398,11 @@ export async function mentorOverview(
       },
       orderBy: { createdAt: "asc" },
     }),
-    // Balances draw on every active session this mentor ever logged, not just
+    // Balances draw on every charging session this mentor ever logged, not just
     // the ones the window happens to show.
     prisma.session.groupBy({
       by: ["studentId", "attended"],
-      where: { mentorId, status: SESSION_STATUS.ACTIVE },
+      where: { mentorId, ...CHARGED_SESSION },
       _sum: { hours: true },
     }),
     prisma.session.findMany({
@@ -411,6 +461,8 @@ export async function mentorOverview(
     remaining: number;
     delivered: number;
     missed: number;
+    /** Hours given out of plan in the window — delivered, but charged to nobody. */
+    extra: number;
     sessions: number;
   };
   const rows = new Map<string, ProgramRow>();
@@ -427,6 +479,7 @@ export async function mentorOverview(
       remaining: 0,
       delivered: 0,
       missed: 0,
+      extra: 0,
       sessions: 0,
     };
     rows.set(id, fresh);
@@ -445,7 +498,8 @@ export async function mentorOverview(
   for (const s of active) {
     const row = rowFor(s.student.programId, s.student.program.name);
     row.sessions += 1;
-    if (s.attended) row.delivered += s.hours;
+    if (!s.withinPlan) row.extra += s.hours;
+    else if (s.attended) row.delivered += s.hours;
     else row.missed += s.hours;
   }
 
@@ -461,6 +515,7 @@ export async function mentorOverview(
       sessions: active.length,
       delivered: sum((r) => r.delivered),
       missed: sum((r) => r.missed),
+      extra: sum((r) => r.extra),
       allocated: sum((r) => r.allocated),
       forfeited: sum((r) => r.forfeited),
       remaining: sum((r) => r.remaining),

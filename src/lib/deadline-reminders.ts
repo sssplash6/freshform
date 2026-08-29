@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { notify, notificationHref } from "@/lib/notify";
-import { NOTIFICATION_TYPES, SESSION_STATUS } from "@/lib/constants";
+import { CHARGED_SESSION, NOTIFICATION_TYPES } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
 
 const UPCOMING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -45,7 +45,10 @@ export async function ensureDeadlineReminders() {
       ? []
       : await prisma.session.groupBy({
           by: ["studentId", "mentorId"],
-          where: { status: SESSION_STATUS.ACTIVE, OR: pairs },
+          // Charging sessions only: hours given out of plan never drew this
+          // allocation down, so counting them would understate what is at risk
+          // of expiring and silence a reminder that should have gone out.
+          where: { ...CHARGED_SESSION, OR: pairs },
           _sum: { hours: true },
         });
   const usedBy = new Map(

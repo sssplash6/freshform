@@ -8,6 +8,7 @@ import {
   ATTENDANCE,
   ATTENDANCE_META,
   attendanceOf,
+  hoursKindOf,
   SESSION_STATUS,
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
@@ -82,7 +83,7 @@ export default async function MentorSessionsPage({
       prisma.session.count({ where: { mentorId: user.id } }),
       // Totals over every session the filters match, page or no page.
       prisma.session.groupBy({
-        by: ["attended"],
+        by: ["attended", "withinPlan"],
         where: { ...where, status: SESSION_STATUS.ACTIVE },
         _sum: { hours: true },
         _count: true,
@@ -130,13 +131,18 @@ export default async function MentorSessionsPage({
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const activeHours = byAttendance.reduce(
-    (sum, row) => sum + (row._sum.hours ?? 0),
-    0
-  );
+  // Hours charged vs. hours given: an out-of-plan session is time this mentor
+  // spent, so it counts in the session tally, but it drew nobody's balance
+  // down and so is stated apart from the hours total.
+  const activeHours = byAttendance
+    .filter((row) => row.withinPlan)
+    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
+  const extraHours = byAttendance
+    .filter((row) => !row.withinPlan)
+    .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
   const activeCount = byAttendance.reduce((sum, row) => sum + row._count, 0);
   const missedHours = byAttendance
-    .filter((row) => !row.attended)
+    .filter((row) => row.withinPlan && !row.attended)
     .reduce((sum, row) => sum + (row._sum.hours ?? 0), 0);
 
   const params = { student, program, from, to };
@@ -160,6 +166,9 @@ export default async function MentorSessionsPage({
           sessions
           {missedHours > 0
             ? `, including ${formatHours(missedHours)} missed to no-shows`
+            : ""}
+          {extraHours > 0
+            ? `, plus ${formatHours(extraHours)} given outside the plan`
             : ""}
           .
         </p>
@@ -248,7 +257,13 @@ export default async function MentorSessionsPage({
                         </span>
                       </Td>
                       <Td label="Hours" align="right" className="tabular-nums">
-                        {formatHours(s.hours)}
+                        <span
+                          className={
+                            s.withinPlan ? undefined : "text-muted-fg line-through"
+                          }
+                        >
+                          {formatHours(s.hours)}
+                        </span>
                       </Td>
                       <Td
                         label="Task"
@@ -263,17 +278,24 @@ export default async function MentorSessionsPage({
                         {s.note ?? "—"}
                       </Td>
                       <Td label="Status">
-                        {voided ? (
-                          <Chip tone="gray">Voided</Chip>
-                        ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
-                          <Chip tone="green">Logged</Chip>
-                        ) : (
-                          <Chip
-                            tone={ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"}
-                          >
-                            {ATTENDANCE_META[attendanceOf(s)].label}
-                          </Chip>
-                        )}
+                        <span className="flex flex-wrap gap-1.5">
+                          {voided ? (
+                            <Chip tone="gray">Voided</Chip>
+                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
+                            <Chip tone="green">Logged</Chip>
+                          ) : (
+                            <Chip
+                              tone={
+                                ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"
+                              }
+                            >
+                              {ATTENDANCE_META[attendanceOf(s)].label}
+                            </Chip>
+                          )}
+                          {!voided && !s.withinPlan && (
+                            <Chip tone="gray">Extra</Chip>
+                          )}
+                        </span>
                       </Td>
                       <Td>
                         {!voided && (
@@ -283,6 +305,7 @@ export default async function MentorSessionsPage({
                               hours: s.hours,
                               date: toDateInputValue(s.date),
                               attendance: attendanceOf(s),
+                              hoursKind: hoursKindOf(s),
                               note: s.note,
                               assignmentId: s.assignmentId,
                             }}

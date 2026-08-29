@@ -3,7 +3,8 @@
 Internal, role-based web app that tracks students' mentoring hours. Students
 are granted hours by admins, book sessions with mentors through external
 Calendly links, and mentors log completed sessions, which draws down the
-student's balance. Everyone sees dashboards scoped to their role and gets
+student's balance. Mentors also schedule interviews ahead of time, which the
+student confirms. Everyone sees dashboards scoped to their role and gets
 in-app notifications when hours change.
 
 **Stack:** Next.js 16 (App Router) · Prisma 7 + SQLite · Auth.js v5 (Google
@@ -17,8 +18,8 @@ persistent disk.
 | Admin | `/admin` | Everything: create students anywhere, set hour allotments (audited), assign mentors + booking links, cross-program dashboard, all feedback |
 | Dept Leader | `/leader` | Create students in their program, program dashboard, program mentor feedback |
 | Sales | `/sales` | Create students in their program, program dashboard |
-| Mentor | `/mentor` | See assigned students, log/edit/void their own sessions, see their (anonymous) ratings |
-| Student | `/student` | Hours + history, book via mentors' Calendly links, leave mentor/website feedback |
+| Mentor | `/mentor` | See assigned students, log/edit/void their own sessions, schedule/move/cancel interviews, see their (anonymous) ratings |
+| Student | `/student` | Hours breakdown + meeting history, confirm or decline scheduled interviews, book via mentors' Calendly links, leave mentor/website feedback |
 
 **Sign-in rules:** everyone uses Google OAuth. Staff come from the seeded
 preset list; students can sign in only if staff created them first
@@ -100,8 +101,18 @@ Completed and remaining hours are **derived** from `ACTIVE` sessions vs.
 hours automatically. Every allotment change writes an `HourAllotmentChange`
 audit row.
 
+Which sessions actually spend an allocation is one rule, `chargesAllocation()`
+in `src/lib/constants.ts`: active *and* in-plan. A session logged as EXTRA
+(`Session.withinPlan = false`) is time the mentor gave on top of the plan — it
+appears in every log and counts toward its task, but it moves no balance and
+can be logged after the allocation's deadline has passed.
+
+A scheduled meeting is an `Interview`, deliberately not a future-dated
+`Session`: it charges nothing, the student answers it, and it becomes hours
+only when the mentor logs that day's session — which retires it as `HELD`.
+
 ## Out of scope (MVP)
 
-Redemption deadlines / expiry, multi-program enrollment, email/SMS (in-app
-notifications only), staff management UI (seeded instead), built-in
-scheduling or Google Calendar/Meet integration.
+Multi-program enrollment, SMS, staff management UI (seeded instead), and
+Google Calendar/Meet integration — scheduling is in-app only, and the meeting
+link is whatever the mentor pastes in.

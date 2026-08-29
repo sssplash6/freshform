@@ -1,4 +1,5 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
+import { HoursBreakdown } from "@/components/hours-breakdown";
 import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
@@ -12,6 +13,8 @@ type Totals = {
   missed: number;
   forfeited: number;
   remaining: number;
+  /** Hours delivered outside the plan — charged to no allocation. */
+  extra: number;
 };
 
 /**
@@ -34,6 +37,7 @@ export function StudentLedger({
   manage = false,
   manageSessions,
   extraStats,
+  meetings,
   mentorBase,
 }: {
   sessions: LedgerSession[];
@@ -49,6 +53,8 @@ export function StudentLedger({
   manageSessions?: ManageMeetings;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
+  /** The scheduled-meetings panel, when the reader gets one. */
+  meetings?: React.ReactNode;
   /** Base path (admin only) that makes every mentor chip link to their page. */
   mentorBase?: string;
 }) {
@@ -71,6 +77,13 @@ export function StudentLedger({
             tone="danger"
           />
         )}
+        {totals.extra > 0 && (
+          <StatCard
+            label="Extra, beyond plan"
+            value={formatHours(totals.extra)}
+            tone="muted"
+          />
+        )}
         <StatCard
           label="Hours remaining"
           value={formatHours(totals.remaining)}
@@ -80,6 +93,19 @@ export function StudentLedger({
         />
         {extraStats}
       </StatCardGrid>
+
+      {/* The same figures as one bar: the strip says what each number is, this
+          says how they sit against each other. */}
+      <HoursBreakdown
+        allotted={totals.allotted}
+        completed={totals.completed}
+        missed={totals.missed}
+        forfeited={totals.forfeited}
+        remaining={totals.remaining}
+        extra={totals.extra}
+      />
+
+      {meetings}
 
       <MeetingsLog
         sessions={sessions}

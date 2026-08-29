@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
+import { HoursKindPicker } from "@/components/forms/hours-kind-picker";
 import { PencilIcon } from "@/components/icons";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
@@ -42,6 +43,9 @@ export function SessionRowActions({
     date: string;
     /** One of the four states in lib/constants.ts ATTENDANCE. */
     attendance: string;
+    /** PLAN or EXTRA — see HOURS_KIND. Correctable, since a mis-tick here moves
+     *  hours into or out of the student's balance. */
+    hoursKind: string;
     note: string | null;
     assignmentId: string | null;
   };
@@ -207,6 +211,8 @@ export function SessionRowActions({
               </label>
 
               <AttendancePicker defaultValue={session.attendance} compact />
+
+              <HoursKindPicker defaultValue={session.hoursKind} compact />
 
               <SubmitButton size="sm" pendingText="Saving…">
                 Save changes

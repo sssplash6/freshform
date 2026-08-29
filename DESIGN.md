@@ -75,6 +75,20 @@ vocabulary throughout: mentor, student, task, program.
   stacked form still says what the value means.
 - `Pagination` states the slice in words and pages with links, so a page is
   shareable and the back button behaves.
+- `HoursBreakdown` is an allotment as one bar and its key — delivered, missed,
+  expired, still yours — so the proportions answer the question the four
+  figures used to make people subtract for. Hours logged out of plan sit
+  outside the bar; they were never part of what was bought.
+- `ScheduledMeetings` is the plan-tone counterpart to the amber meetings log.
+  Coming and completed are shaped differently on purpose — a column of
+  calendar leaves against a timeline of dots — so nobody has to read a heading
+  to know which half they are looking at.
+
+A logged session is TWO questions, asked side by side and shaped identically:
+`AttendancePicker` (what happened) and `HoursKindPicker` (whose hours it
+spends). Each states the consequence of the chosen option underneath, because
+neither is guessable from its label alone: absent still charges, extra does
+not.
 
 ## Motion
 

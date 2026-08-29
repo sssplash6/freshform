@@ -4,7 +4,10 @@ import { AssignmentsPanel } from "@/components/assignments-panel";
 import { Chip } from "@/components/chip";
 import { Deadline } from "@/components/deadline";
 import { LogSessionForm } from "@/components/forms/log-session-form";
+import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
+import { HoursBreakdown } from "@/components/hours-breakdown";
 import { MeetingsLog } from "@/components/meetings-log";
+import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
@@ -12,6 +15,7 @@ import { Callout } from "@/components/ui/callout";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   ASSIGNMENT_PROGRESS,
+  chargesAllocation,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -21,7 +25,11 @@ import { formatDate, formatHours } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { studentLedger, taskOptionsForSessions } from "@/lib/queries";
+import {
+  studentLedger,
+  studentMeetings,
+  taskOptionsForSessions,
+} from "@/lib/queries";
 
 /**
  * Mentor's view of one of their students. The numbers are scoped to THIS mentor
@@ -48,7 +56,8 @@ export default async function MentorStudentDetailPage({
   });
   if (!profile) notFound();
 
-  const [allocation, poolRow, poolScope, ledger, hours] = await Promise.all([
+  const [allocation, poolRow, poolScope, ledger, hours, meetings] =
+    await Promise.all([
     prisma.hourAllocation.findUnique({
       where: {
         studentId_mentorId: { studentId: profile.id, mentorId: mentor.id },
@@ -73,6 +82,7 @@ export default async function MentorStudentDetailPage({
     }),
     studentLedger(profile.id),
     allocationSummary(profile.id),
+    studentMeetings(profile.id),
   ]);
 
   const mySessions = ledger.sessions.filter((s) => s.mentorId === mentor.id);
@@ -95,9 +105,16 @@ export default async function MentorStudentDetailPage({
 
   const allocated = allocation?.hours ?? 0;
   const myActive = mySessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
-  const used = myActive.reduce((sum, s) => sum + s.hours, 0);
+  // Only charging sessions move this balance; hours given out of plan are
+  // counted beside it, never inside it.
+  const used = myActive
+    .filter(chargesAllocation)
+    .reduce((sum, s) => sum + s.hours, 0);
   const missed = myActive
-    .filter((s) => !s.attended)
+    .filter((s) => chargesAllocation(s) && !s.attended)
+    .reduce((sum, s) => sum + s.hours, 0);
+  const extra = myActive
+    .filter((s) => !s.withinPlan)
     .reduce((sum, s) => sum + s.hours, 0);
   const completed = used - missed;
   // Once the deadline passes, unused hours are forfeited and no more sessions
@@ -164,6 +181,13 @@ export default async function MentorStudentDetailPage({
         {missed > 0 && (
           <StatCard label="Missed (no-show)" value={formatHours(missed)} />
         )}
+        {extra > 0 && (
+          <StatCard
+            label="Extra, beyond plan"
+            value={formatHours(extra)}
+            tone="muted"
+          />
+        )}
         <StatCard
           label="Remaining with you"
           value={formatHours(remaining)}
@@ -177,6 +201,36 @@ export default async function MentorStudentDetailPage({
           tone="muted"
         />
       </StatCardGrid>
+
+      {/* Their whole allotment, not just this mentor's slice: a consultant
+          picking up an essay needs to know how much room the student has left
+          across everyone before booking three more hours of it. */}
+      <HoursBreakdown
+        allotted={hours.allotted}
+        completed={hours.completed}
+        missed={hours.missed}
+        forfeited={hours.forfeited}
+        remaining={hours.remaining}
+        extra={hours.extra}
+      />
+
+      <ScheduledMeetings
+        meetings={meetings}
+        view="mentor"
+        emptyBody="Book an interview and the student is asked to confirm they'll be there."
+        toolbar={
+          approved ? (
+            <ScheduleInterviewForm
+              studentProfileId={profile.id}
+              studentName={profile.user.name?.split(" ")[0] ?? "The student"}
+            />
+          ) : (
+            <p className="text-sm text-muted-fg">
+              Meetings can be scheduled once this student is approved.
+            </p>
+          )
+        }
+      />
 
       <MeetingsLog
         sessions={ledger.sessions}

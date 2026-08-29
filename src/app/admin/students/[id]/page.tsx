@@ -9,6 +9,7 @@ import { StatCard } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
 import { StudentFolderForm } from "@/components/forms/student-folder-form";
 import { StudentFolderLink } from "@/components/student-folder-link";
+import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StudentLedger } from "@/components/student-ledger";
 import { PersonChip } from "@/components/person-chip";
 import { TelegramHandle } from "@/components/telegram-handle";
@@ -26,6 +27,7 @@ import { prisma } from "@/lib/prisma";
 import {
   programOptions,
   studentLedger,
+  studentMeetings,
   taskOptionsForSessions,
   toProgramOptions,
 } from "@/lib/queries";
@@ -58,7 +60,7 @@ export default async function AdminStudentDetailPage({
   if (!profile) notFound();
 
   const isPending = profile.user.status === USER_STATUS.PENDING;
-  const [allMentors, hours, programs, ledger] = await Promise.all([
+  const [allMentors, hours, programs, ledger, meetings] = await Promise.all([
     prisma.user.findMany({
       where: { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] },
       orderBy: [{ name: "asc" }],
@@ -66,6 +68,7 @@ export default async function AdminStudentDetailPage({
     allocationSummary(profile.id),
     programOptions(),
     studentLedger(profile.id),
+    studentMeetings(profile.id),
   ]);
   // What each logged session could be re-attached to, so a mis-picked task is
   // fixable from the log itself.
@@ -162,6 +165,13 @@ export default async function AdminStudentDetailPage({
         manage
         manageSessions={{ isAdmin: true, tasksBySession }}
         mentorBase="/admin/mentors"
+        meetings={
+          <ScheduledMeetings
+            meetings={meetings}
+            view="staff"
+            emptyBody="Mentors book interviews from their own view of this student; anything they schedule shows here."
+          />
+        }
         extraStats={
           <>
             <StatCard

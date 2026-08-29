@@ -52,6 +52,8 @@ type Pairing = {
   /** Hours delivered in the last week only. */
   deliveredThisWeek: number;
   missedThisWeek: number;
+  /** Last week's out-of-plan hours: delivered, but charged to no allocation. */
+  extraThisWeek: number;
   expired: boolean;
   /** Unused hours lost to a passed deadline. */
   forfeited: number;
@@ -82,6 +84,7 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
         mentorId: true,
         hours: true,
         attended: true,
+        withinPlan: true,
         date: true,
       },
     }),
@@ -92,14 +95,18 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
   const used = new Map<string, number>();
   const deliveredWeek = new Map<string, number>();
   const missedWeek = new Map<string, number>();
+  const extraWeek = new Map<string, number>();
   const bump = (map: Map<string, number>, k: string, n: number) =>
     map.set(k, (map.get(k) ?? 0) + n);
 
   for (const s of sessions) {
     const k = key(s.studentId, s.mentorId);
-    bump(used, k, s.hours);
+    // Out-of-plan hours draw nothing down, so they stay out of `used` — the
+    // digest's whole subject is hours at risk of expiring unused.
+    if (s.withinPlan) bump(used, k, s.hours);
     if (s.date.getTime() >= weekAgo.getTime()) {
-      if (s.attended) bump(deliveredWeek, k, s.hours);
+      if (!s.withinPlan) bump(extraWeek, k, s.hours);
+      else if (s.attended) bump(deliveredWeek, k, s.hours);
       else bump(missedWeek, k, s.hours);
     }
   }
@@ -123,6 +130,7 @@ async function loadPairings(now: Date): Promise<Pairing[]> {
       used: drawn,
       deliveredThisWeek: deliveredWeek.get(k) ?? 0,
       missedThisWeek: missedWeek.get(k) ?? 0,
+      extraThisWeek: extraWeek.get(k) ?? 0,
       expired,
       forfeited: expired ? Math.max(0, a.hours - drawn) : 0,
       remaining: expired ? Math.min(0, a.hours - drawn) : a.hours - drawn,

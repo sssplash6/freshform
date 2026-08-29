@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { logSession } from "@/lib/actions/sessions";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
+import { HoursKindPicker } from "@/components/forms/hours-kind-picker";
 import { Select } from "@/components/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 
@@ -138,8 +139,13 @@ export function LogSessionForm({
         </p>
       )}
 
+      {/* Two questions about the same meeting, side by side: how it went, and
+          whether it spends the student's hours. */}
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <AttendancePicker />
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+          <AttendancePicker />
+          <HoursKindPicker />
+        </div>
         <SubmitButton pendingText="Logging…" className="h-11 min-w-40">
           Log session
         </SubmitButton>

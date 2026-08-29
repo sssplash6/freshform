@@ -131,3 +131,24 @@ export function SearchIcon({ className }: { className?: string }) {
     </Svg>
   );
 }
+
+/** Calendar page — a meeting that hasn't happened yet. */
+export function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4M16 3v4" />
+    </Svg>
+  );
+}
+
+/** Chain link — where a meeting happens. */
+export function LinkIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.2 1.2" />
+      <path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.2-1.2" />
+    </Svg>
+  );
+}

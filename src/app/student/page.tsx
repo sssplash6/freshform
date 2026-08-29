@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { HoursBreakdown } from "@/components/hours-breakdown";
 import { HoursRing } from "@/components/hours-ring";
 import { ArrowRightIcon } from "@/components/icons";
 import { MentorHoursList } from "@/components/mentor-hours-list";
+import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StudentGoals } from "@/components/student-goals";
 import { StudentJourney } from "@/components/student-journey";
 import { Callout } from "@/components/ui/callout";
@@ -15,37 +17,7 @@ import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { allocationSummary } from "@/lib/hours";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { studentLedger } from "@/lib/queries";
-
-/** A small figure the student can act on, beside the ring rather than in a strip. */
-function Fact({
-  value,
-  label,
-  tone = "ink",
-}: {
-  value: string;
-  label: string;
-  tone?: "ink" | "accent" | "danger" | "muted";
-}) {
-  const color =
-    tone === "accent"
-      ? "text-accent-ink"
-      : tone === "danger"
-        ? "text-red-700"
-        : tone === "muted"
-          ? "text-muted-fg"
-          : "text-ink";
-  return (
-    <div>
-      <div className={`text-xl font-bold leading-none tabular-nums ${color}`}>
-        {value}
-      </div>
-      <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
-        {label}
-      </div>
-    </div>
-  );
-}
+import { studentLedger, studentMeetings } from "@/lib/queries";
 
 export default async function StudentHomePage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -85,20 +57,23 @@ export default async function StudentHomePage() {
     );
   }
 
-  const [hours, ledger] = await Promise.all([
+  const [hours, ledger, meetings] = await Promise.all([
     allocationSummary(profile.id),
     studentLedger(profile.id),
+    studentMeetings(profile.id),
   ]);
   const activeSessions = ledger.sessions.filter(
     (s) => s.status === SESSION_STATUS.ACTIVE
   );
   const firstName = user.name?.split(" ")[0] ?? "there";
   const tasksLeft = ledger.assignments.filter((a) => a.progress !== "DONE").length;
+  const mentors = hours.perMentor.filter((m) => m.mentor).length;
 
   return (
     <div className="space-y-6">
-      {/* The one question a student opens this app to answer, given a shape.
-          Everything below is detail behind it. */}
+      {/* The one question a student opens this app to answer, given a shape —
+          and immediately under it, where the rest of the allotment went, so the
+          balance never has to be taken on trust. */}
       <section className="lift-in relative overflow-hidden rounded-2xl border border-line bg-surface">
         <div className="h-[3px] w-full bg-accent" aria-hidden="true" />
         <div className="relative bg-gradient-to-br from-accent-soft to-surface px-5 py-6 sm:px-7">
@@ -122,34 +97,9 @@ export default async function StudentHomePage() {
                   : "Your mentoring hours are all used up. Talk to your program contact about topping up."}
               </p>
 
-              <div className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-4">
-                <Fact
-                  value={formatHours(hours.completed)}
-                  label="Hours completed"
-                  tone="accent"
-                />
-                <Fact
-                  value={String(activeSessions.length)}
-                  label="Sessions"
-                  tone="muted"
-                />
-                <Fact
-                  value={String(hours.perMentor.filter((m) => m.mentor).length)}
-                  label="Mentors"
-                  tone="muted"
-                />
-                {hours.missed > 0 && (
-                  <Fact
-                    value={formatHours(hours.missed)}
-                    label="Hours missed"
-                    tone="danger"
-                  />
-                )}
-              </div>
-
               <Link
                 href="/student/book"
-                className="group mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-dark"
+                className="group mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-dark"
               >
                 Book your next session
                 <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -162,6 +112,27 @@ export default async function StudentHomePage() {
               className="mx-auto sm:mx-0"
             />
           </div>
+        </div>
+
+        <div className="border-t border-line px-5 py-5 sm:px-7">
+          <HoursBreakdown
+            allotted={hours.allotted}
+            completed={hours.completed}
+            missed={hours.missed}
+            forfeited={hours.forfeited}
+            remaining={hours.remaining}
+            extra={hours.extra}
+          />
+          <p className="mt-3 text-xs text-muted-fg">
+            {activeSessions.length} meeting
+            {activeSessions.length === 1 ? "" : "s"} logged
+            {mentors > 0 && (
+              <>
+                {" · "}
+                {mentors} mentor{mentors === 1 ? "" : "s"} on your team
+              </>
+            )}
+          </p>
         </div>
       </section>
 
@@ -180,9 +151,17 @@ export default async function StudentHomePage() {
         </Callout>
       )}
 
-      <StudentGoals assignments={ledger.assignments} />
+      {/* The two halves of the same story, in the order a student cares about
+          them: what they have to turn up to, then what they have done. */}
+      <ScheduledMeetings
+        meetings={meetings}
+        view="student"
+        emptyBody="When a mentor books an interview with you, it appears here and you can confirm you'll be there."
+      />
 
       <StudentJourney sessions={ledger.sessions} />
+
+      <StudentGoals assignments={ledger.assignments} />
 
       <MentorHoursList items={hours.perMentor} />
     </div>

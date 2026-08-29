@@ -6,6 +6,7 @@ import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { MeetingsLog } from "@/components/meetings-log";
+import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
@@ -14,6 +15,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
+  CHARGED_SESSION,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -23,7 +25,7 @@ import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatHours } from "@/lib/format";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
-import { mentorAssignments, recentMeetings } from "@/lib/queries";
+import { mentorAssignments, mentorMeetings, recentMeetings } from "@/lib/queries";
 
 type MentorStudent = {
   profile: {
@@ -143,6 +145,7 @@ export default async function MentorHomePage({
     mySessionSums,
     delivered,
     myMeetings,
+    myDiary,
     myGoals,
   ] = await Promise.all([
       mentorAssignments(user.id),
@@ -164,18 +167,23 @@ export default async function MentorHomePage({
         },
         orderBy: { createdAt: "asc" },
       }),
+      // Balances: charging sessions only, so hours given out of plan never
+      // shrink what a student still holds with this mentor.
       prisma.session.groupBy({
         by: ["studentId", "attended"],
-        where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
+        where: { mentorId: user.id, ...CHARGED_SESSION },
         _sum: { hours: true },
       }),
+      // The headline tallies, which DO want the out-of-plan hours — they are
+      // hours this mentor delivered — so the split comes back in the grouping.
       prisma.session.groupBy({
-        by: ["attended"],
+        by: ["attended", "withinPlan"],
         where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
         _sum: { hours: true },
         _count: true,
       }),
       recentMeetings({ mentorId: user.id, take: 8 }),
+      mentorMeetings(user.id),
       // Goals an admin gave THIS mentor, plus goals with no mentor yet —
       // logging against an unassigned one is how it becomes theirs.
       prisma.assignment.findMany({
@@ -268,10 +276,13 @@ export default async function MentorHomePage({
 
   // Mentor-wide delivered vs. missed hours and total session count.
   const deliveredHours = delivered
-    .filter((d) => d.attended)
+    .filter((d) => d.withinPlan && d.attended)
     .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
   const missedHours = delivered
-    .filter((d) => !d.attended)
+    .filter((d) => d.withinPlan && !d.attended)
+    .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
+  const extraHours = delivered
+    .filter((d) => !d.withinPlan)
     .reduce((sum, d) => sum + (d._sum.hours ?? 0), 0);
   const sessionsLogged = delivered.reduce((sum, d) => sum + d._count, 0);
 
@@ -343,6 +354,13 @@ export default async function MentorHomePage({
         {missedHours > 0 && (
           <StatCard label="Hours missed" value={formatHours(missedHours)} />
         )}
+        {extraHours > 0 && (
+          <StatCard
+            label="Hours beyond plan"
+            value={formatHours(extraHours)}
+            tone="muted"
+          />
+        )}
         <StatCard label="Programs" value={String(assignedPrograms.size)} />
       </StatCardGrid>
 
@@ -367,6 +385,16 @@ export default async function MentorHomePage({
           ))}
         </div>
       )}
+
+      {/* What is still ahead comes before the log of what is behind: a mentor
+          opening this page needs to know who they are seeing on Thursday, and
+          which of those has not answered yet. */}
+      <ScheduledMeetings
+        meetings={myDiary}
+        view="mentor"
+        title="Your diary"
+        emptyBody="Open a student and schedule an interview; it appears here once it's booked."
+      />
 
       <MeetingsLog
         sessions={myMeetings}

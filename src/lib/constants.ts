@@ -108,6 +108,112 @@ export function attendanceFields(state: string): {
   }
 }
 
+/**
+ * Where a logged meeting's hours come from. Asked once, next to attendance,
+ * because it is a different question with different consequences:
+ *
+ *   PLAN   the meeting spends hours the student was allocated  (the default)
+ *   EXTRA  work done on top of the allocation — it charges nothing
+ *
+ * Stored as `Session.withinPlan`. The rule about what EXTRA does to the ledger
+ * lives in `chargesAllocation()` (lib/hours.ts), not here.
+ */
+export const HOURS_KIND = {
+  PLAN: "PLAN",
+  EXTRA: "EXTRA",
+} as const;
+
+export type HoursKind = (typeof HOURS_KIND)[keyof typeof HOURS_KIND];
+
+export const HOURS_KIND_META: Record<
+  string,
+  { label: string; hint: string; chip?: string; tone?: "amber" | "gray" }
+> = {
+  PLAN: {
+    label: "Counts toward their hours",
+    hint: "The usual case — these hours come out of what the student holds with you.",
+  },
+  EXTRA: {
+    label: "Extra, beyond their hours",
+    hint: "Work on top of the plan. It shows in the log and against the task, but charges nothing to their balance.",
+    chip: "Extra — no hours charged",
+    tone: "gray",
+  },
+};
+
+/** How a stored session reads back as one of the two kinds. */
+export function hoursKindOf(session: { withinPlan: boolean }): HoursKind {
+  return session.withinPlan ? HOURS_KIND.PLAN : HOURS_KIND.EXTRA;
+}
+
+/** The column one of the two kinds writes. */
+export function hoursKindFields(kind: string): { withinPlan: boolean } {
+  return { withinPlan: kind !== HOURS_KIND.EXTRA };
+}
+
+/**
+ * THE rule about which logged hours move a balance, in one place.
+ *
+ * A session spends a student's allocation only when it is ACTIVE (a voided or
+ * rescheduled one delivered nothing) AND in-plan (an EXTRA one was given on top
+ * of the allocation, so it charges nothing). Everything that sums hours against
+ * an allocation asks this — the predicate for rows already in memory, the
+ * `CHARGED_SESSION` filter for sums the database does — so the policy can be
+ * changed here rather than in a dozen queries that each half-remember it.
+ *
+ * Note what it deliberately does NOT govern: hours logged against a TASK. Work
+ * done out of plan is still work done toward the essay, so goal progress counts
+ * every active session (see lib/goal-progress.ts).
+ */
+export function chargesAllocation(session: {
+  status: string;
+  withinPlan: boolean;
+}): boolean {
+  return session.status === SESSION_STATUS.ACTIVE && session.withinPlan;
+}
+
+/** The same rule as a Prisma `where` fragment. */
+export const CHARGED_SESSION = {
+  status: SESSION_STATUS.ACTIVE,
+  withinPlan: true,
+} as const;
+
+/**
+ * A scheduled meeting's life. It starts PROPOSED because the student has not
+ * answered yet; only they move it to CONFIRMED or DECLINED, only the mentor
+ * CANCELLED, and logging the hours makes it HELD.
+ */
+export const INTERVIEW_STATUS = {
+  PROPOSED: "PROPOSED",
+  CONFIRMED: "CONFIRMED",
+  DECLINED: "DECLINED",
+  CANCELLED: "CANCELLED",
+  HELD: "HELD",
+} as const;
+
+export type InterviewStatus =
+  (typeof INTERVIEW_STATUS)[keyof typeof INTERVIEW_STATUS];
+
+export const INTERVIEW_STATUS_META: Record<
+  string,
+  { label: string; tone: "green" | "amber" | "gray" | "red" | "violet" }
+> = {
+  PROPOSED: { label: "Awaiting confirmation", tone: "amber" },
+  CONFIRMED: { label: "Confirmed", tone: "green" },
+  DECLINED: { label: "Student can't make it", tone: "red" },
+  CANCELLED: { label: "Cancelled", tone: "gray" },
+  HELD: { label: "Held", tone: "gray" },
+};
+
+/** Still in the diary: on the calendar, not cancelled, not yet logged. */
+export function interviewIsOpen(interview: { status: string }): boolean {
+  return (
+    interview.status === INTERVIEW_STATUS.PROPOSED ||
+    interview.status === INTERVIEW_STATUS.CONFIRMED ||
+    interview.status === INTERVIEW_STATUS.DECLINED
+  );
+}
+
 /** How far along one planned piece of work is. Admin-set, never derived. */
 export const ASSIGNMENT_PROGRESS = {
   NOT_STARTED: "NOT_STARTED",
@@ -144,6 +250,10 @@ export const NOTIFICATION_TYPES = {
   GOAL_ASSIGNED: "GOAL_ASSIGNED", // to the mentor: an admin gave them a task (usually with the hours for it)
   GOAL_CHANGED: "GOAL_CHANGED", // to the mentor: their task was edited, re-staged or removed
   GOAL_DONE: "GOAL_DONE", // to admins: work an admin planned is finished
+  INTERVIEW_SCHEDULED: "INTERVIEW_SCHEDULED", // to the student: a mentor put a meeting in the diary, please confirm
+  INTERVIEW_MOVED: "INTERVIEW_MOVED", // to the student: that meeting changed time, please confirm again
+  INTERVIEW_CANCELLED: "INTERVIEW_CANCELLED", // to the other side: it's off
+  INTERVIEW_ANSWERED: "INTERVIEW_ANSWERED", // to the mentor: the student confirmed, or can't make it
 } as const;
 
 export type NotificationType =
@@ -171,6 +281,10 @@ export const NOTIFICATION_META: Record<
   GOAL_ASSIGNED: { label: "New task", tone: "plan" },
   GOAL_CHANGED: { label: "Task changed", tone: "plan" },
   GOAL_DONE: { label: "Task done", tone: "success" },
+  INTERVIEW_SCHEDULED: { label: "Meeting scheduled", tone: "plan" },
+  INTERVIEW_MOVED: { label: "Meeting moved", tone: "plan" },
+  INTERVIEW_CANCELLED: { label: "Meeting cancelled", tone: "warning" },
+  INTERVIEW_ANSWERED: { label: "Meeting answer", tone: "success" },
 };
 
 /**
