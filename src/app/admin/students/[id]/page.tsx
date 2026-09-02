@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArrowLink } from "@/components/arrow-link";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { Deadline } from "@/components/deadline";
 import { Chip } from "@/components/chip";
@@ -17,7 +18,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { ASSIGNMENT_PROGRESS, ROLES, USER_STATUS } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  canActAsMentor,
+  ROLES,
+  USER_STATUS,
+} from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMinutes, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
@@ -73,6 +80,30 @@ export default async function AdminStudentDetailPage({
   // fixable from the log itself.
   const tasksBySession = await taskOptionsForSessions(ledger.sessions);
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
+
+  // The jump back to the mentor view, offered only when that view would open —
+  // it needs hours with this student, a session with them, or a program the
+  // viewer mentors in, the same three answers `/mentor/students/[id]` asks for.
+  // The switch in the header can't work this out from a path, so the page that
+  // holds the ledger answers it here, and an admin who doesn't mentor this
+  // student is never handed a link to a 404.
+  // Free but for the assignment lookup: the allocations and every session are
+  // already in hand.
+  const viewer = await requireRole(ROLES.ADMIN);
+  const mentorsThem =
+    canActAsMentor(viewer) &&
+    (hours.perMentor.some((m) => m.mentor?.id === viewer.id) ||
+      ledger.sessions.some((s) => s.mentorId === viewer.id) ||
+      (await prisma.mentorAssignment.findFirst({
+        where: {
+          mentorId: viewer.id,
+          programId: profile.programId,
+          OR: [
+            { cohortId: null },
+            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+          ],
+        },
+      })) !== null);
   const mentorOptions = allMentors.map((m) => ({
     value: m.id,
     label: m.name ?? m.email,
@@ -107,6 +138,13 @@ export default async function AdminStudentDetailPage({
         backLabel={`${profile.program.name} students`}
         eyebrow={`Student · ${profile.program.name}`}
         monogram={initials(profile.user.name, profile.user.email)}
+        actions={
+          mentorsThem ? (
+            <ArrowLink href={`/mentor/students/${profile.id}`}>
+              Open mentor view
+            </ArrowLink>
+          ) : undefined
+        }
         title={
           <span className="flex flex-wrap items-center gap-3">
             {profile.user.name ?? profile.user.email}

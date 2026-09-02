@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { ArrowLink } from "@/components/arrow-link";
 import { AssignmentsPanel } from "@/components/assignments-panel";
 import { Chip } from "@/components/chip";
 import { Deadline } from "@/components/deadline";
@@ -16,6 +17,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   ASSIGNMENT_PROGRESS,
   chargesAllocation,
+  ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -133,6 +135,18 @@ export default async function MentorStudentDetailPage({
         backLabel="My students"
         eyebrow={`Your student · ${profile.program.name}`}
         monogram={initials(profile.user.name, profile.user.email)}
+        // Admins who also mentor came here to look at their student, and half
+        // of what they may want to DO about them — grant hours, edit the plan,
+        // correct the record — only exists in the admin view of this same
+        // student. One link, rather than switching profile and finding them
+        // again. Admins may open every student, so it always opens.
+        actions={
+          mentor.role === ROLES.ADMIN ? (
+            <ArrowLink href={`/admin/students/${profile.id}`}>
+              Open in admin view
+            </ArrowLink>
+          ) : undefined
+        }
         title={
           <span className="flex flex-wrap items-center gap-3">
             {profile.user.name ?? profile.user.email}

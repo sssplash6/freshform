@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { Avatar } from "@/components/avatar";
 import { NavLinks } from "@/components/nav-links";
-import { CheckIcon, ChevronDownIcon, LogOutIcon } from "@/components/icons";
+import { ChevronDownIcon, LogOutIcon } from "@/components/icons";
+import { ProfileSwitch, ProfileSwitchMenu } from "@/components/profile-switch";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
@@ -12,85 +13,6 @@ import type { User } from "@/generated/prisma/client";
 async function signOutAction() {
   "use server";
   await signOut({ redirectTo: "/login" });
-}
-
-/**
- * Header switch for dual-role admins (admin + mentor): highlights the active
- * profile and links to the other one. Route-based — /admin* is admin view,
- * /mentor* is mentor view — so the layout passes which is active.
- */
-function ProfileSwitch({ active }: { active: Role }) {
-  const items = [
-    { role: ROLES.ADMIN, label: "Admin", href: "/admin" },
-    { role: ROLES.MENTOR, label: "Mentor", href: "/mentor" },
-  ] as const;
-  return (
-    <div
-      role="group"
-      aria-label="Switch profile"
-      className="flex items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
-    >
-      {items.map((it) =>
-        it.role === active ? (
-          <span
-            key={it.role}
-            aria-current="true"
-            className="rounded-md bg-accent px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
-          >
-            {it.label}
-          </span>
-        ) : (
-          <Link
-            key={it.role}
-            href={it.href}
-            className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg transition-colors hover:text-ink"
-          >
-            {it.label}
-          </Link>
-        )
-      )}
-    </div>
-  );
-}
-
-/**
- * The same switch as a pair of menu rows. On a 320px header there is no room
- * for branding, a two-segment switch, a bell and a menu button at once — and
- * the switch is the one of the four that can live inside the menu without being
- * any harder to find.
- */
-function ProfileSwitchMenu({ active }: { active: Role }) {
-  const items = [
-    { role: ROLES.ADMIN, label: "Admin", href: "/admin" },
-    { role: ROLES.MENTOR, label: "Mentor", href: "/mentor" },
-  ] as const;
-  return (
-    <div className="border-b border-line pb-1" role="group" aria-label="Switch profile">
-      <p className="px-3 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
-        Profile
-      </p>
-      {items.map((it) =>
-        it.role === active ? (
-          <span
-            key={it.role}
-            aria-current="true"
-            className="flex min-h-11 items-center justify-between rounded-lg bg-brand-soft px-3 text-sm font-medium text-brand"
-          >
-            {it.label}
-            <CheckIcon className="h-4 w-4" />
-          </span>
-        ) : (
-          <Link
-            key={it.role}
-            href={it.href}
-            className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
-          >
-            {it.label}
-          </Link>
-        )
-      )}
-    </div>
-  );
 }
 
 function RoleBadge({ role }: { role: Role }) {
