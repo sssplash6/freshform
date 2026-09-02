@@ -48,11 +48,10 @@ export const PROGRAMS: { name: string; cohorts: string[] }[] = [
  * dual-role admin who can also act as a mentor (toggle into the mentor
  * dashboard, be assigned to programs).
  *
- * This is the exclusive list of admins. Most are mentors too — the exceptions
- * are tech@ (the developer account) and admins who simply don't mentor, who
- * are left without the flag. Add DEPT_LEADER / SALES entries with real emails
- * when those people are known, then re-run the seed (the seed only upserts,
- * so it never removes anyone).
+ * This is the exclusive list of admins. Most are mentors too; admins who
+ * simply don't mentor are left without the flag. Add DEPT_LEADER / SALES
+ * entries with real emails when those people are known, then re-run the seed
+ * (the seed only upserts, so it never removes anyone).
  */
 export const STAFF_SEED: {
   email: string;
@@ -66,7 +65,8 @@ export const STAFF_SEED: {
     name: "Freshman Academy Admin",
     role: "ADMIN",
     program: null,
-    // Developer account, not a mentor.
+    // Runs the platform and mentors students, so it carries both roles.
+    isMentor: true,
   },
   {
     email: "sharofiddin@freshman.academy",
