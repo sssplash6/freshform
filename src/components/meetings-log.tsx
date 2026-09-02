@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Chip } from "@/components/chip";
-import { ExpandableNote } from "@/components/expandable-note";
+import { ExpandableText } from "@/components/expandable-text";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -216,13 +216,13 @@ export function MeetingsLog({
                 >
                   {formatDate(s.date)}
                 </Td>
-                <Td label="Task" className="sm:max-w-56">
+                <Td label="Task" className="sm:min-w-40 sm:max-w-56">
                   {s.assignment ? (
-                    <span
+                    <ExpandableText
+                      text={s.assignment.purpose}
+                      lines={2}
                       className={`text-plan-ink ${voided ? "opacity-55" : ""}`}
-                    >
-                      {s.assignment.purpose}
-                    </span>
+                    />
                   ) : (
                     <span className="text-muted-fg">—</span>
                   )}
@@ -230,7 +230,7 @@ export function MeetingsLog({
                 <Td label="Notes" className="sm:max-w-md">
                   <div className={voided ? "opacity-55" : undefined}>
                     {s.note ? (
-                      <ExpandableNote text={s.note} />
+                      <ExpandableText text={s.note} />
                     ) : (
                       <span className="text-muted-fg">—</span>
                     )}

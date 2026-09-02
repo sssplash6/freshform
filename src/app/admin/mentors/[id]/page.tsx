@@ -161,7 +161,6 @@ export default async function AdminMentorDetailPage({
           tone="total"
           eyebrow="Time"
           title="Delivery record"
-          caption={`Delivered and missed cover ${win.label}; allocated and remaining are balances as of today`}
         />
 
         <MentorHoursFilter
@@ -361,7 +360,6 @@ export default async function AdminMentorDetailPage({
           tone="total"
           eyebrow="Holding time from this mentor"
           title="Students"
-          caption="Current balances — the period above doesn't move these"
         />
         {overview.students.length === 0 ? (
           <EmptyState framed={false} title="No students yet">

@@ -1,5 +1,5 @@
 import { Chip, type ChipTone } from "@/components/chip";
-import { ExpandableNote } from "@/components/expandable-note";
+import { ExpandableText } from "@/components/expandable-text";
 import { HoursBreakdown } from "@/components/hours-breakdown";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
@@ -160,7 +160,7 @@ function LoggedMeetingRow({ session }: { session: LedgerSession }) {
       </div>
       {session.note && (
         <div className="mt-0.5 text-[13px] text-ink">
-          <ExpandableNote text={session.note} />
+          <ExpandableText text={session.note} />
         </div>
       )}
       {(voided || state !== ATTENDANCE.ATTENDED || !session.withinPlan) && (
