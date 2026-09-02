@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { NavLinks } from "@/components/nav-links";
 import { ChevronDownIcon, LogOutIcon } from "@/components/icons";
-import { ProfileSwitch, ProfileSwitchMenu } from "@/components/profile-switch";
+import {
+  ProfileShortcut,
+  ProfileSwitch,
+  ProfileSwitchMenu,
+} from "@/components/profile-switch";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
@@ -143,6 +147,9 @@ export async function AppShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      {/* Once, for the whole shell: both switches below are in the DOM at the
+          same time, so the key would otherwise be handled twice. */}
+      {isDual && <ProfileShortcut active={activeRole} />}
       <header className="border-b border-line bg-surface">
         {/* Desktop */}
         <div className="mx-auto hidden min-h-16 max-w-5xl items-center gap-6 px-4 md:flex">

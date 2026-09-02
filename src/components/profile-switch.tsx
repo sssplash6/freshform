@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
 
 import { CheckIcon } from "@/components/icons";
 import { ROLES, type Role } from "@/lib/constants";
@@ -10,6 +11,36 @@ const ITEMS = [
   { role: ROLES.ADMIN, home: "/admin", label: "Admin" },
   { role: ROLES.MENTOR, home: "/mentor", label: "Mentor" },
 ] as const;
+
+/** The profile that isn't the one you're in. There are only ever two. */
+function other(active: Role): (typeof ITEMS)[number] {
+  return ITEMS.find((it) => it.role !== active) ?? ITEMS[0];
+}
+
+/**
+ * Alt+M, and ⌥M on a Mac — "M for mode". Chosen because it is free in every
+ * major browser on both platforms: ⌘L/Ctrl+L, the obvious pick, is the address
+ * bar and is reserved, so a page cannot have it.
+ *
+ * Rendered as a tooltip rather than visible text: the header already carries a
+ * brand, a switch, a bell and a menu at 320px.
+ */
+function useShortcutLabel(): string {
+  // The platform is an external, never-changing fact, and the server can't see
+  // it — so the server renders the plain form and the client swaps in ⌥ during
+  // hydration. useSyncExternalStore is what gives those two different answers
+  // without it counting as a hydration mismatch.
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => (/Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌥M" : "Alt+M"),
+    () => "Alt+M"
+  );
+}
+
+/** A store that never emits: the keyboard's labels don't change mid-session. */
+function subscribeToNothing(): () => void {
+  return () => {};
+}
 
 /**
  * Where the other profile's version of THIS page lives, or null when there is
@@ -35,13 +66,67 @@ function counterpart(pathname: string, to: Role): string | null {
   return null;
 }
 
+/**
+ * The keyboard half of the switch: Alt+M / ⌥M anywhere in the app. Renders
+ * nothing, and the shell mounts exactly one of it — both switches are in the
+ * DOM at once (one hidden by a breakpoint), so hanging the listener off either
+ * would fire it twice.
+ *
+ * It prefers the counterpart link the PAGE marked, when there is one, because
+ * that is the only thing that knows whether a student's mentor view opens for
+ * this viewer. Failing that it falls back to the path mapping, then to the
+ * other profile's home — so the key always goes somewhere real.
+ */
+export function ProfileShortcut({ active }: { active: Role }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const target = other(active);
+    function onKeyDown(e: KeyboardEvent) {
+      // Alt alone: ⌥⌘M and ⌥⇧M belong to other things, here and in the OS.
+      if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      // ⌥M types "µ" on a Mac, so the key that arrives isn't "m" — the physical
+      // key is what identifies the chord.
+      if (e.code !== "KeyM") return;
+      // Never while someone is writing a note or a student's name — and never
+      // steal the µ they meant to type.
+      const el = document.activeElement;
+      if (
+        el instanceof HTMLElement &&
+        (el.isContentEditable ||
+          el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT")
+      ) {
+        return;
+      }
+      const marked = document
+        .querySelector("[data-profile-counterpart] a[href]")
+        ?.getAttribute("href");
+      const href =
+        (marked?.startsWith(target.home) ? marked : null) ??
+        counterpart(pathname, target.role) ??
+        target.home;
+      e.preventDefault();
+      router.push(href);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [active, pathname, router]);
+
+  return null;
+}
+
 /** Two segments, the active one filled. Dual-role admins only. */
 export function ProfileSwitch({ active }: { active: Role }) {
   const pathname = usePathname();
+  const shortcut = useShortcutLabel();
   return (
     <div
       role="group"
       aria-label="Switch profile"
+      aria-keyshortcuts="Alt+M"
       className="flex items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
     >
       {ITEMS.map((it) =>
@@ -57,6 +142,7 @@ export function ProfileSwitch({ active }: { active: Role }) {
           <Link
             key={it.role}
             href={counterpart(pathname, it.role) ?? it.home}
+            title={`Switch profile (${shortcut})`}
             className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg transition-colors hover:text-ink"
           >
             {it.label}
@@ -75,10 +161,19 @@ export function ProfileSwitch({ active }: { active: Role }) {
  */
 export function ProfileSwitchMenu({ active }: { active: Role }) {
   const pathname = usePathname();
+  const shortcut = useShortcutLabel();
   return (
-    <div className="border-b border-line pb-1" role="group" aria-label="Switch profile">
-      <p className="px-3 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
+    <div
+      className="border-b border-line pb-1"
+      role="group"
+      aria-label="Switch profile"
+      aria-keyshortcuts="Alt+M"
+    >
+      <p className="flex items-baseline justify-between gap-2 px-3 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
         Profile
+        <span className="font-semibold normal-case tracking-normal">
+          {shortcut}
+        </span>
       </p>
       {ITEMS.map((it) =>
         it.role === active ? (

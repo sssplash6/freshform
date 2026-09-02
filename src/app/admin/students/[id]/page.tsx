@@ -140,9 +140,13 @@ export default async function AdminStudentDetailPage({
         monogram={initials(profile.user.name, profile.user.email)}
         actions={
           mentorsThem ? (
-            <ArrowLink href={`/mentor/students/${profile.id}`}>
-              Open mentor view
-            </ArrowLink>
+            // Marked so the Alt+M shortcut can find it: this link is the only
+            // thing on the page that knows the mentor view opens for them.
+            <span data-profile-counterpart="true">
+              <ArrowLink href={`/mentor/students/${profile.id}`}>
+                Open mentor view
+              </ArrowLink>
+            </span>
           ) : undefined
         }
         title={

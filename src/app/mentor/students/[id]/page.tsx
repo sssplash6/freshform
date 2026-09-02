@@ -142,9 +142,11 @@ export default async function MentorStudentDetailPage({
         // again. Admins may open every student, so it always opens.
         actions={
           mentor.role === ROLES.ADMIN ? (
-            <ArrowLink href={`/admin/students/${profile.id}`}>
-              Open in admin view
-            </ArrowLink>
+            <span data-profile-counterpart="true">
+              <ArrowLink href={`/admin/students/${profile.id}`}>
+                Open in admin view
+              </ArrowLink>
+            </span>
           ) : undefined
         }
         title={
