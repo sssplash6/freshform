@@ -268,7 +268,12 @@ export default async function AdminStudentDetailPage({
                         : "the unassigned time"
                     }
                     currentMinutes={m.allocated}
-                    currentDeadline={toDateInputValue(m.deadline)}
+                    currentDeadline={
+                      // Null on a derived row — hours logged by a mentor who
+                      // holds no allocation — so the admin picks a use-by date
+                      // as they would for any fresh grant.
+                      m.deadline ? toDateInputValue(m.deadline) : null
+                    }
                     openTasks={openTasksByMentor[m.mentor?.id ?? ""] ?? []}
                     showAmountPaid={isMasters}
                     currentAmountPaid={m.amountPaid}

@@ -15,7 +15,6 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
-  CHARGED_SESSION,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -40,6 +39,9 @@ type MentorStudent = {
   allocated: number;
   completed: number;
   missed: number;
+  /** Hours delivered on top of the plan: outside every total beside it, but a
+   *  row of zeros would otherwise deny work this mentor actually did. */
+  extra: number;
   remaining: number;
   deadline: Date | null;
   expired: boolean;
@@ -137,7 +139,10 @@ export default async function MentorHomePage({
   // A mentor's students are the ones an admin allocated time to FROM this
   // mentor — plus, further down, students in their programs holding unassigned
   // hours, which any mentor may log against (logging carves them to whoever
-  // did the meeting).
+  // did the meeting), and anyone they have logged a session with. That last
+  // group is why the list can't be read off the allocations alone: a mentor in
+  // the program may log without holding a grant, and a student they just
+  // recorded a meeting for must not vanish from the list that leads to them.
   const [
     assignments,
     allocations,
@@ -167,11 +172,13 @@ export default async function MentorHomePage({
         },
         orderBy: { createdAt: "asc" },
       }),
-      // Balances: charging sessions only, so hours given out of plan never
-      // shrink what a student still holds with this mentor.
+      // Every active session, split by plan: the in-plan rows are the balances
+      // (hours given out of plan never shrink what a student still holds), and
+      // the whole set names the students this mentor has met — including any
+      // they have only ever given extra time to.
       prisma.session.groupBy({
-        by: ["studentId", "attended"],
-        where: { mentorId: user.id, ...CHARGED_SESSION },
+        by: ["studentId", "attended", "withinPlan"],
+        where: { mentorId: user.id, status: SESSION_STATUS.ACTIVE },
         _sum: { minutes: true },
       }),
       // The headline tallies, which DO want the out-of-plan hours — they are
@@ -218,8 +225,16 @@ export default async function MentorHomePage({
 
   const usedByStudent = new Map<string, number>();
   const missedByStudent = new Map<string, number>();
+  const extraByStudent = new Map<string, number>();
   for (const s of mySessionSums) {
     const hrs = s._sum.minutes ?? 0;
+    if (!s.withinPlan) {
+      extraByStudent.set(
+        s.studentId,
+        (extraByStudent.get(s.studentId) ?? 0) + hrs
+      );
+      continue;
+    }
     usedByStudent.set(s.studentId, (usedByStudent.get(s.studentId) ?? 0) + hrs);
     if (!s.attended) {
       missedByStudent.set(
@@ -237,6 +252,7 @@ export default async function MentorHomePage({
       allocated: a.minutes,
       completed: used - missed,
       missed,
+      extra: extraByStudent.get(a.studentId) ?? 0,
       // Unused hours on an expired allocation are forfeited.
       remaining: expired ? Math.min(0, a.minutes - used) : a.minutes - used,
       deadline: a.deadline,
@@ -266,6 +282,7 @@ export default async function MentorHomePage({
       allocated: 0,
       completed: 0,
       missed: 0,
+      extra: extraByStudent.get(p.studentId) ?? 0,
       remaining: 0,
       deadline: p.deadline,
       expired: false,
@@ -273,6 +290,60 @@ export default async function MentorHomePage({
       pool: p.minutes,
     });
   }
+
+  // Students this mentor has met but holds no allocation for: they may log in
+  // their program without a grant, and an admin may remove an allocation after
+  // the fact. The meetings happened either way, so the student stays on the
+  // list — with the in-plan hours showing as the overdraw they are, since
+  // nothing was ever allotted to draw them from.
+  const listed = new Set(students.map((s) => s.profile.id));
+  const metIds = [...new Set(mySessionSums.map((s) => s.studentId))].filter(
+    (id) => !listed.has(id)
+  );
+  const met = metIds.length
+    ? await prisma.studentProfile.findMany({
+        where: { id: { in: metIds } },
+        include: { user: true, program: true, cohort: true },
+      })
+    : [];
+  for (const p of met) {
+    const used = usedByStudent.get(p.id) ?? 0;
+    const missed = missedByStudent.get(p.id) ?? 0;
+    listed.add(p.id);
+    students.push({
+      profile: p,
+      allocated: 0,
+      completed: used - missed,
+      missed,
+      extra: extraByStudent.get(p.id) ?? 0,
+      remaining: -used,
+      deadline: null,
+      expired: false,
+      approved: p.user.status === USER_STATUS.ACTIVE,
+    });
+  }
+
+  // Everyone else in this mentor's programs. Not students of theirs — nothing
+  // has been allocated and nothing logged — so they stay off the table and out
+  // of every total on it, and appear only in the log form's picker, which is
+  // exactly as far as the mentor's authority reaches: they may record a meeting
+  // with anyone in a program they work in, and the "Whose hours?" tick decides
+  // whether it charges.
+  const loggable = assignments.length
+    ? await prisma.studentProfile.findMany({
+        where: {
+          id: { notIn: [...listed] },
+          user: { status: USER_STATUS.ACTIVE },
+          OR: assignments.map((a) =>
+            a.cohortId
+              ? { programId: a.programId, cohortId: a.cohortId }
+              : { programId: a.programId }
+          ),
+        },
+        include: { user: true, program: true },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
 
   // Mentor-wide delivered vs. missed hours and total session count.
   const deliveredMinutes = delivered
@@ -408,8 +479,8 @@ export default async function MentorHomePage({
       {visible.length === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
           {selected
-            ? "No students have time allocated with you in this program yet."
-            : "No students have time allocated with you yet. An admin assigns those."}
+            ? "No students have time allocated with you in this program yet — you can still log a meeting with anyone in it using the form below."
+            : "No students have time allocated with you yet. An admin assigns those, but you can already log a meeting with anyone in your programs using the form below."}
         </p>
       ) : (
         [...byProgram.entries()].map(([programId, group]) => (
@@ -442,6 +513,11 @@ export default async function MentorHomePage({
                         {s.pool != null && (
                           <Chip tone="gray">
                             {formatDuration(s.pool)} unassigned
+                          </Chip>
+                        )}
+                        {s.extra > 0 && (
+                          <Chip tone="gray">
+                            {formatDuration(s.extra)} extra
                           </Chip>
                         )}
                       </span>
@@ -523,20 +599,35 @@ export default async function MentorHomePage({
       )}
 
       <LogSessionForm
-        students={visible
-          .filter((s) => s.approved && !s.expired)
-          // Name on the first line, the numbers on the second: the picker is
-          // scanned by who, then confirmed by how much. Both lines are
-          // searchable, so the email is there to be typed at, not read.
-          .map((s) => ({
-            profileId: s.profile.id,
-            label: s.profile.user.name ?? s.profile.user.email,
-            hint:
-              s.pool != null
-                ? `${formatDuration(s.pool)} unassigned — logging makes them yours · ${s.profile.program.name} · ${s.profile.user.email}`
-                : `${formatDuration(s.remaining)} left with you · ${s.profile.program.name} · ${s.profile.user.email}`,
-            goals: goalsByStudent.get(s.profile.id) ?? [],
-          }))}
+        students={[
+          ...visible
+            .filter((s) => s.approved && !s.expired)
+            // Name on the first line, the numbers on the second: the picker is
+            // scanned by who, then confirmed by how much. Both lines are
+            // searchable, so the email is there to be typed at, not read.
+            .map((s) => ({
+              profileId: s.profile.id,
+              label: s.profile.user.name ?? s.profile.user.email,
+              hint:
+                s.pool != null
+                  ? `${formatDuration(s.pool)} unassigned — logging makes them yours · ${s.profile.program.name} · ${s.profile.user.email}`
+                  : s.allocated > 0
+                    ? `${formatDuration(s.remaining)} left with you · ${s.profile.program.name} · ${s.profile.user.email}`
+                    : `No time allocated to you · ${s.profile.program.name} · ${s.profile.user.email}`,
+              goals: goalsByStudent.get(s.profile.id) ?? [],
+            })),
+          // Then everyone else in the mentor's programs, last because they are
+          // the least likely pick — but pickable, so a meeting that happened
+          // before any hours were granted can still be recorded today.
+          ...loggable
+            .filter((p) => !selected || p.programId === selected)
+            .map((p) => ({
+              profileId: p.id,
+              label: p.user.name ?? p.user.email,
+              hint: `No time allocated to you · ${p.program.name} · ${p.user.email}`,
+              goals: goalsByStudent.get(p.id) ?? [],
+            })),
+        ]}
       />
     </div>
   );

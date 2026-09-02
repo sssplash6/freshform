@@ -38,9 +38,11 @@ import {
  * mentor picking up an essay needs to know what the last three meetings covered
  * and who else is working on what. Read-only on the plan, which only admins set.
  *
- * Only reachable for students the mentor has an allocation or a session with —
- * or ones holding live unassigned time, which any mentor may log against
- * (the logged hours become theirs).
+ * Only reachable for students the mentor has an allocation or a session with,
+ * or any student in a program they work in: a mentor there may log for them
+ * whether or not an admin has granted hours yet (their "Whose hours?" tick
+ * decides whether those hours charge), and logging against live unassigned time
+ * makes those hours theirs.
  */
 export default async function MentorStudentDetailPage({
   params,
@@ -56,7 +58,7 @@ export default async function MentorStudentDetailPage({
   });
   if (!profile) notFound();
 
-  const [allocation, poolRow, poolScope, ledger, hours, meetings] =
+  const [allocation, poolRow, scope, ledger, hours, meetings] =
     await Promise.all([
     prisma.hourAllocation.findUnique({
       where: {
@@ -66,10 +68,11 @@ export default async function MentorStudentDetailPage({
     prisma.hourAllocation.findFirst({
       where: { studentId: profile.id, mentorId: null },
     }),
-    // The pool only opens this page to mentors actually working in the
-    // student's program (and cohort, where the assignment is cohort-scoped) —
-    // the same rule logSession enforces. Without it, a live pool would show
-    // any mentor anywhere this student's whole ledger.
+    // Working in the student's program (and cohort, where the assignment is
+    // cohort-scoped) is what opens this page to a mentor who holds nothing for
+    // them yet — the same rule logSession enforces, so every student the form
+    // will accept is a student this page will show. Without it, one live pool
+    // would show any mentor anywhere this student's whole ledger.
     prisma.mentorAssignment.findFirst({
       where: {
         mentorId: mentor.id,
@@ -92,7 +95,7 @@ export default async function MentorStudentDetailPage({
   // hours of their own — their sessions then draw those, not the pool.
   const pool =
     !allocation &&
-    poolScope &&
+    scope &&
     poolRow &&
     poolRow.minutes > 0 &&
     !deadlinePassed(poolRow.deadline)
@@ -100,8 +103,8 @@ export default async function MentorStudentDetailPage({
       : null;
 
   // Not this mentor's student — no hours together, no history together, and no
-  // unassigned time a session could claim.
-  if (!allocation && mySessions.length === 0 && !pool) notFound();
+  // program in common that would let them log any.
+  if (!allocation && mySessions.length === 0 && !scope) notFound();
 
   const allocated = allocation?.minutes ?? 0;
   const myActive = mySessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
@@ -255,12 +258,26 @@ export default async function MentorStudentDetailPage({
         </Callout>
       ) : (
         <>
-          {pool && (
+          {pool ? (
             <Callout tone="brand" title="Unassigned time available">
               This student holds {formatDuration(pool.minutes)} no mentor
               was named for, usable until {formatDate(pool.deadline)}. Log a
               session below and the hours you log become yours.
             </Callout>
+          ) : (
+            /* Every figure above reads zero, which on its own looks like a
+               student the mentor shouldn't be seeing. Say what they CAN do
+               instead: the meeting is loggable either way, and the tick is
+               what decides whether it needs hours nobody has granted yet. */
+            !allocation && (
+              <Callout tone="brand" title="No time allocated to you yet">
+                You work in {profile.program.name}, so you can log meetings
+                with {profile.user.name?.split(" ")[0] ?? "them"} now. In-plan
+                hours will show as an overdraw until an admin allocates them —
+                or pick &ldquo;Extra, beyond their time&rdquo; for time given on
+                top of the plan, which charges nothing.
+              </Callout>
+            )
           )}
           <LogSessionForm
             students={[
@@ -269,7 +286,9 @@ export default async function MentorStudentDetailPage({
                 label: profile.user.name ?? profile.user.email,
                 hint: pool
                   ? `${formatDuration(pool.minutes)} unassigned — logging makes them yours`
-                  : `${formatDuration(remaining)} left with you`,
+                  : allocation
+                    ? `${formatDuration(remaining)} left with you`
+                    : `No time allocated to you — in-plan hours will overdraw`,
                 goals: ledger.assignments
                   .filter(
                     (a) => a.mentorId === mentor.id || a.mentorId === null

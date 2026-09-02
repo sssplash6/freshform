@@ -63,7 +63,18 @@ export async function allocationSummary(studentProfileId: string) {
   // Once a deadline passes, the allocation's unused minutes are forfeited: they
   // stop counting toward "remaining" and surface as "expired".
   const now = Date.now();
-  const perMentor = allocations.map((a) => {
+  const perMentor: {
+    mentor: (typeof allocations)[number]["mentor"];
+    allocated: number;
+    completed: number;
+    missed: number;
+    extra: number;
+    remaining: number;
+    forfeited: number;
+    expired: boolean;
+    deadline: Date | null;
+    amountPaid: number | null;
+  }[] = allocations.map((a) => {
     // The unassigned pool (mentor null) can never have sessions against it —
     // sessions are logged by a mentor — so its used/missed are always 0.
     const used = (a.mentorId && usedByMentor.get(a.mentorId)) || 0;
@@ -85,6 +96,38 @@ export async function allocationSummary(studentProfileId: string) {
       amountPaid: a.amountPaid,
     };
   });
+
+  // Mentors with sessions but no allocation row of their own. Two ways to get
+  // there: a mentor working in the student's program may log without holding a
+  // grant (the "Whose hours?" tick decides whether it charges), and an admin may
+  // remove an allocation afterwards. Either way those minutes are already
+  // counted in the totals below, so the breakdown has to name whose they are —
+  // otherwise the student and the admin read an overdraw that no row explains.
+  // A derived row, so: nothing allotted, no deadline to be past, and whatever
+  // was charged showing as the overdraw it is.
+  const granted = new Set(allocations.flatMap((a) => (a.mentorId ? [a.mentorId] : [])));
+  const ungranted = [...new Set(sessionSums.map((s) => s.mentorId))].filter(
+    (id) => !granted.has(id)
+  );
+  if (ungranted.length > 0) {
+    const mentors = await prisma.user.findMany({ where: { id: { in: ungranted } } });
+    for (const mentor of mentors) {
+      const used = usedByMentor.get(mentor.id) ?? 0;
+      const missed = missedByMentor.get(mentor.id) ?? 0;
+      perMentor.push({
+        mentor,
+        allocated: 0,
+        completed: used - missed,
+        missed,
+        extra: extraByMentor.get(mentor.id) ?? 0,
+        remaining: -used,
+        forfeited: 0,
+        expired: false,
+        deadline: null,
+        amountPaid: null,
+      });
+    }
+  }
 
   const allotted = allocations.reduce((sum, a) => sum + a.minutes, 0);
   // Count every charging session, including any logged by a mentor whose

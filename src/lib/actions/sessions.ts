@@ -179,6 +179,10 @@ async function resolveGoal(
  * or, when the mentor holds none, carves what the session charges out of the
  * student's unassigned pool into a new allocation of their own — and notifies
  * them. Overdraw is allowed but flagged back to the mentor.
+ *
+ * A mentor working in the student's program may log without holding any
+ * allocation for them at all; the "Whose hours?" tick decides whether those
+ * hours charge, and an in-plan log with nothing to draw on overdraws.
  */
 export async function logSession(
   _prev: ActionState,
@@ -232,37 +236,45 @@ export async function logSession(
     : await prisma.hourAllocation.findFirst({
         where: { studentId: profile.id, mentorId: null },
       });
-  // An allocation of their own IS authorization — an admin granted it. The
-  // pool has no such grant, so claiming from it requires actually working in
-  // the student's program (and cohort, where the assignment is cohort-scoped):
-  // without this, any mentor anywhere could log against any student's pool and
-  // carve its hours to themselves.
+  // Two things authorize a log, and either alone is enough:
   //
-  // Working in the student's program is also the WHOLE authorization for an
-  // out-of-plan log: those hours claim nothing from anybody, so demanding an
-  // allocation first would be asking an admin to grant hours that are, by
-  // definition, not being spent.
-  const scope =
-    !allocation && (pool || !withinPlan)
-      ? await prisma.mentorAssignment.findFirst({
-          where: {
-            mentorId: mentor.id,
-            programId: profile.programId,
-            OR: [
-              { cohortId: null },
-              ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
-            ],
-          },
-        })
-      : null;
-  if (withinPlan ? !allocation && !(pool && scope) : !allocation && !scope) {
+  //  - an allocation of the mentor's own, which IS authorization: an admin
+  //    granted it, and it outlives a program assignment that later moves, so a
+  //    mentor can always correct the hours they already delivered;
+  //  - actually working in the student's program (and cohort, where the
+  //    assignment is cohort-scoped), which is what a mentor has on the day they
+  //    meet a student nobody has granted them hours for yet.
+  //
+  // The second is what stops "no hours allocated" from meaning "the meeting
+  // cannot be recorded" — a mentor shouldn't have to wait on an admin to log
+  // work they have already done. It is also the whole reason the check can't be
+  // dropped: without it any mentor anywhere could log against any student, and
+  // carve their unassigned hours to themselves.
+  const scope = allocation
+    ? null
+    : await prisma.mentorAssignment.findFirst({
+        where: {
+          mentorId: mentor.id,
+          programId: profile.programId,
+          OR: [
+            { cohortId: null },
+            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
+          ],
+        },
+      });
+  if (!allocation && !scope) {
     return {
       ok: false,
-      error: withinPlan
-        ? "No hours were allocated to you for that student, and they hold no unassigned time you can log against. Ask an admin to allocate time first, or log this as extra hours."
-        : "You aren't assigned to that student's program, so you can't log hours for them.",
+      error:
+        "You aren't assigned to that student's program, so you can't log hours for them.",
     };
   }
+
+  // Whether the hours charge is the mentor's own answer to "Whose hours?", and
+  // nothing else: it is NOT inferred from what the student happens to hold.
+  // In-plan against an empty balance overdraws — warned, never blocked, exactly
+  // as in-plan past a balance always has — because the alternative is a mentor
+  // choosing between misreporting the meeting as extra and not logging it.
 
   // Deadlines are hard: once passed, the unused hours are forfeited and no
   // further sessions can be logged against this allocation. A rescheduled
@@ -272,7 +284,12 @@ export async function logSession(
   // Out-of-plan hours are exempt, and deliberately so: an expired deadline means
   // the student's remaining hours are gone, not that a mentor who kept helping
   // them afterwards has nowhere to record it.
-  const source = withinPlan ? (allocation ?? pool!) : null;
+  //
+  // A student holding nothing at all has no deadline to be past: an expired
+  // allocation is a positive statement that the time is over, where an absent
+  // one is only an absence. The first closes in-plan logging; the second
+  // overdraws.
+  const source = withinPlan ? (allocation ?? pool) : null;
   if (source && source.deadline.getTime() < Date.now()) {
     return {
       ok: false,
@@ -490,7 +507,11 @@ export async function logSession(
       ok: true,
       message: pool
         ? `Rescheduled meeting recorded — no time charged, and ${studentName}'s unassigned pool is untouched.`
-        : `Rescheduled meeting recorded — no time charged. ${studentName} still has ${formatDuration(await remainingWith(profile.id, mentor.id, allocation!.minutes))} left with you.`,
+        : allocation
+          ? `Rescheduled meeting recorded — no time charged. ${studentName} still has ${formatDuration(await remainingWith(profile.id, mentor.id, allocation.minutes))} left with you.`
+          : // Nothing is allocated, so there is no balance to reassure anyone
+            // about — "0h left with you" would read as a loss.
+            `Rescheduled meeting recorded — no time charged.`,
     };
   }
   if (pool) {
@@ -505,13 +526,22 @@ export async function logSession(
           : `Session logged.${stateNote}${goalNote}${meetingNote} ${formatDuration(carved)} of ${studentName}'s unassigned minutes moved to you; ${formatDuration(poolAfter)} remain in the pool.`,
     };
   }
-  const remaining = await remainingWith(profile.id, mentor.id, allocation!.minutes);
+  const remaining = await remainingWith(
+    profile.id,
+    mentor.id,
+    allocation?.minutes ?? 0
+  );
   return {
     ok: true,
     message:
-      remaining < 0
-        ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatDuration(-remaining)} with you.`
-        : `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatDuration(remaining)} left with you.`,
+      remaining >= 0
+        ? `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatDuration(remaining)} left with you.`
+        : allocation
+          ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatDuration(-remaining)} with you.`
+          : // No allocation at all, so this overdraw isn't a balance run down —
+            // it is time nobody has granted yet. Name the two ways out rather
+            // than leaving a red number the mentor can't act on.
+            `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: no time is allocated to you for ${studentName}, so they're overdrawn by ${formatDuration(-remaining)} with you. Ask an admin to allocate it, or correct this session to extra time.`,
   };
 }
 
