@@ -10,6 +10,11 @@ services:
     plan: starter # required — persistent disks are not available on Free
     numInstances: 1 # must stay 1: SQLite cannot be shared across instances
 
+    # Deploys are MANUAL (Render dashboard → Manual Deploy). main is pushed to
+    # continuously during the redesign and must not go live on every commit;
+    # deploy a commit deliberately once it has been clicked through locally.
+    autoDeploy: false
+
     # Use `npm install`, not `npm ci`: the lockfile is generated on macOS and
     # omits Linux-only optional deps (@emnapi/*, wasm fallbacks for Tailwind's
     # native oxide), which makes strict `npm ci` fail on Render's Linux build.
