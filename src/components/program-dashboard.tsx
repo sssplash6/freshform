@@ -1,4 +1,4 @@
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { StudentsTable } from "@/components/students-table";
 import { LinkButton } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -56,23 +56,23 @@ export async function ProgramDashboard({
         {program.name} dashboard
       </h1>
 
-      <StatCardGrid>
-        <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Time allotted" value={formatDuration(overall.allotted)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Students" value={String(students.length)} />
+        <Figure label="Time allotted" value={formatDuration(overall.allotted)} />
+        <Figure
           label="Time completed"
           value={formatDuration(overall.completed)}
-          tone="brand"
+          tone="hours"
         />
         {overall.missed > 0 && (
-          <StatCard label="Time missed" value={formatDuration(overall.missed)} />
+          <Figure label="Time missed" value={formatDuration(overall.missed)} />
         )}
-        <StatCard
+        <Figure
           label="Time remaining"
           value={formatDuration(overall.remaining)}
-          tone={overall.remaining < 0 ? "danger" : "default"}
+          tone={overall.remaining < 0 ? "danger" : "ink"}
         />
-      </StatCardGrid>
+      </FigureRow>
 
       {students.length === 0 ? (
         <EmptyState

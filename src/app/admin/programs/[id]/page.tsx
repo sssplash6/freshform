@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { MeetingsLog } from "@/components/meetings-log";
 import { PersonChip } from "@/components/person-chip";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
@@ -168,25 +168,25 @@ export default async function AdminProgramOverviewPage({
 
   return (
     <div className="space-y-8">
-      <StatCardGrid>
-        <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Mentors" value={String(mentorCount)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Students" value={String(students.length)} />
+        <Figure label="Mentors" value={String(mentorCount)} />
+        <Figure
           label="Time completed"
           value={formatDuration(totals.completed)}
-          tone="brand"
+          tone="hours"
         />
         {totals.missed > 0 && (
-          <StatCard label="Time missed" value={formatDuration(totals.missed)} />
+          <Figure label="Time missed" value={formatDuration(totals.missed)} />
         )}
-        <StatCard
+        <Figure
           label="Time remaining"
           value={formatDuration(totals.remaining)}
         />
         {isMasters && (
-          <StatCard label="Total paid" value={formatMoney(totalPaid)} />
+          <Figure label="Total paid" value={formatMoney(totalPaid)} />
         )}
-      </StatCardGrid>
+      </FigureRow>
 
       {attention.length > 0 && (
         <Section

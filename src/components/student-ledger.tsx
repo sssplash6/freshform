@@ -4,7 +4,7 @@ import type { ViewerContext } from "@/lib/status";
 import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { formatDuration } from "@/lib/format";
 import type { ScheduledMeeting } from "@/lib/interviews";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
@@ -65,38 +65,38 @@ export function StudentLedger({
 }) {
   return (
     <div className="space-y-6">
-      <StatCardGrid>
-        <StatCard label="Time allotted" value={formatDuration(totals.allotted)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Time allotted" value={formatDuration(totals.allotted)} />
+        <Figure
           label="Time completed"
           value={formatDuration(totals.completed)}
-          tone="brand"
+          tone="hours"
         />
         {totals.missed > 0 && (
-          <StatCard label="Missed" value={formatDuration(totals.missed)} />
+          <Figure label="Missed" value={formatDuration(totals.missed)} />
         )}
         {totals.forfeited > 0 && (
-          <StatCard
+          <Figure
             label="Expired unused"
             value={formatDuration(totals.forfeited)}
             tone="danger"
           />
         )}
         {totals.extra > 0 && (
-          <StatCard
+          <Figure
             label="Extra, beyond plan"
             value={formatDuration(totals.extra)}
             tone="muted"
           />
         )}
-        <StatCard
+        <Figure
           label="Time remaining"
           value={formatDuration(totals.remaining)}
-          tone={totals.remaining < 0 ? "danger" : "default"}
-          lead
+          tone={totals.remaining < 0 ? "danger" : "ink"}
+          size="lead"
         />
         {extraStats}
-      </StatCardGrid>
+      </FigureRow>
 
       {/* The spreadsheet's whole tab, side by side and read-only: this is what
           the page is opened for. The panels under it are where rows get

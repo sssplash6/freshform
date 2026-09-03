@@ -7,7 +7,7 @@ import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-for
 import { HoursBreakdown } from "@/components/hours-breakdown";
 import { MeetingsLog } from "@/components/meetings-log";
 import { ScheduledMeetings } from "@/components/scheduled-meetings";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
@@ -191,34 +191,34 @@ export default async function MentorStudentDetailPage({
         }
       />
 
-      <StatCardGrid>
-        <StatCard label="Allocated to you" value={formatDuration(allocated)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Allocated to you" value={formatDuration(allocated)} />
+        <Figure
           label="Completed with you"
           value={formatDuration(completed)}
         />
         {missed > 0 && (
-          <StatCard label="Missed (no-show)" value={formatDuration(missed)} />
+          <Figure label="Missed (no-show)" value={formatDuration(missed)} />
         )}
         {extra > 0 && (
-          <StatCard
+          <Figure
             label="Extra, beyond plan"
             value={formatDuration(extra)}
             tone="muted"
           />
         )}
-        <StatCard
+        <Figure
           label="Remaining with you"
           value={formatDuration(remaining)}
-          tone={remaining < 0 ? "danger" : "default"}
-          lead
+          tone={remaining < 0 ? "danger" : "ink"}
+          size="lead"
         />
-        <StatCard
+        <Figure
           label="Sessions together"
           value={String(myActive.length)}
           tone="muted"
         />
-      </StatCardGrid>
+      </FigureRow>
 
       {/* Their whole allotment, not just this mentor's slice: a consultant
           picking up an essay needs to know how much room the student has left

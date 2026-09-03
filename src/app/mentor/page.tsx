@@ -5,7 +5,7 @@ import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { MeetingsLog } from "@/components/meetings-log";
 import { ScheduledMeetings } from "@/components/scheduled-meetings";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { PageTitle } from "@/components/ui/section";
@@ -413,25 +413,25 @@ export default async function MentorHomePage({
         }.`}
       />
 
-      <StatCardGrid>
-        <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Sessions logged" value={String(sessionsLogged)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Students" value={String(students.length)} />
+        <Figure label="Sessions logged" value={String(sessionsLogged)} />
+        <Figure
           label="Time delivered"
           value={formatDuration(deliveredMinutes)}
         />
         {missedMinutes > 0 && (
-          <StatCard label="Time missed" value={formatDuration(missedMinutes)} />
+          <Figure label="Time missed" value={formatDuration(missedMinutes)} />
         )}
         {extraMinutes > 0 && (
-          <StatCard
+          <Figure
             label="Time beyond plan"
             value={formatDuration(extraMinutes)}
             tone="muted"
           />
         )}
-        <StatCard label="Programs" value={String(assignedPrograms.size)} />
-      </StatCardGrid>
+        <Figure label="Programs" value={String(assignedPrograms.size)} />
+      </FigureRow>
 
       {assignedPrograms.size > 1 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -6,7 +6,7 @@ import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";
 import { MeetingsLog } from "@/components/meetings-log";
 import { ProgramIslandCard } from "@/components/program-island-card";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { Callout } from "@/components/ui/callout";
 import { PageTitle } from "@/components/ui/section";
 import { ROLES, USER_STATUS } from "@/lib/constants";
@@ -122,22 +122,22 @@ export default async function AdminHomePage() {
         </Callout>
       )}
 
-      <StatCardGrid>
-        <StatCard label="Students" value={String(students.length)} />
-        <StatCard label="Time allotted" value={formatDuration(overall.allotted)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Students" value={String(students.length)} />
+        <Figure label="Time allotted" value={formatDuration(overall.allotted)} />
+        <Figure
           label="Time completed"
           value={formatDuration(overall.completed)}
         />
         {overall.missed > 0 && (
-          <StatCard label="Time missed" value={formatDuration(overall.missed)} />
+          <Figure label="Time missed" value={formatDuration(overall.missed)} />
         )}
-        <StatCard
+        <Figure
           label="Time remaining"
           value={formatDuration(overall.remaining)}
-          tone={overall.remaining < 0 ? "danger" : "default"}
+          tone={overall.remaining < 0 ? "danger" : "ink"}
         />
-      </StatCardGrid>
+      </FigureRow>
 
       <MeetingsLog
         sessions={meetings}

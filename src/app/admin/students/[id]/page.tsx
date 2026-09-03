@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLink } from "@/components/arrow-link";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
-import { StatCard } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { StudentCorrections } from "@/components/forms/student-corrections";
 import { StudentFolderForm } from "@/components/forms/student-folder-form";
 import { StudentFolderLink } from "@/components/student-folder-link";
@@ -213,13 +213,13 @@ export default async function AdminStudentDetailPage({
         scheduled={meetings}
         extraStats={
           <>
-            <StatCard
+            <Figure
               label="Mentors"
               value={String(hours.perMentor.filter((m) => m.mentor).length)}
               tone="muted"
             />
             {isMasters && (
-              <StatCard label="Total paid" value={formatMoney(hours.paid)} />
+              <Figure label="Total paid" value={formatMoney(hours.paid)} />
             )}
           </>
         }

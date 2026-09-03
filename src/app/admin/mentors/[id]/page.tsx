@@ -7,7 +7,7 @@ import {
   resolveWindow,
   type HoursQuery,
 } from "@/components/mentor-hours-filter";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
@@ -175,29 +175,30 @@ export default async function AdminMentorDetailPage({
           <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand">
             {capitalize(win.label)} · {scope ?? "all programs"}
           </p>
-          <StatCardGrid framed={false} className="pt-4">
-            <StatCard
+          <FigureRow framed={false} className="pt-4">
+            <Figure
               label="Time delivered"
               value={formatDuration(totals.delivered)}
-              lead
+              size="lead"
+          tone="hours"
             />
-            <StatCard label="Meetings" value={String(totals.sessions)} />
+            <Figure label="Meetings" value={String(totals.sessions)} />
             {totals.missed > 0 && (
-              <StatCard label="Time missed" value={formatDuration(totals.missed)} />
+              <Figure label="Time missed" value={formatDuration(totals.missed)} />
             )}
-            <StatCard label="Students" value={String(totals.students)} />
-            <StatCard
+            <Figure label="Students" value={String(totals.students)} />
+            <Figure
               label="Time remaining"
               value={formatDuration(totals.remaining)}
             />
             {rated && (
-              <StatCard
+              <Figure
                 label={`Rating · ${feedback._count}`}
                 value={feedback._avg.rating!.toFixed(1)}
                 tone="muted"
               />
             )}
-          </StatCardGrid>
+          </FigureRow>
         </div>
 
         <div className="border-t border-line px-4 pt-4 sm:px-5">

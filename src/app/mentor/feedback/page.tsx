@@ -1,5 +1,5 @@
 import { Rating } from "@/components/rating";
-import { StatCard, StatCardGrid } from "@/components/stat-card";
+import { Figure, FigureRow } from "@/components/ui/figure";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
@@ -42,14 +42,13 @@ export default async function MentorFeedbackPage({
         </p>
       </div>
 
-      <StatCardGrid>
-        <StatCard label="Ratings received" value={String(stats._count)} />
-        <StatCard
+      <FigureRow>
+        <Figure label="Ratings received" value={String(stats._count)} />
+        <Figure
           label="Average rating"
           value={avg === null ? "—" : avg.toFixed(1)}
-          tone="brand"
         />
-      </StatCardGrid>
+      </FigureRow>
 
       {stats._count === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
