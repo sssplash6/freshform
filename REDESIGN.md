@@ -1196,40 +1196,36 @@ booking link and watches the inbox row disappear.
 
 ---
 
-## 10. Still needs the owner
+## 10. Owner decisions — answered 2026-09-03
 
-Six questions. Each blocks a named step; none blocks Phases 0-2.
+All six are settled. Where the answer differs from the recommendation above it, the owner's answer
+governs and the reason it is safe is stated.
 
-1. **Imported Master's data.** 10 of 11 Master's students have logged sessions and zero
-   `HourAllocation` rows. Backfill allocations from the tracking sheet / mark imported sessions
-   EXTRA so they never overdraw / add an informational "imported, no allocation on record" state /
-   wipe the imported sessions. *Recommend: backfill where the sheet has the numbers, otherwise mark
-   them EXTRA — the honest-ledger principle forbids inventing balances, and a permanent special
-   case is a permanent special case.* Blocks nothing (§8.8 keeps the inbox calm either way) but the
-   answer should land before Phase 6's demo.
-2. **Money in the UI.** `amountPaid` is captured for Master's allocations. The plan renders it on
-   allocation rows and program settings only, behind `Program.tracksPayment`. Should SALES-level
-   staff also see a paid figure on `/students` and the program header? *Recommend: yes for SALES,
-   nowhere else.* Blocks step 45.
-3. **tech@ as a student-facing mentor.** "Freshman Academy Admin" currently appears to students as a
-   bookable mentor, in history rows, task chips and the feedback picker, and greets its owner
-   "Hi, Freshman". Create a separate personal mentor account and set `tech@ isMentor: false` /
-   rename tech@ to the person's name / keep as is. *Recommend: a separate personal account.* Blocks
-   step 52's "hide admin-only accounts" rule being sufficient.
-4. **Platform admins.** tech@ only, or tech@ plus one backup address? *Recommend: tech@ plus one
-   backup — a single platform admin is a single point of failure for creating programs and grants.*
-   Blocks step 22's seed.
-5. **Do DEPT_LEADER and SALES exist within the horizon?** Nobody is seeded as either. The plan
-   models them as `ProgramStaff` levels at almost no cost, with today's powers (read the program,
-   add students, leader sees feedback). If they will be hired, may they approve self-signups or
-   allocate time? *Recommend: keep them as levels with today's powers; add nothing until someone
-   holds the role.* Blocks step 49's level list.
-6. **What else gets cut.** Two surfaces survive on your instruction and cost real work: mentor
-   ratings (a student tab, a mentor page section, an admin page) and the weekly digest email (515
-   lines + a cron + an HMAC unsubscribe path). Confirm both stay, or name what else goes.
-   *Recommend: keep both — the digest is the only thing that stops time expiring unnoticed.*
-
----
+1. **Imported Master's data — LEAVE IT AS IT IS.** No backfill, no EXTRA re-marking, no new state,
+   no wipe. The Master's ledger keeps reading `-20h 2m still to deliver` and `83h 2m of 65h
+   completed`, and 10 of 11 students keep the `BALANCE_NONE` + `BALANCE_OVERDRAWN` statuses their
+   rows honestly earn. This is survivable precisely because of §5.1 `rollUp()`: more than three
+   statuses of one type collapse to a single row (`"10 students have no time allocated →"`), so the
+   first screen stays calm without anyone inventing a balance. Do NOT add a special case for
+   imported rows anywhere; the honest-ledger principle is doing its job.
+2. **Money — every admin, everywhere it appears today.** Keep the figure on the admin dashboard,
+   the program overview and the student page as well as on allocation rows and program settings. It
+   still moves behind `Program.tracksPayment` (M3) rather than the `MASTERS_PROGRAM_NAME` string
+   match, so renaming a program stops silently disabling billing. No SALES-only view is built.
+3. **tech@ as a student-facing mentor — keep as is.** `tech@` stays `isMentor: true` and remains
+   bookable. Note that two of the three symptoms disappear anyway: the `"Hi, Freshman"` greeting
+   goes when Phase 2 deletes the greeting banner (`mentor/page.tsx:404-415`), and `/student/book`
+   stops offering mentors with no allocation and no booking link (Phase 7). What remains by choice
+   is the organisation's name owning ledger rows and appearing in the feedback picker.
+4. **Platform admin — tech@ only.** Step 22's seed marks exactly one account. The accepted risk is
+   that a lockout freezes program creation and grant-making; the escape hatch is one statement in
+   the Render shell (`UPDATE "User" SET "platformAdmin" = true WHERE email = '…';`), which is why a
+   second address is not required. Do not widen this without asking.
+5. **DEPT_LEADER and SALES — keep as `ProgramStaff` levels with exactly today's powers.** Read the
+   program, add students, and for LEADER see that program's feedback. No approving signups, no
+   allocating time. Add nothing until a real person holds the role.
+6. **Nothing else is cut.** Mentor ratings and the weekly digest email both stay, as specified.
+   `WebsiteFeedback` remains the only removal (M5).
 
 ## 11. Out of scope (the post-redesign list)
 
