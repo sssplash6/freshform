@@ -5,6 +5,7 @@ import {
   USER_STATUS,
 } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/format";
+import { programWallClock } from "@/lib/when";
 
 /**
  * Every state the product can be in, in one file.
@@ -956,7 +957,7 @@ export function meetingStatus(i: MeetingStatusInput, v: ViewerContext): Status |
 
   // Same day counts as still ahead: a whole-day meeting has no time to compare
   // against, and one at 09:00 should not read as overdue over lunch.
-  const overdue = startOfDay(i.scheduledAt) < startOfDay(v.now) && !i.sessionId;
+    const overdue = startOfDay(i.scheduledAt) < startOfToday(v.now) && !i.sessionId;
   if (overdue) return status("MEETING_UNLOGGED", v, detail, extra);
 
   if (i.status === INTERVIEW_STATUS.DECLINED) {
@@ -968,8 +969,17 @@ export function meetingStatus(i: MeetingStatusInput, v: ViewerContext): Status |
   return status("MEETING_CONFIRMED", v, detail, extra);
 }
 
-/** Midnight UTC of a date, matching how meeting times are stored and read. */
+/**
+ * Midnight of a date, matching how meeting times are stored and read.
+ *
+ * Only correct for a stored `scheduledAt`, which is the program's wall clock
+ * kept in a UTC field. A real instant — `viewer.now` — has to go through
+ * `programWallClock` first, or the two sit on different calendar days for the
+ * five hours after midnight in Tashkent and a meeting later that morning reads
+ * as already overdue.
+ */
 const startOfDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+const startOfToday = (now: Date) => startOfDay(programWallClock(now));
 
 // ---------------------------------------------------------------------------
 // Presentation of a whole list

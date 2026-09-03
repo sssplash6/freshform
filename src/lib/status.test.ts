@@ -708,3 +708,43 @@ describe("attentionList", () => {
     expect(rows[0].type).toBe("MEETING_UNLOGGED");
   });
 });
+
+describe("meetingStatus and the program's clock", () => {
+  const meeting = {
+    id: "i1",
+    status: "CONFIRMED",
+    scheduledAt: new Date("2026-09-04T10:00:00Z"), // 10:00 Tashkent, Sep 4
+    sessionId: null,
+  };
+
+  it("does not call this morning's meeting unlogged at 02:00 Tashkent", () => {
+    // 02:00 Tashkent on Sep 4 is 21:00 UTC on Sep 3 — a different UTC date, so
+    // a raw comparison put the meeting a day ahead and, once UTC rolled over
+    // and Tashkent had not, a day behind.
+    const v: ViewerContext = {
+      audience: "mentor",
+      userId: "m1",
+      now: new Date("2026-09-03T21:00:00Z"),
+    };
+    expect(meetingStatus(meeting, v)?.type).toBe("MEETING_CONFIRMED");
+  });
+
+  it("still calls yesterday's unlogged meeting unlogged", () => {
+    const v: ViewerContext = {
+      audience: "mentor",
+      userId: "m1",
+      now: new Date("2026-09-05T09:00:00Z"),
+    };
+    expect(meetingStatus(meeting, v)?.type).toBe("MEETING_UNLOGGED");
+  });
+
+  it("leaves a meeting from earlier today alone", () => {
+    // Whether it needs logging is a question for the end of the day, not lunch.
+    const v: ViewerContext = {
+      audience: "mentor",
+      userId: "m1",
+      now: new Date("2026-09-04T14:00:00Z"),
+    };
+    expect(meetingStatus(meeting, v)?.type).toBe("MEETING_CONFIRMED");
+  });
+});
