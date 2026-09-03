@@ -1,7 +1,15 @@
 /**
- * A stable identity color per person, so the same mentor is the same color in
+ * A stable identity colour per person, so the same mentor is the same colour in
  * every table on every page. Derived from their id rather than stored: nobody
- * has to pick colors, and a mentor added today looks the same tomorrow.
+ * has to pick colours, and a mentor added today looks the same tomorrow.
+ *
+ * THREE hues, down from eight. Eight was not merely loud — it was ambiguous:
+ * a mentor's chip could be the same amber as a "no-show" chip and the same
+ * violet as an "in progress" chip, so a reader could not tell whether a colour
+ * meant a person or a problem. Three hues that appear nowhere else in the
+ * palette can only mean a person. They repeat past three people, which is the
+ * accepted cost: the initials and the name disambiguate, the colour only has to
+ * make a column trackable.
  *
  * Class strings are written out in full because Tailwind only generates
  * utilities it can see in source — a template like `bg-tone-${hue}-soft` would
@@ -21,52 +29,22 @@ export type PersonTone = {
 
 const TONES: PersonTone[] = [
   {
-    chip: "bg-tone-violet-soft text-tone-violet-ink",
-    badge: "bg-tone-violet-dot",
-    ink: "text-tone-violet-ink",
-    ring: "ring-tone-violet-dot",
-  },
-  {
     chip: "bg-tone-teal-soft text-tone-teal-ink",
     badge: "bg-tone-teal-dot",
     ink: "text-tone-teal-ink",
     ring: "ring-tone-teal-dot",
   },
   {
-    chip: "bg-tone-amber-soft text-tone-amber-ink",
-    badge: "bg-tone-amber-dot",
-    ink: "text-tone-amber-ink",
-    ring: "ring-tone-amber-dot",
-  },
-  {
-    chip: "bg-tone-rose-soft text-tone-rose-ink",
-    badge: "bg-tone-rose-dot",
-    ink: "text-tone-rose-ink",
-    ring: "ring-tone-rose-dot",
-  },
-  {
-    chip: "bg-tone-indigo-soft text-tone-indigo-ink",
-    badge: "bg-tone-indigo-dot",
-    ink: "text-tone-indigo-ink",
-    ring: "ring-tone-indigo-dot",
-  },
-  {
-    chip: "bg-tone-lime-soft text-tone-lime-ink",
-    badge: "bg-tone-lime-dot",
-    ink: "text-tone-lime-ink",
-    ring: "ring-tone-lime-dot",
-  },
-  {
-    chip: "bg-tone-cyan-soft text-tone-cyan-ink",
-    badge: "bg-tone-cyan-dot",
-    ink: "text-tone-cyan-ink",
-    ring: "ring-tone-cyan-dot",
-  },
-  {
     chip: "bg-tone-plum-soft text-tone-plum-ink",
     badge: "bg-tone-plum-dot",
     ink: "text-tone-plum-ink",
     ring: "ring-tone-plum-dot",
+  },
+  {
+    chip: "bg-tone-moss-soft text-tone-moss-ink",
+    badge: "bg-tone-moss-dot",
+    ink: "text-tone-moss-ink",
+    ring: "ring-tone-moss-dot",
   },
 ];
 
@@ -85,14 +63,15 @@ export function personTone(id: string): PersonTone {
 }
 
 /**
- * The same eight hues, expressed as a banner treatment, so each program's page
- * and card read as its own place instead of three identical blue headers.
+ * DYING. The same three hues as a banner treatment, kept only so the four
+ * call sites that still read it compile: the admin dashboard's program cards,
+ * the program layout's banner, and the two mentor-page banners. Every one of
+ * them loses its wash when `PageHeader` becomes a single plain treatment, and
+ * this goes with them — a program is a place, not a face, and is identified by
+ * its name.
  *
- * Keyed off the program's POSITION in creation order, not a hash of its id:
- * hashing three programs into eight buckets collides about a third of the time,
- * and two programs sharing a color is exactly what this exists to prevent. By
- * position the first eight are guaranteed distinct, and a program's color never
- * moves as long as nothing created before it is deleted.
+ * Keyed off the program's POSITION in creation order rather than a hash, so
+ * two programs never collide while it survives.
  */
 export type ProgramTone = {
   /** Gradient wash for a banner body. */
@@ -107,52 +86,22 @@ export type ProgramTone = {
 
 const PROGRAM_TONES: ProgramTone[] = [
   {
-    wash: "from-tone-violet-soft to-surface",
-    rule: "bg-tone-violet-dot",
-    eyebrow: "text-tone-violet-ink",
-    cardHover: "hover:border-tone-violet-dot/60",
-  },
-  {
     wash: "from-tone-teal-soft to-surface",
     rule: "bg-tone-teal-dot",
     eyebrow: "text-tone-teal-ink",
     cardHover: "hover:border-tone-teal-dot/60",
   },
   {
-    wash: "from-tone-amber-soft to-surface",
-    rule: "bg-tone-amber-dot",
-    eyebrow: "text-tone-amber-ink",
-    cardHover: "hover:border-tone-amber-dot/60",
-  },
-  {
-    wash: "from-tone-rose-soft to-surface",
-    rule: "bg-tone-rose-dot",
-    eyebrow: "text-tone-rose-ink",
-    cardHover: "hover:border-tone-rose-dot/60",
-  },
-  {
-    wash: "from-tone-indigo-soft to-surface",
-    rule: "bg-tone-indigo-dot",
-    eyebrow: "text-tone-indigo-ink",
-    cardHover: "hover:border-tone-indigo-dot/60",
-  },
-  {
-    wash: "from-tone-lime-soft to-surface",
-    rule: "bg-tone-lime-dot",
-    eyebrow: "text-tone-lime-ink",
-    cardHover: "hover:border-tone-lime-dot/60",
-  },
-  {
-    wash: "from-tone-cyan-soft to-surface",
-    rule: "bg-tone-cyan-dot",
-    eyebrow: "text-tone-cyan-ink",
-    cardHover: "hover:border-tone-cyan-dot/60",
-  },
-  {
     wash: "from-tone-plum-soft to-surface",
     rule: "bg-tone-plum-dot",
     eyebrow: "text-tone-plum-ink",
     cardHover: "hover:border-tone-plum-dot/60",
+  },
+  {
+    wash: "from-tone-moss-soft to-surface",
+    rule: "bg-tone-moss-dot",
+    eyebrow: "text-tone-moss-ink",
+    cardHover: "hover:border-tone-moss-dot/60",
   },
 ];
 
@@ -162,18 +111,15 @@ export function programTone(position: number): ProgramTone {
 }
 
 /**
- * One person's own hue as a banner treatment, so a mentor's page opens in the
- * colour their chip already carries in every table — you recognise whose page
- * it is before reading the name.
- *
- * PROGRAM_TONES lists the same eight hues in the same order as TONES, so
- * hashing an id through either lands on the same colour. Keep them in step.
+ * DYING, with `programTone`. One person's own hue as a banner treatment.
+ * PROGRAM_TONES lists the same three hues in the same order as TONES, so
+ * hashing an id through either lands on the same colour.
  */
 export function personBanner(id: string): ProgramTone {
   return PROGRAM_TONES[hashIndex(id, PROGRAM_TONES.length)];
 }
 
-/** How many hues exist before they repeat — handy in tests and docs. */
+/** How many hues exist before they repeat. Dies with PROGRAM_TONES. */
 export const PROGRAM_TONE_COUNT = PROGRAM_TONES.length;
 
 /**

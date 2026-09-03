@@ -1,5 +1,7 @@
 import "server-only";
 
+import { BRAND } from "@/lib/brand";
+
 /**
  * The shell every email shares, as inline-styled HTML plus a plain-text twin.
  *
@@ -8,9 +10,9 @@ import "server-only";
  * images either — the brand here is the type and one orange rule, and an image
  * that a client blocks by default is worse than no image.
  *
- * Colours are the tokens from globals.css written out by hand, since a mail
- * client never sees our stylesheet: brand #124b84, accent #f18d05, ink #1a2733,
- * muted #6b7480, line #e5e6e8, canvas #f4f5f6.
+ * Colours come from `lib/brand.ts` rather than being written out here: a mail
+ * client never sees our stylesheet, so the hex has to be inline, but it should
+ * not be a second copy that drifts from the app's.
  */
 
 /**
@@ -18,16 +20,16 @@ import "server-only";
  * soon" and "already lost" are different facts and DESIGN.md reserves red for
  * the second: hours you can still book are not a loss yet.
  *
- * `urgent` is the palette's amber text token (#8a5a08) rather than the bright
- * accent (#f18d05) — orange that light fails contrast at body-text size, and
- * unlike the app there is no large stat readout here to carry it.
+ * `urgent` is the palette's amber text token rather than the bright accent —
+ * orange that light fails contrast at body-text size, and unlike the app there
+ * is no large stat readout here to carry it.
  */
 export type RowTone = "normal" | "urgent" | "lost";
 
 const ROW_COLOR: Record<RowTone, string> = {
-  normal: "#1a2733",
-  urgent: "#8a5a08",
-  lost: "#b42318",
+  normal: BRAND.ink,
+  urgent: BRAND.warnInk,
+  lost: BRAND.dangerInk,
 };
 
 export type Section = {
@@ -78,11 +80,11 @@ export function renderEmail({
         .map(
           (row) => `
           <tr>
-            <td style="padding:8px 0;border-bottom:1px solid #e5e6e8;font-size:15px;color:#1a2733;">
+            <td style="padding:8px 0;border-bottom:1px solid ${BRAND.line};font-size:15px;color:${BRAND.ink};">
               ${escapeHtml(row.label)}
-              ${row.muted ? `<div style="font-size:13px;color:#6b7480;margin-top:2px;">${escapeHtml(row.muted)}</div>` : ""}
+              ${row.muted ? `<div style="font-size:13px;color:${BRAND.muted};margin-top:2px;">${escapeHtml(row.muted)}</div>` : ""}
             </td>
-            <td align="right" style="padding:8px 0 8px 12px;border-bottom:1px solid #e5e6e8;font-size:15px;font-weight:600;white-space:nowrap;color:${ROW_COLOR[row.tone ?? "normal"]};">
+            <td align="right" style="padding:8px 0 8px 12px;border-bottom:1px solid ${BRAND.line};font-size:15px;font-weight:600;white-space:nowrap;color:${ROW_COLOR[row.tone ?? "normal"]};">
               ${escapeHtml(row.value)}
             </td>
           </tr>`
@@ -91,13 +93,13 @@ export function renderEmail({
 
       return `
         <tr><td style="padding:24px 0 0 0;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#124b84;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:${BRAND.brand};">
             ${escapeHtml(section.heading)}
           </div>
           ${section.lines
             .map(
               (line) =>
-                `<p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;color:#1a2733;">${escapeHtml(line)}</p>`
+                `<p style="margin:8px 0 0 0;font-size:15px;line-height:1.5;color:${BRAND.ink};">${escapeHtml(line)}</p>`
             )
             .join("")}
           ${rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse;">${rows}</table>` : ""}
@@ -108,16 +110,16 @@ export function renderEmail({
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>${escapeHtml(title)}</title></head>
-<body style="margin:0;padding:0;background:#f4f5f6;">
+<body style="margin:0;padding:0;background:${BRAND.canvas};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.canvas};">
 <tr><td align="center" style="padding:24px 12px;">
-  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e6e8;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <tr><td style="height:3px;background:#f18d05;"></td></tr>
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <tr><td style="height:3px;background:${BRAND.accent};"></td></tr>
     <tr><td style="padding:24px 28px 0 28px;">
-      <div style="font-size:15px;font-weight:700;color:#124b84;">freshlog</div>
-      <h1 style="margin:12px 0 0 0;font-size:24px;line-height:1.25;font-weight:700;color:#1a2733;">${escapeHtml(title)}</h1>
-      <p style="margin:10px 0 0 0;font-size:15px;line-height:1.5;color:#6b7480;">${escapeHtml(intro)}</p>
+      <div style="font-size:15px;font-weight:700;color:${BRAND.brand};">freshlog</div>
+      <h1 style="margin:12px 0 0 0;font-size:24px;line-height:1.25;font-weight:700;color:${BRAND.ink};">${escapeHtml(title)}</h1>
+      <p style="margin:10px 0 0 0;font-size:15px;line-height:1.5;color:${BRAND.muted};">${escapeHtml(intro)}</p>
     </td></tr>
     <tr><td style="padding:0 28px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sectionHtml}</table>
@@ -125,14 +127,14 @@ export function renderEmail({
     ${
       cta
         ? `<tr><td style="padding:26px 28px 0 28px;">
-            <a href="${escapeHtml(cta.url)}" style="display:inline-block;background:${cta.tone === "accent" ? "#f18d05" : "#124b84"};color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 20px;border-radius:8px;">${escapeHtml(cta.label)}</a>
+            <a href="${escapeHtml(cta.url)}" style="display:inline-block;background:${cta.tone === "accent" ? BRAND.accent : BRAND.brand};color:${BRAND.surface};font-size:15px;font-weight:600;text-decoration:none;padding:12px 20px;border-radius:8px;">${escapeHtml(cta.label)}</a>
           </td></tr>`
         : ""
     }
     <tr><td style="padding:26px 28px 24px 28px;">
-      <div style="border-top:1px solid #e5e6e8;padding-top:14px;font-size:12px;line-height:1.5;color:#6b7480;">
+      <div style="border-top:1px solid ${BRAND.line};padding-top:14px;font-size:12px;line-height:1.5;color:${BRAND.muted};">
         ${escapeHtml(footerNote)}
-        ${unsubscribeUrl ? `<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7480;text-decoration:underline;">Turn off these weekly emails</a>` : ""}
+        ${unsubscribeUrl ? `<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:${BRAND.muted};text-decoration:underline;">Turn off these weekly emails</a>` : ""}
       </div>
     </td></tr>
   </table>
