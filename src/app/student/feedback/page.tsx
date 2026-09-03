@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExpandableText } from "@/components/expandable-text";
 
 export default async function StudentFeedbackPage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -92,7 +93,9 @@ export default async function StudentFeedbackPage() {
                   <Rating value={f.rating} />
                 </div>
                 {f.comment && (
-                  <p className="mt-1 text-muted-fg">{f.comment}</p>
+                  <div className="mt-1 text-muted-fg">
+                    <ExpandableText text={f.comment} className="text-muted-fg" />
+                  </div>
                 )}
                 <p className="mt-1 text-xs text-muted-fg">
                   {f.createdAt.toISOString().slice(0, 10)}

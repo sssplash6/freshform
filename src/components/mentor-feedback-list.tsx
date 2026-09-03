@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Rating } from "@/components/rating";
 import type { MentorFeedback, StudentProfile, User } from "@/generated/prisma/client";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExpandableText } from "@/components/expandable-text";
 
 type FeedbackRow = MentorFeedback & {
   student: StudentProfile & { user: User };
@@ -53,7 +54,7 @@ export function MentorFeedbackList({
         >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="truncate font-medium text-ink">
+              <h3 className="min-w-0 truncate font-medium text-ink">
                 {mentorBase ? (
                   <Link
                     href={`${mentorBase}/${mentor.id}`}
@@ -65,7 +66,7 @@ export function MentorFeedbackList({
                   (mentor.name ?? mentor.email)
                 )}
               </h3>
-              <p className="truncate text-xs text-muted-fg">{mentor.email}</p>
+              <p className="min-w-0 truncate text-xs text-muted-fg">{mentor.email}</p>
             </div>
             <div className="shrink-0 text-right text-sm">
               <Rating value={Math.round(average)} />
@@ -86,7 +87,9 @@ export function MentorFeedbackList({
                   </span>
                 </div>
                 {f.comment && (
-                  <p className="mt-0.5 text-muted-fg">{f.comment}</p>
+                  <div className="mt-0.5">
+                  <ExpandableText text={f.comment} className="text-muted-fg" />
+                </div>
                 )}
               </li>
             ))}

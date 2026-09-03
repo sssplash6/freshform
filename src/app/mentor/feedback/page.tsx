@@ -4,6 +4,7 @@ import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExpandableText } from "@/components/expandable-text";
 
 /**
  * A mentor's own ratings. Anonymous by policy: no student names or
@@ -69,7 +70,11 @@ export default async function MentorFeedbackPage({
                     {f.createdAt.toISOString().slice(0, 10)}
                   </span>
                 </div>
-                {f.comment && <p className="mt-1 text-muted-fg">{f.comment}</p>}
+                {f.comment && (
+                  <div className="mt-1">
+                    <ExpandableText text={f.comment} className="text-muted-fg" />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

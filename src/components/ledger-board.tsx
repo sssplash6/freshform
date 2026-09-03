@@ -124,7 +124,9 @@ function UpcomingMeetingRow({
           {state && <StatusChip status={state} />}
         </div>
         {meeting.note && (
-          <p className="mt-0.5 text-[13px] text-ink">{meeting.note}</p>
+          <div className="mt-0.5 text-[13px]">
+            <ExpandableText text={meeting.note} lines={2} />
+          </div>
         )}
         {meeting.link && (
           <a
@@ -256,7 +258,9 @@ function TaskRow({
       )}
 
       {task.note && (
-        <p className="mt-1 text-xs text-muted-fg">{task.note}</p>
+        <div className="mt-1 text-xs">
+          <ExpandableText text={task.note} lines={2} className="text-muted-fg" />
+        </div>
       )}
     </li>
   );

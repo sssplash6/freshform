@@ -226,7 +226,7 @@ export function ProgramTargetsPicker({
                     className="h-4 w-4 shrink-0 accent-brand"
                   />
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{p.name}</span>
+                    <span className="block min-w-0 truncate font-medium">{p.name}</span>
                     {p.cohorts.length > 0 && (
                       <span className="block text-xs text-muted-fg">
                         {wide

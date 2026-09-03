@@ -62,7 +62,7 @@ export function PersonChip({
         person={person}
         className={sm ? "h-5 w-5 text-[9px]" : "h-8 w-8 text-[11px]"}
       />
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 truncate">{label}</span>
     </>
   );
 

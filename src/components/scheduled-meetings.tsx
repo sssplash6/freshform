@@ -12,6 +12,7 @@ import { formatMeetingWhen, formatUntil, toDateInputValue, toTimeInputValue } fr
 import { awaitingAnswer, splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
 import { cn } from "@/lib/cn";
 import { meetingStatus, type Audience, type ViewerContext } from "@/lib/status";
+import { ExpandableText } from "@/components/expandable-text";
 
 const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -118,7 +119,9 @@ function MeetingRow({
         </p>
 
         {meeting.note && (
-          <p className="mt-1.5 text-[15px] text-ink">{meeting.note}</p>
+          <div className="mt-1.5 text-[15px]">
+            <ExpandableText text={meeting.note} lines={2} />
+          </div>
         )}
 
         {meeting.link && (

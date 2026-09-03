@@ -577,7 +577,7 @@ function SelectItem({
       )}
     >
       <span className="min-w-0">
-        <span className="block truncate">{option.label}</span>
+        <span className="block min-w-0 truncate">{option.label}</span>
         {option.hint && (
           <span
             className={cn(

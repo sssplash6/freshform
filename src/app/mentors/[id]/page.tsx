@@ -170,11 +170,11 @@ export default async function MentorProfilePage({
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">
+                  <p className="min-w-0 truncate text-sm font-medium text-ink">
                     {labelOf(a)}
                   </p>
                   {!isStudent && (
-                    <p className="mt-0.5 truncate text-xs text-muted-fg">
+                    <p className="mt-0.5 min-w-0 truncate text-xs text-muted-fg">
                       {a.calendlyUrl ?? "The mentor hasn't set this one yet."}
                     </p>
                   )}

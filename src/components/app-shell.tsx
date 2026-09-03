@@ -87,11 +87,11 @@ function UserMenu({ user }: { user: User }) {
       </summary>
       <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
         <div className="border-b border-line px-3 py-2.5">
-          <p className="truncate text-sm font-medium text-ink">
+          <p className="min-w-0 truncate text-sm font-medium text-ink">
             {user.name ?? user.email}
           </p>
           {user.name && (
-            <p className="truncate text-xs text-muted-fg">{user.email}</p>
+            <p className="min-w-0 truncate text-xs text-muted-fg">{user.email}</p>
           )}
         </div>
         <form action={signOutAction} className="pt-1">
@@ -191,11 +191,11 @@ export async function AppShell({
                 </nav>
                 <div className="mt-1 border-t border-line pt-1">
                   <div className="px-3 py-2">
-                    <p className="truncate text-sm font-medium text-ink">
+                    <p className="min-w-0 truncate text-sm font-medium text-ink">
                       {user.name ?? user.email}
                     </p>
                     {user.name && (
-                      <p className="truncate text-xs text-muted-fg">
+                      <p className="min-w-0 truncate text-xs text-muted-fg">
                         {user.email}
                       </p>
                     )}

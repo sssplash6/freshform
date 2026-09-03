@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/dal";
 import { mentorFeedbackGroups } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExpandableText } from "@/components/expandable-text";
 
 /** Mentors per page of the grouped list, and site comments per page. */
 const MENTORS_PER_PAGE = 10;
@@ -94,7 +95,9 @@ export default async function AdminFeedbackPage({
                   </span>
                 </div>
                 {f.comment && (
-                  <p className="mt-0.5 text-muted-fg">{f.comment}</p>
+                  <div className="mt-0.5">
+                    <ExpandableText text={f.comment} className="text-muted-fg" />
+                  </div>
                 )}
               </li>
             ))}

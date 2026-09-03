@@ -12,6 +12,7 @@ import { personTone } from "@/lib/person-tone";
 import { cn } from "@/lib/cn";
 import type { LedgerSession } from "@/lib/queries";
 import { StatusChip } from "@/components/ui/status-chip";
+import { ExpandableText } from "@/components/expandable-text";
 
 /**
  * The meetings that already happened, as a timeline rather than the admin's
@@ -107,7 +108,9 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                     </p>
                   )}
                   {s.note && (
-                    <p className="mt-1 text-[15px] text-ink">{s.note}</p>
+                    <div className="mt-1 text-[15px]">
+                      <ExpandableText text={s.note} />
+                    </div>
                   )}
 
                   {(voided ||
