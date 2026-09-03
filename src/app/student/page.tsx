@@ -104,8 +104,10 @@ export default async function StudentHomePage() {
             </div>
 
             <HoursRing
-              used={hours.completed + hours.missed}
+              used={hours.used}
               allotted={hours.allotted}
+              forfeited={hours.forfeited}
+              remaining={hours.remaining}
               className="mx-auto sm:mx-0"
             />
           </div>

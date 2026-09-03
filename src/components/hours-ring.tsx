@@ -13,10 +13,23 @@ import { formatDuration } from "@/lib/format";
 export function HoursRing({
   used,
   allotted,
+  forfeited = 0,
+  remaining,
   className,
 }: {
   used: number;
   allotted: number;
+  /** Minutes lost to a passed deadline. Part of the sweep; never spendable. */
+  forfeited?: number;
+  /**
+   * What is actually left, from `allocationSummary`.
+   *
+   * Passed in rather than derived here, because deriving it was a bug: this
+   * component used `allotted - used` and the ledger uses
+   * `allotted - used - forfeited`, so any student with an expired allocation
+   * read a bigger number inside the ring than in the sentence beside it.
+   */
+  remaining: number;
   className?: string;
 }) {
   const size = 132;
@@ -24,9 +37,10 @@ export function HoursRing({
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const pct =
-    allotted > 0 ? Math.min(1, Math.max(0, used / allotted)) : 0;
-  const remaining = allotted - used;
+  // Time that is gone is time that is gone, whether it was spent or forfeited:
+  // the sweep shows what the student can no longer book.
+  const gone = used + forfeited;
+  const pct = allotted > 0 ? Math.min(1, Math.max(0, gone / allotted)) : 0;
   const overdrawn = remaining < 0;
   // A full sweep when overdrawn: the ring can't show more than all of it, and
   // the red number below carries the rest of the message.
@@ -65,7 +79,7 @@ export function HoursRing({
           style={{ ["--ring-circumference" as string]: `${circumference}` }}
           className={cn(
             "ring-draw",
-            overdrawn ? "stroke-red-500" : "stroke-accent",
+            overdrawn ? "stroke-danger" : "stroke-accent",
           )}
         />
       </svg>
@@ -73,7 +87,7 @@ export function HoursRing({
         <div
           className={cn(
             "text-[30px] font-bold leading-none tracking-tight tabular-nums",
-            overdrawn ? "text-red-700" : "text-ink",
+            overdrawn ? "text-danger-ink" : "text-ink",
           )}
         >
           {formatDuration(overdrawn ? -remaining : remaining)}

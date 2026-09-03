@@ -20,10 +20,18 @@ type Segment = {
   key: string;
   label: string;
   minutes: number;
-  /** Bar fill. */
+  /** Bar fill, as a class. Empty when the fill is an inline `style`. */
   fill: string;
-  /** Legend swatch + figure color. */
+  /** For the striped fill, which a Tailwind class cannot express. */
+  style?: React.CSSProperties;
+  /** The figure's colour in the key. */
   ink: string;
+  /**
+   * The key's swatch SHAPE, so the legend survives without colour: a filled
+   * dot for delivered, a striped square for charged-but-missed, a hollow ring
+   * for what is still the student's.
+   */
+  swatch?: "striped" | "ring";
 };
 
 export function HoursBreakdown({
@@ -44,6 +52,12 @@ export function HoursBreakdown({
   className?: string;
 }) {
   const overdrawn = remaining < 0;
+  // Charged time is charged time: delivered and missed are the SAME hue, told
+  // apart by a stripe rather than by a second warm colour nine degrees away.
+  const stripedAccent = {
+    backgroundImage:
+      "repeating-linear-gradient(135deg, var(--color-accent) 0 4px, color-mix(in srgb, var(--color-accent) 40%, white) 4px 8px)",
+  };
   const segments: Segment[] = [
     {
       key: "completed",
@@ -56,22 +70,25 @@ export function HoursBreakdown({
       key: "missed",
       label: "Missed, charged",
       minutes: missed,
-      fill: "bg-amber-400",
-      ink: "text-amber-700",
+      fill: "",
+      style: stripedAccent,
+      ink: "text-ink",
+      swatch: "striped",
     },
     {
       key: "forfeited",
       label: "Expired unused",
       minutes: forfeited,
-      fill: "bg-red-400",
-      ink: "text-red-700",
+      fill: "bg-danger",
+      ink: "text-danger-ink",
     },
     {
       key: "remaining",
       label: overdrawn ? "Overdrawn" : "Still yours",
       minutes: overdrawn ? -remaining : remaining,
-      fill: overdrawn ? "bg-red-500" : "bg-line",
-      ink: overdrawn ? "text-red-700" : "text-ink",
+      fill: overdrawn ? "bg-danger" : "bg-line",
+      ink: overdrawn ? "text-danger-ink" : "text-ink",
+      swatch: overdrawn ? undefined : "ring",
     },
   ];
 
@@ -90,7 +107,7 @@ export function HoursBreakdown({
           <div
             key={s.key}
             className={cn("h-full", s.fill)}
-            style={{ width: `${(s.minutes / span) * 100}%` }}
+            style={{ width: `${(s.minutes / span) * 100}%`, ...s.style }}
           />
         ))}
       </div>
@@ -99,7 +116,7 @@ export function HoursBreakdown({
           figure it stands for. */}
       <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2.5">
         <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
             Allotted
           </dt>
           <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-ink">
@@ -108,10 +125,18 @@ export function HoursBreakdown({
         </div>
         {shown.map((s) => (
           <div key={s.key}>
-            <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
+            <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
               <span
                 aria-hidden="true"
-                className={cn("h-2 w-2 shrink-0 rounded-full", s.fill)}
+                style={s.style}
+                className={cn(
+                  "h-2 w-2 shrink-0",
+                  s.swatch === "striped"
+                    ? "rounded-[2px]"
+                    : s.swatch === "ring"
+                      ? "rounded-full border border-muted-fg/50"
+                      : cn("rounded-full", s.fill)
+                )}
               />
               {s.label}
             </dt>
@@ -127,7 +152,7 @@ export function HoursBreakdown({
         ))}
         {extra > 0 && (
           <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
               Extra, beyond plan
             </dt>
             <dd className="mt-0.5 text-[15px] font-bold tabular-nums text-ink">
@@ -139,8 +164,8 @@ export function HoursBreakdown({
 
       {extra > 0 && (
         <p className="mt-2.5 text-xs text-muted-fg">
-          {formatDuration(extra)} were given on top of the allotment and drew
-          none of it down, so they sit outside the bar.
+          {formatDuration(extra)} was given on top of the allotment and drew
+          none of it down, so it sits outside the bar.
         </p>
       )}
     </div>
