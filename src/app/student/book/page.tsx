@@ -1,35 +1,77 @@
 import { redirect } from "next/navigation";
 
 import { PersonChip } from "@/components/person-chip";
+import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExternalLink } from "@/components/ui/link";
 import { Meter } from "@/components/ui/meter";
-import { PageTitle } from "@/components/ui/section";
-import { ROLES, USER_STATUS } from "@/lib/constants";
+import { PageTitle, Section } from "@/components/ui/section";
+import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
+import { cn } from "@/lib/cn";
+import { ROLES, USER_STATUS, canActAsMentor } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
-import { allocationSummary } from "@/lib/hours";
-import { personTone } from "@/lib/person-tone";
+import { allocationSummary, type AllocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
-import { cn } from "@/lib/cn";
-import { DeadlineText } from "@/components/ui/status-chip";
+import {
+  EXPIRY_WINDOW_DAYS,
+  rollUp,
+  severityOf,
+  status,
+  type Status,
+  type ViewerContext,
+} from "@/lib/status";
+
+type MentorHours = AllocationSummary["perMentor"][number];
+type Mentor = NonNullable<MentorHours["mentor"]>;
 
 /**
- * Booking is entirely external Calendly links (spec §8) — this page lists the
- * mentors assigned to the student's program (or cohort), each as a card in that
- * mentor's own identity color, with the hours the student still holds with them.
+ * One mentor: the time held with them, and the way to reach them.
  *
- * Ordered by hours remaining: the mentor a student can book the most time with
- * belongs at the top, rather than whoever happened to be assigned first.
+ * `hours` and `bookingUrl` are independently optional because the two facts
+ * come from two different tables that do not have to agree — which is the bug
+ * this page was rebuilt around. See the union below.
  */
+type BookRow = {
+  mentor: Mentor;
+  hours: MentorHours | null;
+  bookingUrl: string | null;
+  /** A calendar this student may actually open. See `offersBooking`. */
+  bookable: boolean;
+};
+
+/**
+ * Whether a mentor can be offered as bookable at all — before any question of
+ * balances.
+ *
+ * Two guards, both from real rows in the live data: the platform's own admin
+ * account is paired into every program and was being offered to students as
+ * somebody to book, and a mentor who has never set a name renders as an email
+ * address in a "Book with…" button.
+ */
+function offersBooking(mentor: Mentor, bookingUrl: string | null): boolean {
+  return (
+    Boolean(bookingUrl) && canActAsMentor(mentor) && Boolean(mentor.name?.trim())
+  );
+}
+
+/** Soonest use-by first; a mentor with no allocation has no clock and goes last. */
+function byUseBy(a: BookRow, b: BookRow): number {
+  return (
+    (a.hours?.deadline?.getTime() ?? Infinity) -
+    (b.hours?.deadline?.getTime() ?? Infinity)
+  );
+}
+
 export default async function StudentBookPage() {
   const user = await requireRole(ROLES.STUDENT);
   const now = new Date();
+  const viewer: ViewerContext = { audience: "student", userId: user.id, now };
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
-    include: { program: true, cohort: true },
+    select: { id: true, programId: true, cohortId: true },
   });
 
   // Not onboarded / not approved yet — the home page explains what's next.
@@ -43,133 +85,270 @@ export default async function StudentBookPage() {
     }),
     allocationSummary(profile.id),
   ]);
-  // Pooled hours (no mentor yet) aren't bookable, so they don't map to a card.
-  const hoursByMentor = new Map(
-    hours.perMentor.flatMap((m) => (m.mentor ? [[m.mentor.id, m] as const] : []))
-  );
 
-  const cards = [...assignments].sort(
-    (a, b) =>
-      (hoursByMentor.get(b.mentorId)?.remaining ?? -1) -
-      (hoursByMentor.get(a.mentorId)?.remaining ?? -1)
-  );
-  const bookable = cards.filter((a) => a.calendlyUrl).length;
+  // A mentor can be paired twice — once program-wide, once for the cohort — so
+  // what matters is whether they have a link ANYWHERE, not whether the pairing
+  // this student's cohort happened to match carries one.
+  const pairings = new Map<string, { mentor: Mentor; bookingUrl: string | null }>();
+  for (const a of assignments) {
+    const seen = pairings.get(a.mentorId);
+    if (!seen?.bookingUrl) {
+      pairings.set(a.mentorId, { mentor: a.mentor, bookingUrl: a.calendlyUrl });
+    }
+  }
+
+  // THE UNION, and the reason this page was rebuilt: it is keyed on the mentor,
+  // and a mentor qualifies by holding this student's time OR by having a
+  // calendar to open. Keying it on `MentorAssignment` alone — the pairing — put
+  // hours a student still holds with a mentor whose pairing was later removed
+  // inside the ring total on /student and on no page at all: they could see the
+  // balance and not whose it was.
+  const rows = new Map<string, BookRow>();
+  for (const h of hours.perMentor) {
+    // Pooled time has no mentor to book with; the state row above names it.
+    if (!h.mentor) continue;
+    const bookingUrl = pairings.get(h.mentor.id)?.bookingUrl ?? null;
+    rows.set(h.mentor.id, {
+      mentor: h.mentor,
+      hours: h,
+      bookingUrl,
+      bookable:
+        offersBooking(h.mentor, bookingUrl) && !h.expired && h.remaining >= 0,
+    });
+  }
+  for (const [mentorId, { mentor, bookingUrl }] of pairings) {
+    if (rows.has(mentorId)) continue;
+    // No time and no calendar is nothing to offer. This is what emptied the
+    // page of its eight dashed placeholders.
+    if (!offersBooking(mentor, bookingUrl)) continue;
+    rows.set(mentorId, { mentor, hours: null, bookingUrl, bookable: true });
+  }
+
+  const all = [...rows.values()].sort(byUseBy);
+  // Settled: nothing left to spend and nothing to book. Folded rather than cut —
+  // the count keeps the magnitude on screen, and expired or overdrawn time is
+  // still time the student needs to be able to name.
+  const settled = all.filter((r) => !r.bookable && (r.hours?.remaining ?? 0) <= 0);
+  const live = all.filter((r) => !settled.includes(r));
+  // A fold that hides everything is just a hidden page.
+  const open = live.length > 0 ? live : settled;
+  const folded = live.length > 0 ? settled : [];
+
+  const states: Status[] = [];
+  // Time granted before a mentor was chosen: it is inside the balance on the
+  // home page and belongs to no row here, so the difference has to be stated.
+  const pooled = hours.perMentor
+    .filter((m) => !m.mentor)
+    .reduce((sum, m) => sum + Math.max(0, m.remaining), 0);
+  if (pooled > 0) {
+    const s = status("POOL_UNASSIGNED", viewer, { minutes: pooled });
+    if (s) states.push(s);
+  }
+  // Said once, at the top, only when NOTHING here can be booked — otherwise
+  // each row says it for itself, beside the email that answers it.
+  const nothingBookable = all.length > 0 && all.every((r) => !r.bookable);
+  if (nothingBookable) {
+    const linkless = all.flatMap((r) => {
+      const s = r.bookingUrl ? null : status("BOOKING_LINK_MISSING", viewer);
+      return s ? [s] : [];
+    });
+    // Threshold 1: one mentor keeps their own wording, several collapse into
+    // the count. Either way the sentence comes from the model, not from here.
+    states.push(...rollUp(linkless, viewer, { threshold: 1 }));
+  }
+
+  const nothingToShow =
+    all.length === 0
+      ? status(hours.allotted === 0 ? "BALANCE_NONE" : "NO_MENTOR", viewer)
+      : null;
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        eyebrow={
-          profile.cohort
-            ? `${profile.program.name} / ${profile.cohort.name}`
-            : profile.program.name
-        }
-        title="Book a session"
-        subtitle={
-          bookable > 0
-            ? "Pick a mentor and choose a time on their calendar. The session shows up in your history once they log it."
-            : "Your mentors haven't shared their calendars yet. Reach them on Telegram in the meantime."
-        }
-      />
+      <PageTitle backHref="/student" backLabel="Home" title="Book a session" />
 
-      {cards.length === 0 ? (
-        <EmptyState title="No mentors yet">
-          Nobody is assigned to your program yet. Your program arranges it.
-        </EmptyState>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {cards.map((a, i) => {
-            const withMentor = hoursByMentor.get(a.mentorId);
-            const remaining = withMentor?.remaining;
-                        const allocated = withMentor?.allocated ?? 0;
-            // Not `allocated - remaining`: `allocationSummary` writes an
-            // expired allocation's remaining down to zero, so an untouched
-            // grant that ran out of time read as fully used and filled the bar
-            // to 100%. Forfeited minutes are gone, but they were never spent
-            // with this mentor, and a bar that says otherwise tells a student
-            // they had their sessions.
-            const used = Math.max(
-              0,
-              (withMentor?.completed ?? 0) + (withMentor?.missed ?? 0)
-            );
-            const tone = personTone(a.mentorId);
-            return (
-              <li
-                key={a.id}
-                className="deal-in flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-shadow hover:shadow-soft"
-                style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
-              >
-                {/* The mentor's own color across the top, matching their chip
-                    everywhere else in the app. */}
-                <div
-                  className={cn("h-[3px] w-full", tone.badge)}
-                  aria-hidden="true"
-                />
-                <div className="flex flex-1 flex-col p-5">
-                  <PersonChip
-                    person={a.mentor}
-                    href={`/mentors/${a.mentorId}`}
-                    className="self-start"
-                  />
-
-                  {remaining === undefined ? (
-                    <p className="mt-4 text-sm text-muted-fg">
-                      No time with this mentor yet.
-                    </p>
-                  ) : (
-                    <>
-                      <p className="mt-4">
-                        <span
-                          className={cn(
-                            "text-2xl font-bold leading-none tabular-nums",
-                            remaining < 0 ? "text-danger-ink" : "text-ink",
-                          )}
-                        >
-                          {formatDuration(remaining < 0 ? -remaining : remaining)}
-                        </span>
-                        <span className="ml-1.5 text-sm text-muted-fg">
-                          {remaining < 0 ? "over" : "you can book"}
-                        </span>
-                      </p>
-                      {allocated > 0 && (
-                        <Meter
-                          className="mt-2.5"
-                          size="sm"
-                          pct={Math.min(100, Math.round((used / allocated) * 100))}
-                          tone={remaining < 0 ? "danger" : "accent"}
-                          ariaValueNow={used}
-                          ariaValueMax={allocated}
-                          ariaLabel={`Time used with ${a.mentor.name ?? a.mentor.email}`}
-                        />
-                      )}
-                      {withMentor?.deadline && (
-                        <p className="mt-2 text-xs text-muted-fg">
-                          Use them by <DeadlineText deadline={withMentor.deadline} now={now} />
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  <div className="mt-auto pt-5">
-                    {a.calendlyUrl ? (
-                      <ExternalLink
-                        variant="action"
-                        href={a.calendlyUrl}
-                        className="w-full"
-                      >
-                        Book with {a.mentor.name?.split(" ")[0] ?? "them"}
-                      </ExternalLink>
-                    ) : (
-                      <p className="flex min-h-11 items-center justify-center rounded-lg border border-dashed border-line px-4 text-center text-sm text-muted-fg">
-                        No calendar shared yet
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+      {states.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {states.map((s) => (
+            <StatusChip key={s.type} status={s} />
+          ))}
+        </div>
       )}
+
+      <Section title="Your mentors" count={all.length || undefined}>
+        {nothingToShow ? (
+          <EmptyState framed={false} variant="blocked" title={nothingToShow.label}>
+            {nothingToShow.explanation}
+          </EmptyState>
+        ) : (
+          <ul className="divide-y divide-line">
+            {open.map((row) => (
+              <MentorRow
+                key={row.mentor.id}
+                row={row}
+                viewer={viewer}
+                sayLinkState={!nothingBookable}
+              />
+            ))}
+          </ul>
+        )}
+
+        {folded.length > 0 && (
+          <Disclosure
+            label="Mentors with no time left"
+            count={folded.length}
+            className="border-t border-line px-4 sm:px-5"
+          >
+            <ul className="-mx-4 divide-y divide-line border-t border-line sm:-mx-5">
+              {folded.map((row) => (
+                <MentorRow
+                  key={row.mentor.id}
+                  row={row}
+                  viewer={viewer}
+                  sayLinkState={!nothingBookable}
+                />
+              ))}
+            </ul>
+          </Disclosure>
+        )}
+      </Section>
     </div>
+  );
+}
+
+/**
+ * The balance leads, the meter shows the proportion, and the foot of the row is
+ * either a calendar or a way to reach the person — never a dashed placeholder
+ * where a button should be.
+ */
+function MentorRow({
+  row,
+  viewer,
+  /** False while the state row above has already said it for every mentor. */
+  sayLinkState,
+}: {
+  row: BookRow;
+  viewer: ViewerContext;
+  sayLinkState: boolean;
+}) {
+  const { mentor, hours, bookingUrl, bookable } = row;
+  const name = mentor.name ?? mentor.email;
+  const overdrawn = (hours?.remaining ?? 0) < 0;
+  // Not `allocated - remaining`: `allocationSummary` writes an expired
+  // allocation's remaining down to zero, so an untouched grant that ran out of
+  // time read as fully used and filled the bar to 100%. Forfeited minutes are
+  // gone, but they were never spent with this mentor, and a bar that says
+  // otherwise tells a student they had their sessions.
+  const used = hours ? hours.completed + hours.missed : 0;
+  // The bar is what is GONE, spent or forfeited — an expiry empties it too, and
+  // the figures underneath separate the two.
+  const gone = used + (hours?.forfeited ?? 0);
+
+  // A pairing with a calendar but no grant behind it yet: bookable, and honest
+  // about the fact that nothing has been allocated.
+  const noTime = hours ? null : status("BALANCE_NONE", viewer);
+
+  // A month, because that is the window a student can act inside — the same
+  // number `studentStatuses` warns on, so this row and their home page cannot
+  // disagree about which dates are close.
+  const daysToUseBy = hours?.deadline
+    ? (hours.deadline.getTime() - viewer.now.getTime()) / 86_400_000
+    : null;
+  const expiringSoon =
+    daysToUseBy !== null &&
+    daysToUseBy >= 0 &&
+    daysToUseBy <= EXPIRY_WINDOW_DAYS.student;
+
+  // One chip, for the one thing standing between this row and a booking.
+  // Overdrawn is deliberately absent: the figure beside the name already says
+  // "over", in red, and saying it twice on one row is the habit this page was
+  // rebuilt to drop.
+  const blocked =
+    hours?.expired && hours.forfeited > 0
+      ? status("ALLOCATION_EXPIRED", viewer, { minutes: hours.forfeited })
+      : !bookingUrl && sayLinkState
+        ? status("BOOKING_LINK_MISSING", viewer)
+        : null;
+
+  return (
+    <li className="px-4 py-4 sm:px-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+        <PersonChip person={mentor} size="sm" href={`/mentors/${mentor.id}`} />
+        {hours ? (
+          <span className="text-sm text-muted-fg">
+            <span
+              className={cn(
+                "text-lg font-bold tabular-nums",
+                overdrawn ? "text-danger-ink" : "text-ink"
+              )}
+            >
+              {formatDuration(Math.abs(hours.remaining))}
+            </span>{" "}
+            {overdrawn ? "over" : "left"}
+          </span>
+        ) : (
+          noTime && <StatusChip status={noTime} />
+        )}
+      </div>
+
+      {hours && hours.allocated > 0 && (
+        <>
+          <Meter
+            className="mt-2.5"
+            pct={
+              overdrawn ? 100 : Math.round((gone / hours.allocated) * 100)
+            }
+            tone={overdrawn ? "danger" : "accent"}
+            ariaValueNow={used}
+            ariaValueMax={hours.allocated}
+            ariaLabel={`Time used with ${name}`}
+          />
+          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
+            <span className="tabular-nums">
+              {formatDuration(used)} of {formatDuration(hours.allocated)} used
+              {hours.missed > 0 ? ` · ${formatDuration(hours.missed)} missed` : ""}
+            </span>
+            {/* A chip only while the date can still be acted on. Once it has
+                passed, `DeadlineText` is already red and the chip beside the
+                email says how much went with it — two red chips on one row is
+                the same alarm twice. */}
+            {expiringSoon ? (
+              <StatusChip severity={severityOf("ALLOCATION_EXPIRING")}>
+                Use by <DeadlineText deadline={hours.deadline} now={viewer.now} />
+              </StatusChip>
+            ) : (
+              <span>
+                Use by <DeadlineText deadline={hours.deadline} now={viewer.now} />
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        {bookable && bookingUrl ? (
+          <ExternalLink
+            variant="action"
+            href={bookingUrl}
+            title={`Book with ${name}`}
+          >
+            Book
+          </ExternalLink>
+        ) : (
+          <>
+            {blocked && <StatusChip status={blocked} />}
+            {/* The fallback that makes this page an answer rather than a dead
+                end: no calendar, but a person, and a way to write to them. */}
+            <ExternalLink
+              variant="quiet"
+              href={`mailto:${mentor.email}`}
+              title={`Email ${name}`}
+              className="max-w-full break-all"
+            >
+              {mentor.email}
+            </ExternalLink>
+          </>
+        )}
+      </div>
+    </li>
   );
 }

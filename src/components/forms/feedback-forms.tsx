@@ -70,15 +70,19 @@ function StarRating({ name, idPrefix }: { name: string; idPrefix: string }) {
 
 export function MentorFeedbackForm({
   mentors,
+  /** From `/student/feedback?mentor=` — the person a "Rate" link came from. */
+  defaultMentorId,
 }: {
   mentors: { id: string; label: string }[];
+  defaultMentorId?: string;
 }) {
   const [state, action] = useActionState(submitMentorFeedback, null);
 
   return (
+    // No heading of its own: the page's title says "Rate a mentor" directly
+    // above this, and the form was repeating it word for word.
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
-      <h2 className="text-base font-semibold text-ink">Rate a mentor</h2>
-      <p className="mt-1 text-xs text-muted-fg">
+      <p className="text-xs text-muted-fg">
         Your name isn&apos;t shown to the mentor.
       </p>
       <div className="mt-3 space-y-3">
@@ -88,6 +92,7 @@ export function MentorFeedbackForm({
             <Select
               name="mentorId"
               ariaLabel="Mentor"
+              defaultValue={defaultMentorId ?? ""}
               options={mentors.map((m) => ({ value: m.id, label: m.label }))}
             />
           </div>
