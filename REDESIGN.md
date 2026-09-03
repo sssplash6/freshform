@@ -202,7 +202,7 @@ The horizontal bar is over capacity by its own admission ("Four things do not fi
 ```
 freshlog                        ← wordmark, brand blue
 [ Admin | Mentor ]              ← dual-role only, ⌥M
-Find a student…                 ← submits to /students?q=
+Find a student or mentor…       ← submits to /students?q= or /mentors?q=
 Inbox                     3     ← count = Needs-you rows
 Students
 Mentors
@@ -369,7 +369,7 @@ rewrites its call sites — never as a standalone tidy-up.**
 | `ui/disclosure.tsx` | `<Disclosure label count? param? hint? defaultOpen?>` on native `<details>/<summary>`; one rotating chevron, count in the summary, optional URL param | 6 idioms: `<details>` ×2 hand-styled, `booking-link-form.tsx:73` "Show ▾/Hide ▴", `program-forms.tsx` "New program" **and** "+ Add a cohort" (same file, two shapes), `mentor-list.tsx:86` inline Edit |
 | `ui/row-action-menu.tsx` | `<RowActionMenu trigger="dots\|pencil" label>` | 4 clone popovers (`allocation`/`assignment`/`interview`/`session-row-actions`, effect copied at L70-86 ≡ L85-101 ≡ L59-75 ≡ L78-94) |
 | `ui/confirm-inline.tsx` | `<ConfirmInline label question confirmLabel action disabledReason? />` | 8 two-step confirms (`DangerButton`, `program-settings-forms.tsx:106-152`, promoted) |
-| `ui/filter-bar.tsx` | `<FilterBar q selects presets dateRange summary reset />` — URL-preserving, output feeds a Prisma `where` | `ui/search-form.tsx`, `mentor-hours-filter.tsx` (322 lines), 3 filter cards |
+| `ui/filter-bar.tsx` | `<FilterBar q selects presets dateRange summary reset />` — URL-preserving, output feeds a Prisma `where`; `q` per §5.5 | `ui/search-form.tsx`, `mentor-hours-filter.tsx` (322 lines), 3 filter cards |
 | `ui/save-state.tsx` | `SaveState = idle \| editing \| unsaved \| saving \| saved{at} \| failed{retry}`; `useSaveState(action)` around `useActionState`; `useUnsavedChanges()` | `forms/action-feedback.tsx`, inline error spans |
 | `ui/settings-row.tsx` | `<SettingsRow label description? control state />` | `own-name-form`, `booking-link-form` rows, `student-folder-form`, the digest panel, rename form |
 | `ui/fact-list.tsx` | `<FactList items={[{label, value, change?}]} />` — GOV.UK summary list with inline **Change** + `SaveState` | `student-corrections.tsx` and `student-folder-form.tsx` as panels; header subtitle runs |
@@ -496,7 +496,51 @@ Edit (becomes `Edit ▸` on `/mentors/[id]`), and the two hand-styled `<details>
 (become `Popover`, which is a menu, not a disclosure — §5.2).
 
 
-### 5.5 Palette and tokens
+### 5.5 Search — where it exists, and what it looks in
+
+One free-text box, on the five lists where a person arrives already knowing a name or a word.
+Today exactly two pages have one (`/admin/students`, `/admin/mentors`) and the rest are browse-only,
+which is why "find the student who mentioned scheduling" is currently impossible.
+
+| Page | `q` matches | Why |
+|---|---|---|
+| `/students` | student name, sign-in email | Arriving with a name is the common case. Exists today; kept. |
+| `/mentors` | mentor name, email | Same. Exists today; kept. |
+| `/sessions` | **session note, task purpose**, student name, mentor name | The notes are the richest free text in the product ("Trimmed 12 activities to 10 and reordered by impact"). Searching them answers "when did we cover the Common App?", which nothing can answer today. |
+| `/feedback` | **comment text**, mentor name | How a theme is found — "scheduling", "late", "rushed" — instead of reading 38 cards. |
+| `/notifications` | message text | Years of history accumulate at 50 a page; the category filter narrows the kind, `q` narrows the subject. |
+| Sidebar (staff, mentor) | student **or** mentor name → `/students?q=` or `/mentors?q=` | Typing a name and getting nothing because you guessed the wrong list is the failure this avoids. Disambiguates when both match. |
+| `Select` in a form | option label + its hint line | Already built (`select.tsx:73` `matches()`), with localStorage recents. The log-session student picker is the one that matters. |
+
+**Deliberately no search:** `/programs` (three of them — a list you can read is not a list you
+search), a student's own pages (13 sessions, 8 tasks; the tabs are the navigation), and tasks
+cross-program (no such list exists, and none is proposed). Do not add a box a person would never
+have a reason to type in — an empty control is noise with a placeholder.
+
+**Rules.**
+
+1. **Server-side, always.** `q` becomes part of the Prisma `where`, never a `.filter()` over rows
+   already fetched. The program filter used to be exactly that mistake: showing one program cost
+   the price of loading all of them.
+2. **`?q=` in the URL**, so a search is a link a person can send and the back button undoes it.
+3. **Submit, don't live-search.** Enter or the button. There is no index on these columns and every
+   keystroke would be a table scan; a spinner that fires per character is also its own kind of
+   noise.
+4. **`contains`, trimmed, no `mode`.** SQLite's `LIKE` is case-insensitive for ASCII already, so
+   `{ contains: q }` matches "aziza" to "Aziza" with no extra option — and Prisma's
+   `mode: "insensitive"` is not supported on SQLite, so asking for it would be a runtime error.
+   *Known limit:* ASCII only. A Cyrillic name would match case-sensitively. Acceptable while every
+   name in the data is Latin script; the fix is a lowercased shadow column, and it is not worth one
+   yet.
+5. **Every `q` is an OR across its listed fields**, and combines with the other filters as AND.
+6. **The result count is stated in words** next to the reset: `12 results for "aziza" · Reset`. A
+   filtered list that does not say it is filtered is how someone concludes a student was deleted.
+7. **A no-results state is not an empty state.** "No students match "aziza"." with a Reset — never
+   the "No students yet" copy, which says something false.
+8. **One box per page**, in the `FilterBar`, first position. Never two search fields on one screen.
+
+
+### 5.6 Palette and tokens
 
 The complaint in numbers: 12 chromatic hue families where the rule allows about 5; 24 identity
 tokens (8 hues × 3); amber carrying five meanings and violet four on one screen; **106 raw Tailwind
@@ -551,7 +595,7 @@ circle, striped square, ring.
 `(text|bg|border|ring|stroke|fill|divide|outline|from|to|via)-(red|amber|green|emerald|yellow|blue|violet|purple|indigo|sky|cyan|teal|lime|orange|rose|pink|fuchsia|slate|gray|zinc|neutral|stone)-[0-9]`
 under `src/`, with one allowlisted file for the Google logo (`login/page.tsx`).
 
-### 5.6 Copy rules
+### 5.7 Copy rules
 
 1. **One noun each:** mentor · student · **session** (logged) · **meeting** (scheduled) · task ·
    program · cohort · booking link · time. Banned: *interview, diary, goal, assignment, allotment,
@@ -587,7 +631,7 @@ under `src/`, with one allowlisted file for the Google logo (`login/page.tsx`).
     `Talk to your`, `program contact` outside `programContact()`, `.toISOString().slice` — plus the
     `truncate`-without-`min-w-0` pattern.
 
-### 5.7 Save, freshness and recovery
+### 5.8 Save, freshness and recovery
 
 `SaveState` is the one indicator: `idle | editing | unsaved | saving | saved{at} | failed{retry}`,
 rendered `✓ Saved 12:04` in ink. Every `FactList` row, `SettingsRow`, booking link and inline editor
@@ -827,8 +871,9 @@ disclosure's one sentence.
 ### 6.15 Sessions — `/sessions` (tabs) and `/sessions/new`
 
 **`/sessions?view=logged`** (default): `PageTitle` "Sessions" · one filtered summary line
-("96h logged · 3h missed · 2h extra") · `TabLinks` **Logged | Scheduled** · `FilterBar` (Student ·
-Mentor [staff] · Program · Date range · Attendance · Kind · Status · **Mine**) · `SessionsTable`
+("96h logged · 3h missed · 2h extra") · `TabLinks` **Logged | Scheduled** · `FilterBar` (search: note,
+task, student, mentor · Student · Mentor [staff] · Program · Date range · Attendance · Kind ·
+Status · **Mine**) · `SessionsTable`
 (Date · Student · Mentor · Duration · Task (ink, not violet) · Notes (`ExpandableText`) · exception
 chip only — no "Logged" chip on every row · ⋮) · `Pagination` 25. Mentor lens defaults
 `mentor=me`. **This is the admin ledger from TODO batch 1, and it replaces `MeetingsLog` on six
@@ -853,7 +898,7 @@ reflected in the URL so a phone interruption or a back button does not lose it. 
 
 ### 6.16 Feedback — `/feedback`
 
-Staff: `PageTitle` "Feedback" · one muted summary line · `FilterBar` (Mentor · Program · Rating ≤ ·
+Staff: `PageTitle` "Feedback" · one muted summary line · `FilterBar` (search: comment, mentor · Mentor · Program · Rating ≤ ·
 Date range) · a compact mentors table (mentor · average as a number with small ink stars · ratings ·
 lowest recent · last rated · `StatusChip warn` "Low" when the average <3.5 or any rating ≤2 in 30
 days), **default lowest average first** (today it is ordered by rating *count*, which hides
@@ -1229,7 +1274,7 @@ booking link and watches the inbox row disappear.
 
 ### Phase 8 — Copy, docs, cleanup, verification (6 commits)
 
-54. Copy sweep against §5.6 — every grammar bug in the audit list ("Your mentoring time are all
+54. Copy sweep against §5.7 — every grammar bug in the audit list ("Your mentoring time are all
     used up", "before your time appear", "Your time with them run to", "Extra — none of your used",
     "45 min unused minutes", the comma splice on `admin/page.tsx:79`), `formatDate` everywhere, one
     product name, `programContact()` wired.
