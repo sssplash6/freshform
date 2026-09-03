@@ -6,6 +6,7 @@ import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
+import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, toProgramOptions } from "@/lib/queries";
 
@@ -28,13 +29,7 @@ export default async function AdminProgramStudentsPage({
   if (!program) notFound();
 
   const students = await studentsWithHours({ programId: program.id });
-  const totals = students.reduce(
-    (acc, s) => ({
-      allotted: acc.allotted + s.allottedMinutes,
-      completed: acc.completed + s.completedMinutes,
-    }),
-    { allotted: 0, completed: 0 }
-  );
+  const totals = programTotals(students);
   const programOption = toProgramOptions([program])[0];
 
   return (

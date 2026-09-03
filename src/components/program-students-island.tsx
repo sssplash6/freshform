@@ -3,6 +3,7 @@ import { StudentsTable } from "@/components/students-table";
 import { ArrowLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { formatDuration } from "@/lib/format";
+import { programTotals } from "@/lib/hours";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
 
 /**
@@ -22,13 +23,7 @@ export function ProgramStudentsIsland({
   manageBase?: string;
   programHref?: string;
 }) {
-  const totals = students.reduce(
-    (acc, s) => ({
-      allotted: acc.allotted + s.allottedMinutes,
-      completed: acc.completed + s.completedMinutes,
-    }),
-    { allotted: 0, completed: 0 }
-  );
+  const totals = programTotals(students);
 
   return (
     <Section

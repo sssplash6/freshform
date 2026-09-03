@@ -3,6 +3,7 @@ import { StudentsTable } from "@/components/students-table";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDuration } from "@/lib/format";
+import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
 
@@ -30,15 +31,7 @@ export async function ProgramDashboard({
     );
   }
 
-  const overall = students.reduce(
-    (acc, s) => ({
-      allotted: acc.allotted + s.allottedMinutes,
-      completed: acc.completed + s.completedMinutes,
-      missed: acc.missed + s.missedMinutes,
-      remaining: acc.remaining + s.remainingMinutes,
-    }),
-    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
-  );
+  const overall = programTotals(students);
 
   // Programs without cohorts (all but Global Admissions) get one flat table.
   const byCohort = new Map<string, StudentWithHours[]>();

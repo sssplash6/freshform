@@ -181,3 +181,74 @@ export async function remainingWithMentor(
   });
   return allocation.minutes - (used._sum.minutes ?? 0);
 }
+
+/**
+ * One program's — or one cohort's, or the whole platform's — hours, summed
+ * across students.
+ *
+ * There were four copies of this reduce (`admin/page.tsx`, `program-dashboard`,
+ * `admin/programs/[id]`, `program-students-island`) plus a separate one for
+ * money, and they did not agree on what a total IS: two summed four fields, one
+ * summed two, and none carried `extra`, `forfeited` or the fields' own
+ * relationship. A page showing `allotted` and `completed` but not `forfeited`
+ * cannot be read — the difference has to go somewhere, and it went nowhere.
+ *
+ * Pure, and takes the rows rather than fetching: `studentsWithHours()` has
+ * already done the work, and every caller has the rows in hand.
+ *
+ * @param rows students as `studentsWithHours()` returns them
+ */
+export function programTotals(rows: readonly StudentHoursRow[]): ProgramTotals {
+  const totals: ProgramTotals = {
+    students: rows.length,
+    allotted: 0,
+    completed: 0,
+    missed: 0,
+    remaining: 0,
+    forfeited: 0,
+    extra: 0,
+    paid: 0,
+    overdrawn: 0,
+  };
+  for (const row of rows) {
+    totals.allotted += row.allottedMinutes;
+    totals.completed += row.completedMinutes;
+    totals.missed += row.missedMinutes;
+    totals.remaining += row.remainingMinutes;
+    totals.forfeited += row.forfeitedMinutes;
+    totals.extra += row.extraMinutes;
+    totals.paid += row.amountPaid;
+    if (row.remainingMinutes < 0) totals.overdrawn += 1;
+  }
+  return totals;
+}
+
+/** The fields of a `StudentWithHours` that a total is built from. */
+export type StudentHoursRow = {
+  allottedMinutes: number;
+  completedMinutes: number;
+  missedMinutes: number;
+  remainingMinutes: number;
+  forfeitedMinutes: number;
+  extraMinutes: number;
+  amountPaid: number;
+};
+
+export type ProgramTotals = {
+  students: number;
+  allotted: number;
+  /** Time delivered: used minus no-shows. */
+  completed: number;
+  /** No-show minutes. Charged, and inside `completed`'s complement. */
+  missed: number;
+  /** `allotted − used − forfeited`. Negative when students are overdrawn. */
+  remaining: number;
+  /** Unused minutes lost to a passed deadline. */
+  forfeited: number;
+  /** Out-of-plan minutes: delivered, and outside every figure above. */
+  extra: number;
+  /** Dollars, for programs that track payment. */
+  paid: number;
+  /** How many of these students are past their allocation. */
+  overdrawn: number;
+};

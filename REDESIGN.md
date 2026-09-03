@@ -1147,7 +1147,11 @@ question in three sections. Everything after that is structure.
     `min-w-0` sweep; every table capped at 6 columns.
 14. `ui/link.tsx` (`ArrowLink`, `ExternalLink`); delete `telegram-handle.tsx`,
     `student-folder-link.tsx`, `arrow-link.tsx` and every `→` text glyph.
-15. `programTotals()` in `hours.ts` + tests; delete `totals()` and its three copies.
+15. `programTotals()` in `hours.ts` + tests; delete `totals()` and its **four** copies (a fifth
+    lived in `admin/programs/[id]/students`). It also returns `overdrawn` — a count no page shows
+    yet, and the demo data is 10 of 11 students overdrawn behind a single grey "−20h 2m
+    remaining". Two copies summed only `allotted` and `completed`, so their caption reads
+    "83h 2m of 65h completed" once a program is over its grants; the caption goes in commit 40.
 16. `check-colors.mjs` and `check-copy.mjs` to **error**.
 
 *Verify:* zero raw palette classes, zero banned phrases, `npm test`, and screenshots of

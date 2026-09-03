@@ -12,26 +12,16 @@ import { PageTitle } from "@/components/ui/section";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatDuration } from "@/lib/format";
+import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/dal";
 import {
   recentMeetings,
   studentsWithHours,
   taskOptionsForSessions,
-  type StudentWithHours,
 } from "@/lib/queries";
-import { requireRole } from "@/lib/dal";
 
-function totals(students: StudentWithHours[]) {
-  return students.reduce(
-    (acc, s) => ({
-      allotted: acc.allotted + s.allottedMinutes,
-      completed: acc.completed + s.completedMinutes,
-      missed: acc.missed + s.missedMinutes,
-      remaining: acc.remaining + s.remainingMinutes,
-    }),
-    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
-  );
-}
+
 
 /**
  * Cross-program dashboard: one island per running program with its vitals;
@@ -58,7 +48,7 @@ export default async function AdminHomePage() {
 
 
   const meetingTasks = await taskOptionsForSessions(meetings);
-  const overall = totals(students);
+  const overall = programTotals(students);
   const pending = students.filter(
     (s) => s.user.status === USER_STATUS.PENDING
   );
@@ -158,7 +148,7 @@ export default async function AdminHomePage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map((p) => {
             const ps = students.filter((s) => s.programId === p.id);
-            const pt = totals(ps);
+            const pt = programTotals(ps);
             const mentorCount = new Set(
               assignments
                 .filter((a) => a.programId === p.id)

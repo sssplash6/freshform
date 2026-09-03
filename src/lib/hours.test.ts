@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { SESSION_STATUS } from "@/lib/constants";
-import { allocationSummary, remainingWithMentor } from "@/lib/hours";
+import {
+  allocationSummary,
+  programTotals,
+  remainingWithMentor,
+  type StudentHoursRow,
+} from "@/lib/hours";
 import { allocation, mentor, session, student } from "@/test/db";
 
 /**
@@ -242,5 +247,92 @@ describe("remainingWithMentor", () => {
     });
 
     expect(await remainingWithMentor(s.id, mine.id)).toBe(510);
+  });
+});
+
+describe("programTotals", () => {
+  /** A student row with everything zero, so each test states only what it means. */
+  const row = (over: Partial<StudentHoursRow> = {}): StudentHoursRow => ({
+    allottedMinutes: 0,
+    completedMinutes: 0,
+    missedMinutes: 0,
+    remainingMinutes: 0,
+    forfeitedMinutes: 0,
+    extraMinutes: 0,
+    amountPaid: 0,
+    ...over,
+  });
+
+  it("has no students and no minutes when the program is empty", () => {
+    expect(programTotals([])).toEqual({
+      students: 0,
+      allotted: 0,
+      completed: 0,
+      missed: 0,
+      remaining: 0,
+      forfeited: 0,
+      extra: 0,
+      paid: 0,
+      overdrawn: 0,
+    });
+  });
+
+  it("sums every field across students", () => {
+    const totals = programTotals([
+      row({ allottedMinutes: 600, completedMinutes: 120, remainingMinutes: 480 }),
+      row({ allottedMinutes: 300, completedMinutes: 60, remainingMinutes: 240 }),
+    ]);
+    expect(totals.students).toBe(2);
+    expect(totals.allotted).toBe(900);
+    expect(totals.completed).toBe(180);
+    expect(totals.remaining).toBe(720);
+  });
+
+  it("keeps the ledger's own arithmetic: remaining = allotted − used − forfeited", () => {
+    // 10h granted, 3h delivered, 1h no-showed (charged), 2h forfeited.
+    const used = 180 + 60;
+    const totals = programTotals([
+      row({
+        allottedMinutes: 600,
+        completedMinutes: 180,
+        missedMinutes: 60,
+        forfeitedMinutes: 120,
+        remainingMinutes: 600 - used - 120,
+      }),
+    ]);
+    expect(totals.remaining).toBe(totals.allotted - (totals.completed + totals.missed) - totals.forfeited);
+    expect(totals.remaining).toBe(240);
+  });
+
+  it("leaves out-of-plan time outside every total", () => {
+    const totals = programTotals([row({ allottedMinutes: 600, remainingMinutes: 600, extraMinutes: 90 })]);
+    expect(totals.extra).toBe(90);
+    // 10h granted, 10h left: the 90 extra minutes drew nothing down.
+    expect(totals.allotted).toBe(600);
+    expect(totals.remaining).toBe(600);
+    expect(totals.completed).toBe(0);
+  });
+
+  it("counts overdrawn students rather than hiding them inside a positive sum", () => {
+    // The cross-program dashboard's real shape: one student deep in the red,
+    // three comfortable. A bare `remaining` sum reads as healthy.
+    const totals = programTotals([
+      row({ allottedMinutes: 0, completedMinutes: 465, remainingMinutes: -465 }),
+      row({ allottedMinutes: 600, remainingMinutes: 600 }),
+      row({ allottedMinutes: 600, remainingMinutes: 600 }),
+      row({ allottedMinutes: 600, remainingMinutes: 600 }),
+    ]);
+    expect(totals.remaining).toBe(1335);
+    expect(totals.overdrawn).toBe(1);
+  });
+
+  it("does not count a student at exactly zero as overdrawn", () => {
+    expect(programTotals([row({ allottedMinutes: 600, completedMinutes: 600, remainingMinutes: 0 })]).overdrawn).toBe(0);
+  });
+
+  it("sums money, which only some programs track", () => {
+    const totals = programTotals([row({ amountPaid: 12000 }), row({ amountPaid: 0 }), row({ amountPaid: 4500 })]);
+    expect(totals.paid).toBe(16500);
+    expect(totals.students).toBe(3);
   });
 });

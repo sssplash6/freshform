@@ -18,6 +18,7 @@ import {
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
+import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import {
   programTasks,
@@ -116,18 +117,10 @@ export default async function AdminProgramOverviewPage({
     ]);
 
   const meetingTasks = await taskOptionsForSessions(recentSessions);
-  const totals = students.reduce(
-    (acc, s) => ({
-      allotted: acc.allotted + s.allottedMinutes,
-      completed: acc.completed + s.completedMinutes,
-      missed: acc.missed + s.missedMinutes,
-      remaining: acc.remaining + s.remainingMinutes,
-    }),
-    { allotted: 0, completed: 0, missed: 0, remaining: 0 }
-  );
+  const totals = programTotals(students);
   const mentorCount = new Set(pairings.map((p) => p.mentorId)).size;
   const isMasters = program.name === MASTERS_PROGRAM_NAME;
-  const totalPaid = students.reduce((sum, s) => sum + s.amountPaid, 0);
+  
 
   // The nearest use-by date each student is up against, so hours about to expire
   // are visible before they do.
@@ -185,7 +178,7 @@ export default async function AdminProgramOverviewPage({
           value={formatDuration(totals.remaining)}
         />
         {isMasters && (
-          <Figure label="Total paid" value={formatMoney(totalPaid)} />
+          <Figure label="Total paid" value={formatMoney(totals.paid)} />
         )}
       </FigureRow>
 
