@@ -17,10 +17,10 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-brand text-white hover:bg-brand-dark",
   secondary: "border border-brand/80 text-brand hover:bg-brand hover:text-white",
   ghost: "text-brand hover:bg-brand-soft",
-  danger: "border border-red-300 text-red-700 hover:bg-red-50",
+  danger: "border border-danger-line text-danger-ink hover:bg-danger-soft",
   // The second half of a two-step confirm: by then the destructive choice IS
   // the primary action, so it is filled, not outlined.
-  dangerSolid: "bg-red-700 text-white hover:bg-red-800",
+  dangerSolid: "bg-danger text-white hover:bg-danger/90",
 };
 
 /** Fixed, proportionate heights — sm for inline/table actions, md for the

@@ -137,7 +137,7 @@ function MeetingRow({
         )}
 
         {overdue && (
-          <p className="mt-2 text-xs text-amber-700">
+          <p className="mt-2 text-xs text-warn-ink">
             {view === "mentor"
               ? "This one has passed with nothing logged — log the time below, or cancel it."
               : view === "staff"

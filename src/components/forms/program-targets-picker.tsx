@@ -202,7 +202,7 @@ export function ProgramTargetsPicker({
       <ul
         className={cn(
           "mt-2 divide-y divide-line/60 rounded-lg border",
-          invalid ? "border-red-500" : "border-line",
+          invalid ? "border-danger" : "border-line",
         )}
       >
         {visible.length === 0 && (
@@ -294,7 +294,7 @@ export function ProgramTargetsPicker({
       </ul>
 
       {invalid && (
-        <p id={errorId} role="alert" className="mt-1.5 text-xs text-red-700">
+        <p id={errorId} role="alert" className="mt-1.5 text-xs text-danger-ink">
           Pick at least one program or cohort.
         </p>
       )}

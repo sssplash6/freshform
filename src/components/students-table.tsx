@@ -96,7 +96,7 @@ export function StudentsTable({
             label="Missed"
             align="right"
             className={`tabular-nums ${
-              s.missedMinutes > 0 ? "text-amber-700" : "text-muted-fg"
+              s.missedMinutes > 0 ? "text-warn-ink" : "text-muted-fg"
             }`}
           >
             {s.missedMinutes > 0 ? formatDuration(s.missedMinutes) : "—"}
@@ -105,7 +105,7 @@ export function StudentsTable({
             label="Remaining"
             align="right"
             className={`font-medium tabular-nums ${
-              s.remainingMinutes < 0 ? "text-red-700" : "text-ink"
+              s.remainingMinutes < 0 ? "text-danger-ink" : "text-ink"
             }`}
           >
             {formatDuration(s.remainingMinutes)}

@@ -279,7 +279,7 @@ export default async function AdminStudentDetailPage({
                   label="Missed"
                   align="right"
                   className={`tabular-nums ${
-                    m.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                    m.missed > 0 ? "text-warn-ink" : "text-muted-fg"
                   }`}
                 >
                   {m.missed > 0 ? formatDuration(m.missed) : "—"}
@@ -288,7 +288,7 @@ export default async function AdminStudentDetailPage({
                   label="Remaining"
                   align="right"
                   className={`font-medium tabular-nums ${
-                    m.remaining < 0 ? "text-red-700" : "text-ink"
+                    m.remaining < 0 ? "text-danger-ink" : "text-ink"
                   }`}
                 >
                   {formatDuration(m.remaining)}

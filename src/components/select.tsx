@@ -440,7 +440,7 @@ export function Select({
         className={cn(
           "flex h-10 w-full items-center justify-between gap-2 rounded-lg border bg-surface pl-3.5 pr-2.5 text-[15px] transition-colors focus:outline-none",
           invalid
-            ? "border-red-500"
+            ? "border-danger"
             : open
               ? "border-brand"
               : "border-line hover:border-brand/40",
@@ -463,7 +463,7 @@ export function Select({
       </button>
 
       {invalid && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-red-700">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-danger-ink">
           {ariaLabel} is required.
         </p>
       )}

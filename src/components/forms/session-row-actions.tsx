@@ -247,7 +247,7 @@ export function SessionRowActions({
                   <button
                     type="button"
                     onClick={() => setConfirmingVoid(true)}
-                    className="text-xs font-medium text-red-700 transition-colors hover:underline"
+                    className="text-xs font-medium text-danger-ink transition-colors hover:underline"
                   >
                     Void session — keeps the row, returns the hours
                   </button>
@@ -287,7 +287,7 @@ export function SessionRowActions({
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(true)}
-                      className="text-xs font-medium text-red-700 transition-colors hover:underline"
+                      className="text-xs font-medium text-danger-ink transition-colors hover:underline"
                     >
                       Delete this session
                     </button>

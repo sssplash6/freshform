@@ -278,7 +278,7 @@ export default async function AdminProgramOverviewPage({
                   align="right"
                   className={`tabular-nums ${
                     task.minuteLimit != null && task.loggedMinutes > task.minuteLimit
-                      ? "font-semibold text-amber-700"
+                      ? "font-semibold text-warn-ink"
                       : task.loggedMinutes > 0
                         ? "text-ink"
                         : "text-muted-fg"

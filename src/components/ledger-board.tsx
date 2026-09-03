@@ -212,7 +212,7 @@ function TaskRow({
       : 0;
 
   return (
-    <li className={cn("px-4 py-2.5 sm:px-5", done && "bg-green-50/40")}>
+    <li className={cn("px-4 py-2.5 sm:px-5", done && "bg-canvas/60")}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-[13px] font-semibold text-ink">
           {task.purpose}
@@ -236,7 +236,7 @@ function TaskRow({
 
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-fg">
         <span className="tabular-nums">
-          <span className={cn("font-semibold", over ? "text-red-700" : "text-ink")}>
+          <span className={cn("font-semibold", over ? "text-danger-ink" : "text-ink")}>
             {formatMinutes(task.loggedMinutes)}
           </span>
           {task.minuteLimit != null
@@ -251,7 +251,7 @@ function TaskRow({
       {task.minuteLimit != null && task.minuteLimit > 0 && (
         <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-line">
           <div
-            className={cn("h-full rounded-full", over ? "bg-red-500" : "bg-accent")}
+            className={cn("h-full rounded-full", over ? "bg-danger" : "bg-accent")}
             style={{ width: `${over ? 100 : Math.max(pct, 2)}%` }}
           />
         </div>

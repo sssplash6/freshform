@@ -100,7 +100,7 @@ function ProgramToggleIsland({
           </dt>
           <dd
             className={`text-xl font-bold tabular-nums ${
-              remaining < 0 ? "text-red-700" : "text-ink"
+              remaining < 0 ? "text-danger-ink" : "text-ink"
             }`}
           >
             {formatDuration(remaining)}
@@ -551,7 +551,7 @@ export default async function MentorHomePage({
                     label="Missed"
                     align="right"
                     className={`tabular-nums ${
-                      s.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                      s.missed > 0 ? "text-warn-ink" : "text-muted-fg"
                     }`}
                   >
                     {s.missed > 0 ? formatDuration(s.missed) : "—"}
@@ -560,7 +560,7 @@ export default async function MentorHomePage({
                     label="Remaining"
                     align="right"
                     className={`font-medium tabular-nums ${
-                      s.remaining < 0 ? "text-red-700" : "text-ink"
+                      s.remaining < 0 ? "text-danger-ink" : "text-ink"
                     }`}
                   >
                     {formatDuration(s.remaining)}

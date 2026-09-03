@@ -59,7 +59,7 @@ function GoalCard({
             <div
               className={cn(
                 "bar-grow h-full rounded-full",
-                over ? "bg-amber-500" : "bg-accent",
+                over ? "bg-danger" : "bg-accent",
               )}
               style={{ width: `${Math.max(pct, 2)}%` }}
             />
@@ -143,7 +143,7 @@ export function StudentGoals({
 
           {done.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-green-700">
+              <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
                 Finished
               </h2>
               {/* Collapsed to one line each: done work is reassuring to see but
@@ -157,7 +157,7 @@ export function StudentGoals({
                   >
                     <span
                       aria-hidden="true"
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas text-ink"
                     >
                       <CheckIcon className="h-3 w-3" />
                     </span>

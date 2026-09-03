@@ -23,7 +23,7 @@ export default async function LeaderStudentsPage() {
           students={students}
         />
       ) : (
-        <p className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <p className="rounded-lg border border-danger-line bg-danger-soft p-6 text-sm text-danger-ink">
           Your account isn&apos;t linked to a program. Ask an admin to fix the
           staff configuration.
         </p>

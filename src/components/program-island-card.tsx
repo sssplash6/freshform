@@ -82,7 +82,7 @@ export function ProgramIslandCard({
             </dt>
             <dd
               className={`text-xl font-bold tabular-nums ${
-                s.danger ? "text-red-700" : s.brand ? "text-accent-ink" : "text-ink"
+                s.danger ? "text-danger-ink" : s.brand ? "text-accent-ink" : "text-ink"
               }`}
             >
               {s.value}

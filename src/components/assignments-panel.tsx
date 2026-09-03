@@ -94,7 +94,7 @@ export function AssignmentsPanel({
               return (
                 <Tr
                   key={a.id}
-                  className={`deal-in ${isDone ? "bg-green-50/50" : ""}`}
+                  className={`deal-in ${isDone ? "bg-canvas/60" : ""}`}
                   style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
                 >
                   <Td className="sm:max-w-xs">
@@ -127,7 +127,7 @@ export function AssignmentsPanel({
                     align="right"
                     className={`tabular-nums ${
                       a.minuteLimit != null && a.loggedMinutes > a.minuteLimit
-                        ? "font-semibold text-amber-700"
+                        ? "font-semibold text-warn-ink"
                         : a.loggedMinutes > 0
                           ? "text-ink"
                           : "text-muted-fg"
@@ -206,7 +206,7 @@ export function AssignmentsPanel({
               allotted
             </span>
             {overPlanned && (
-              <span className="font-medium text-amber-700">
+              <span className="font-medium text-warn-ink">
                 Budgeted work exceeds the hours this student holds by{" "}
                 {formatDuration(planned - minutesAllotted)}.
               </span>

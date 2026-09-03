@@ -277,7 +277,7 @@ export default async function AdminMentorDetailPage({
                       label="Missed"
                       align="right"
                       className={`tabular-nums ${
-                        row.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                        row.missed > 0 ? "text-warn-ink" : "text-muted-fg"
                       }`}
                     >
                       {row.missed > 0 ? formatDuration(row.missed) : "—"}
@@ -289,7 +289,7 @@ export default async function AdminMentorDetailPage({
                       label="Remaining"
                       align="right"
                       className={`font-medium tabular-nums ${
-                        row.remaining < 0 ? "text-red-700" : "text-ink"
+                        row.remaining < 0 ? "text-danger-ink" : "text-ink"
                       }`}
                     >
                       {formatDuration(row.remaining)}
@@ -308,7 +308,7 @@ export default async function AdminMentorDetailPage({
                 {totals.missed > 0 && (
                   <>
                     {" · "}
-                    <span className="font-semibold tabular-nums text-amber-700">
+                    <span className="font-semibold tabular-nums text-warn-ink">
                       {formatDuration(totals.missed)}
                     </span>{" "}
                     missed
@@ -327,7 +327,7 @@ export default async function AdminMentorDetailPage({
                 {totals.forfeited > 0 && (
                   <>
                     {" · "}
-                    <span className="font-semibold tabular-nums text-red-700">
+                    <span className="font-semibold tabular-nums text-danger-ink">
                       {formatDuration(totals.forfeited)}
                     </span>{" "}
                     expired unused
@@ -404,7 +404,7 @@ export default async function AdminMentorDetailPage({
                   label="Missed"
                   align="right"
                   className={`tabular-nums ${
-                    s.missed > 0 ? "text-amber-700" : "text-muted-fg"
+                    s.missed > 0 ? "text-warn-ink" : "text-muted-fg"
                   }`}
                 >
                   {s.missed > 0 ? formatDuration(s.missed) : "—"}
@@ -413,7 +413,7 @@ export default async function AdminMentorDetailPage({
                   label="Remaining"
                   align="right"
                   className={`font-medium tabular-nums ${
-                    s.remaining < 0 ? "text-red-700" : "text-ink"
+                    s.remaining < 0 ? "text-danger-ink" : "text-ink"
                   }`}
                 >
                   {formatDuration(s.remaining)}

@@ -44,7 +44,7 @@ export function ApproveStudentButtons({
         </Button>
       </form>
       {error && (
-        <span role="alert" className="text-xs text-red-700">
+        <span role="alert" className="text-xs text-danger-ink">
           {error}
         </span>
       )}

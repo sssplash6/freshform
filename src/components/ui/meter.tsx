@@ -53,7 +53,7 @@ export function Meter({
       <div
         className={cn(
           "h-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
-          tone === "danger" ? "bg-red-500" : "bg-accent",
+          tone === "danger" ? "bg-danger" : "bg-accent",
         )}
         style={{ width: mounted ? `${clamped}%` : "0%" }}
       />

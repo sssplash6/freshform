@@ -49,7 +49,7 @@ function NotificationBell({ count }: { count: number }) {
         />
       </svg>
       {count > 0 && (
-        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -97,7 +97,7 @@ function UserMenu({ user }: { user: User }) {
         <form action={signOutAction} className="pt-1">
           <button
             type="submit"
-            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-red-50 hover:text-red-700"
+            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-danger-soft hover:text-danger-ink"
           >
             <LogOutIcon className="h-4 w-4" />
             Sign out
@@ -203,7 +203,7 @@ export async function AppShell({
                   <form action={signOutAction}>
                     <button
                       type="submit"
-                      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-red-50 hover:text-red-700"
+                      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-danger-soft hover:text-danger-ink"
                     >
                       <LogOutIcon className="h-4 w-4" />
                       Sign out

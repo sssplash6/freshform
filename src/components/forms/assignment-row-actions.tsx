@@ -211,7 +211,7 @@ export function AssignmentRowActions({
                       <button
                         type="button"
                         onClick={() => setConfirmDelete(true)}
-                        className="text-xs font-medium text-red-700 transition-colors hover:underline"
+                        className="text-xs font-medium text-danger-ink transition-colors hover:underline"
                       >
                         Remove
                       </button>

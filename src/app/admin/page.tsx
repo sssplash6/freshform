@@ -90,7 +90,7 @@ export default async function AdminHomePage() {
         >
           These students signed up themselves. Approve them, then allocate
           their time from mentors in their program via “Manage”.
-          <ul className="mt-3 divide-y divide-amber-200">
+          <ul className="mt-3 divide-y divide-warn-line">
             {pending.map((s) => (
               <li
                 key={s.id}

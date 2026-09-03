@@ -9,8 +9,8 @@ const TONE: Record<string, string> = {
   brand: "bg-brand-soft text-brand",
   accent: "bg-accent-soft text-accent-ink",
   plan: "bg-canvas text-muted-fg",
-  success: "bg-green-50 text-green-700",
-  warning: "bg-amber-50 text-amber-700",
+  success: "bg-canvas text-muted-fg",
+  warning: "bg-warn-soft text-warn-ink",
 };
 
 export type FeedNotification = {

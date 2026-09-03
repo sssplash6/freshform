@@ -113,7 +113,7 @@ export default async function StudentBookPage() {
                         <span
                           className={cn(
                             "text-2xl font-bold leading-none tabular-nums",
-                            remaining < 0 ? "text-red-700" : "text-ink",
+                            remaining < 0 ? "text-danger-ink" : "text-ink",
                           )}
                         >
                           {formatDuration(remaining < 0 ? -remaining : remaining)}

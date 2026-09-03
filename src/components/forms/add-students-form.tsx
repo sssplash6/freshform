@@ -120,7 +120,7 @@ function StudentRows({
               onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
               disabled={rows.length === 1}
               aria-label={`Remove student ${i + 1}`}
-              className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-canvas hover:text-red-700 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-fg"
+              className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-muted-fg transition-colors hover:bg-canvas hover:text-danger-ink disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-fg"
             >
               ✕
             </button>

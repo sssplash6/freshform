@@ -142,7 +142,7 @@ function DangerButton({
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+          className="rounded-lg border border-danger-line px-3 py-1.5 text-xs font-medium text-danger-ink transition-colors hover:bg-danger-soft"
         >
           {label}
         </button>

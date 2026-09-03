@@ -26,7 +26,7 @@ export function RemoveAssignmentButton({
           Remove
         </Button>
         {state && !state.ok && (
-          <span role="alert" className="text-xs text-red-700">
+          <span role="alert" className="text-xs text-danger-ink">
             {state.error}
           </span>
         )}
