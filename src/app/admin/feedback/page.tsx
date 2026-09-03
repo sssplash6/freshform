@@ -2,6 +2,8 @@ import { MentorFeedbackList } from "@/components/mentor-feedback-list";
 import { Rating } from "@/components/rating";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Pagination, parsePage } from "@/components/ui/pagination";
+import { ROLES } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { mentorFeedbackGroups } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
 
@@ -14,6 +16,7 @@ export default async function AdminFeedbackPage({
 }: {
   searchParams: Promise<{ page?: string; site?: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { page: rawPage, site: rawSite } = await searchParams;
   const page = parsePage(rawPage);
   const sitePage = parsePage(rawSite);

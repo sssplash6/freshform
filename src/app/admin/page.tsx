@@ -10,9 +10,9 @@ import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Callout } from "@/components/ui/callout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROLES, USER_STATUS } from "@/lib/constants";
-import { monogramOf, programTone } from "@/lib/person-tone";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatDuration } from "@/lib/format";
+import { monogramOf, programTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import {
   recentMeetings,
@@ -20,6 +20,7 @@ import {
   taskOptionsForSessions,
   type StudentWithHours,
 } from "@/lib/queries";
+import { requireRole } from "@/lib/dal";
 
 function totals(students: StudentWithHours[]) {
   return students.reduce(
@@ -39,6 +40,7 @@ function totals(students: StudentWithHours[]) {
  * Pending self-signups are approved right here.
  */
 export default async function AdminHomePage() {
+  await requireRole(ROLES.ADMIN);
   await ensureDeadlineReminders();
 
   const [programs, students, assignments, unassignedMentors, meetings] =

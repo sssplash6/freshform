@@ -31,6 +31,14 @@ export async function requireUser(): Promise<User> {
 /**
  * Require one of the given roles. A signed-in user with the wrong role is
  * sent to their own home instead of seeing someone else's pages.
+ *
+ * Call this in every PAGE, not only in the layout that wraps it. Next renders a
+ * layout and its page in PARALLEL, so a redirect thrown by the layout alone
+ * does not stop the page from running its queries and streaming the result:
+ * until Sep 3 2026 a request carrying any non-empty session cookie — expired,
+ * signed with a rotated secret, or plain garbage — got HTTP 200, a redirect to
+ * /login, and the entire student roster with their email addresses in the
+ * payload. `getCurrentUser` is request-cached, so the second call is free.
  */
 export async function requireRole(...roles: Role[]): Promise<User> {
   const user = await requireUser();

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/pagination";
 import { SearchForm } from "@/components/ui/search-form";
 import { ROLES, USER_STATUS } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
 
@@ -20,6 +21,7 @@ export default async function AdminMentorsPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { q = "", page: rawPage } = await searchParams;
   const query = q.trim();
   const page = parsePage(rawPage);

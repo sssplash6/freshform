@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 
 import { ProgramTabs } from "@/components/program-tabs";
 import { PageHeader } from "@/components/ui/page-header";
+import { ROLES } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
 import { monogramOf, programTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
@@ -23,6 +25,7 @@ export default async function ProgramLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { id } = await params;
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();

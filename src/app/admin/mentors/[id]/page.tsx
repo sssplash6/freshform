@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { formatDate, formatDuration } from "@/lib/format";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
@@ -44,6 +45,7 @@ export default async function AdminMentorDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<HoursQuery>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { id } = await params;
   const query = await searchParams;
 

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { ROLES } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours, toProgramOptions } from "@/lib/queries";
@@ -17,6 +19,7 @@ export default async function AdminProgramStudentsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { id } = await params;
   const program = await prisma.program.findUnique({
     where: { id },

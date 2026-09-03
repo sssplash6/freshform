@@ -11,6 +11,7 @@ import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
   ASSIGNMENT_PROGRESS_LABELS,
+  ROLES,
   USER_STATUS,
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
@@ -24,6 +25,7 @@ import {
   type ProgramTask,
   type StudentWithHours,
 } from "@/lib/queries";
+import { requireRole } from "@/lib/dal";
 
 const DAY = 24 * 60 * 60 * 1000;
 /** How far ahead a use-by date starts counting as "worth doing something about". */
@@ -93,6 +95,7 @@ export default async function AdminProgramOverviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { id } = await params;
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();

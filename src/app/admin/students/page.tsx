@@ -2,6 +2,8 @@ import { Select } from "@/components/select";
 import { StudentsTable } from "@/components/students-table";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { SearchForm } from "@/components/ui/search-form";
+import { ROLES } from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
 
@@ -19,6 +21,7 @@ export default async function AdminStudentsPage({
 }: {
   searchParams: Promise<{ program?: string; q?: string; page?: string }>;
 }) {
+  await requireRole(ROLES.ADMIN);
   const { program = "", q = "", page: rawPage } = await searchParams;
   const query = q.trim();
   const page = parsePage(rawPage);
