@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { cn } from "@/lib/cn";
+import { PAGE_PARAMS, filterHref, readParam, type SearchParams } from "@/lib/filters";
 
 /** Every list page here shows the same slice size, so paging feels uniform. */
 export const PAGE_SIZE = 25;
@@ -14,20 +15,27 @@ export function parsePage(raw: string | undefined): number {
 /**
  * Build a href for another page of the same list, carrying every other filter
  * along — dropping the ones that are empty so a shared link stays readable.
+ *
+ * The query string is `filterHref`'s to build, not this file's: it was the
+ * second of two hand-rolled answers to "what happens to the other params", and
+ * the two disagreed about repeated params and about trimming. What is left
+ * here is the one thing paging means that filtering does not — `filterHref`
+ * drops every page param, which is right when a filter changes and wrong when
+ * a page does, because `/admin/feedback` pages two lists on one route and
+ * stepping through one of them must not send the other back to its start.
  */
 export function pageHref(
   basePath: string,
-  params: Record<string, string | undefined>,
+  params: SearchParams,
   page: number,
   param = "page",
 ): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) search.set(key, value);
+  const changes: Record<string, string | undefined> = {};
+  for (const key of PAGE_PARAMS) {
+    if (key !== param) changes[key] = readParam(params, key);
   }
-  if (page > 1) search.set(param, String(page));
-  const qs = search.toString();
-  return qs ? `${basePath}?${qs}` : basePath;
+  changes[param] = page > 1 ? String(page) : undefined;
+  return filterHref(basePath, params, changes);
 }
 
 /**
@@ -50,7 +58,9 @@ export function Pagination({
   className,
 }: {
   basePath: string;
-  params: Record<string, string | undefined>;
+  /** The page's own `searchParams`. Hand it the whole object: anything left
+      out of it is a filter that vanishes on page two. */
+  params: SearchParams;
   page: number;
   pageSize?: number;
   total: number;
@@ -65,19 +75,28 @@ export function Pagination({
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(total, page * pageSize);
 
-  const step = (to: number, label: string, disabled: boolean) =>
+  // `rel` is passed, not inferred from the label. It used to be read back out
+  // of the words — `label === "Newer" || label === "Previous"` — so renaming a
+  // button silently reversed what it told a crawler and a screen reader about
+  // which way it went, and "Newer" had already been renamed away.
+  const step = (
+    to: number,
+    label: string,
+    rel: "prev" | "next",
+    disabled: boolean,
+  ) =>
     disabled ? (
       <span
         aria-disabled="true"
-        className="inline-flex h-9 items-center rounded-lg border border-line px-3 text-sm text-muted-fg/60"
+        className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-sm text-muted-fg/60"
       >
         {label}
       </span>
     ) : (
       <Link
         href={pageHref(basePath, params, to, param)}
-        rel={label === "Newer" || label === "Previous" ? "prev" : "next"}
-        className="inline-flex h-9 items-center rounded-lg border border-line px-3 text-sm text-ink transition-colors hover:border-brand/40 hover:text-brand"
+        rel={rel}
+        className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-sm text-ink transition-colors hover:border-brand/40 hover:text-brand"
       >
         {label}
       </Link>
@@ -104,8 +123,8 @@ export function Pagination({
       </p>
       {pages > 1 && (
         <div className="flex items-center gap-2">
-          {step(page - 1, "Previous", page <= 1)}
-          {step(page + 1, "Next", page >= pages)}
+          {step(page - 1, "Previous", "prev", page <= 1)}
+          {step(page + 1, "Next", "next", page >= pages)}
         </div>
       )}
     </nav>

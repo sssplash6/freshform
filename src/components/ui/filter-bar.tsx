@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SearchIcon } from "@/components/icons";
 import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import {
@@ -55,6 +56,20 @@ import {
  * Both write the same URL, so a filtered list is a link a person can send, the
  * back button steps through filters, and every narrowing is in the query rather
  * than in a pass over rows already fetched.
+ *
+ * ONE ROW BEFORE THE FOLD, at every width. Laid out flat, the feedback bar's
+ * five controls stand 440px tall on a 390px screen — the whole phone, spent
+ * before the first rated mentor. So only the search box and Apply are always
+ * up: the selects and the date range live behind a `Disclosure` that names
+ * them ("Mentor, program, rating and dates") and opens itself whenever one of
+ * them is set, which is every filtered URL a person arrives on or lands on
+ * after pressing Apply. Not a breakpoint, because the admin reads this on a
+ * phone too and a control that moves between widths cannot be described to
+ * someone over the phone.
+ *
+ * The chips stay out in the open. They are one tap for the narrowing a reader
+ * most often wants, and folding away the cheap control to save the room the
+ * expensive one wastes would be the wrong half.
  */
 
 /** One select in the bar. Its `name` must be in `FILTER_PARAMS`. */
@@ -81,6 +96,7 @@ export function FilterBar({
   dateRange,
   summary,
   reset = true,
+  framed = true,
   className,
 }: {
   /** The list's own path, which every link and the form point back at. */
@@ -103,6 +119,12 @@ export function FilterBar({
   summary?: React.ReactNode;
   /** Offer a Reset once something is on. */
   reset?: boolean;
+  /**
+   * `false` when the bar sits inside the panel it narrows, which owns the
+   * frame. A filter in its own separate card reads as unrelated chrome — the
+   * numbers it produced look like they arrived on their own.
+   */
+  framed?: boolean;
   className?: string;
 }) {
   // Which params the visible controls will re-post, so everything else has to
@@ -126,102 +148,140 @@ export function FilterBar({
   const showValues = Boolean(q || selects.length > 0 || dateRange);
   const showFoot = Boolean(summary) || (reset && count > 0);
 
+  // What is behind the fold, named on the summary so it can be opened on
+  // purpose rather than on spec. Open already when one of them is on: a
+  // filtered list must show the control that filtered it, or the reader has to
+  // go hunting for the reason their list is short.
+  const folded = [...selects.map((s) => s.label), ...(dateRange ? ["dates"] : [])];
+  const foldOpen =
+    selects.some((s) => readParam(params, s.name)) ||
+    Boolean(dateRange && (dateRange.fromValue || dateRange.toValue));
+
   return (
-    <div className={cn("rounded-2xl border border-line bg-surface", className)}>
+    <div
+      className={cn(
+        framed && "rounded-2xl border border-line bg-surface",
+        className
+      )}
+    >
       {showValues && (
         <Form
           action={basePath}
           role={q ? "search" : undefined}
           aria-label="Filters"
-          // items-end so the labels line up along the controls' bottom edge,
-          // and wrap so the bar grows downward on a phone instead of pushing
-          // the page sideways.
-          className="flex flex-wrap items-end gap-3 p-3 sm:p-4"
+          className="p-3 sm:p-4"
         >
           {carried.map((key) => (
             <input key={key} type="hidden" name={key} value={readParam(params, key)} />
           ))}
 
           {q && (
-            // basis-full: on a 390px screen the box takes its own line and the
-            // selects sit under it, rather than three controls sharing 350px.
-            <label className="min-w-0 basis-full text-sm sm:min-w-52 sm:flex-1 sm:basis-auto">
-              <span className="block text-muted-fg">{SEARCH_LABEL[q]}</span>
-              <span className="relative mt-1 block">
-                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-fg" />
-                <Input
-                  type="search"
-                  name="q"
-                  defaultValue={readParam(params, "q")}
-                  placeholder={SEARCH_PLACEHOLDER[q]}
-                  className="pl-9"
-                />
-              </span>
-            </label>
-          )}
-
-          {/*
-            A <div> and not a <label>, unlike the fields either side of it.
-            `Select` carries its own `ariaLabel`, and its value rides a 1px
-            transparent input so a required select can be caught by the browser
-            — which is also the first labelable element inside it. Wrapping it
-            in a label therefore points the caption at something invisible:
-            clicking the word "Program" focused a hidden input instead of
-            opening the list, in all three of the cards this replaces.
-          */}
-          {selects.map((select) => (
-            <div key={select.name} className="min-w-0 basis-full text-sm sm:basis-auto">
-              <span className="block text-muted-fg">{select.label}</span>
-              <span className="mt-1 block sm:w-48">
-                <Select
-                  name={select.name}
-                  ariaLabel={select.label}
-                  options={[...select.options]}
-                  placeholder={select.all}
-                  defaultValue={readParam(params, select.name)}
-                  required={false}
-                  searchable={select.searchable}
-                  recentKey={select.recentKey}
-                />
-              </span>
-            </div>
-          ))}
-
-          {dateRange && (
-            <div className="flex min-w-0 basis-full items-end gap-2 sm:basis-auto">
-              <label className="min-w-0 flex-1 text-sm sm:w-40 sm:flex-none">
-                <span className="block text-muted-fg">From</span>
-                {/* The value has to be YYYY-MM-DD — the control accepts nothing
-                    else — and it is the string out of the URL, never a Date
-                    reformatted here. It shows only what was typed: a preset
-                    leaves these empty so nobody submits a range they never
-                    chose. */}
-                <Input
-                  type="date"
-                  name="from"
-                  defaultValue={dateRange.fromValue}
-                  aria-label="Filter from"
-                  className="mt-1 block"
-                />
+            <div className="flex items-center gap-2">
+              <label className="min-w-0 flex-1">
+                {/*
+                  The caption is for a screen reader only. "Find a student"
+                  above a box already placeholdered "Name or email" is the same
+                  sentence twice and a line of height on the one row that is
+                  never folded away; the magnifier and the placeholder say what
+                  the box is, and the label still names it to anyone listening.
+                */}
+                <span className="sr-only">{SEARCH_LABEL[q]}</span>
+                <span className="relative block">
+                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-fg" />
+                  <Input
+                    type="search"
+                    name="q"
+                    defaultValue={readParam(params, "q")}
+                    placeholder={SEARCH_PLACEHOLDER[q]}
+                    className="pl-9"
+                  />
+                </span>
               </label>
-              <label className="min-w-0 flex-1 text-sm sm:w-40 sm:flex-none">
-                <span className="block text-muted-fg">To</span>
-                <Input
-                  type="date"
-                  name="to"
-                  defaultValue={dateRange.toValue}
-                  aria-label="Filter to"
-                  className="mt-1 block"
-                />
-              </label>
+              {/* 44px, the same as every other primary action: this one is
+                  pressed on a phone more than anywhere else. */}
+              <Button type="submit" size="md" className="shrink-0">
+                Apply
+              </Button>
             </div>
           )}
 
-          {/* 44px, the same as every other primary action: this one is pressed
-              on a phone more than anywhere else. */}
-          <Button type="submit" size="md">
-            Apply
-          </Button>
+          {folded.length > 0 && (
+            <Disclosure label={sentence(folded)} defaultOpen={foldOpen} className={cn(q && "mt-1")}>
+              {/* items-end so the captions line up along the controls' bottom
+                  edge, and wrap so the fold grows downward on a phone instead
+                  of pushing the page sideways. */}
+              <div className="flex flex-wrap items-end gap-3 pt-1">
+                {/*
+                  A <div> and not a <label>, unlike the fields either side of
+                  it. `Select` carries its own `ariaLabel`, and its value rides
+                  a 1px transparent input so a required select can be caught by
+                  the browser — which is also the first labelable element inside
+                  it. Wrapping it in a label therefore points the caption at
+                  something invisible: clicking the word "Program" focused a
+                  hidden input instead of opening the list, in all three of the
+                  cards this replaces.
+                */}
+                {selects.map((select) => (
+                  <div
+                    key={select.name}
+                    className="min-w-0 basis-full text-sm sm:basis-auto"
+                  >
+                    <span className="block text-muted-fg">{select.label}</span>
+                    <span className="mt-1 block sm:w-48">
+                      <Select
+                        name={select.name}
+                        ariaLabel={select.label}
+                        options={[...select.options]}
+                        placeholder={select.all}
+                        defaultValue={readParam(params, select.name)}
+                        required={false}
+                        searchable={select.searchable}
+                        recentKey={select.recentKey}
+                      />
+                    </span>
+                  </div>
+                ))}
+
+                {dateRange && (
+                  <div className="flex min-w-0 basis-full items-end gap-2 sm:basis-auto">
+                    <label className="min-w-0 flex-1 text-sm sm:w-40 sm:flex-none">
+                      <span className="block text-muted-fg">From</span>
+                      {/* The value has to be YYYY-MM-DD — the control accepts
+                          nothing else — and it is the string out of the URL,
+                          never a Date reformatted here. It shows only what was
+                          typed: a preset leaves these empty so nobody submits a
+                          range they never chose. */}
+                      <Input
+                        type="date"
+                        name="from"
+                        defaultValue={dateRange.fromValue}
+                        aria-label="Filter from"
+                        className="mt-1 block"
+                      />
+                    </label>
+                    <label className="min-w-0 flex-1 text-sm sm:w-40 sm:flex-none">
+                      <span className="block text-muted-fg">To</span>
+                      <Input
+                        type="date"
+                        name="to"
+                        defaultValue={dateRange.toValue}
+                        aria-label="Filter to"
+                        className="mt-1 block"
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {/* Without a search box there is no always-visible row to sit
+                    in, so Apply follows the controls it applies. */}
+                {!q && (
+                  <Button type="submit" size="md">
+                    Apply
+                  </Button>
+                )}
+              </div>
+            </Disclosure>
+          )}
         </Form>
       )}
 
@@ -268,6 +328,22 @@ export function FilterBar({
       )}
     </div>
   );
+}
+
+/**
+ * "Mentor, program, rating and dates" — what the fold holds, in one phrase.
+ *
+ * Named rather than "More filters", because a summary that does not say what
+ * is behind it has to be opened to find out, which is the scrolling the fold
+ * was there to save.
+ */
+function sentence(words: readonly string[]): string {
+  const lower = words.map((word) => word.toLowerCase());
+  const joined =
+    lower.length < 2
+      ? lower.join("")
+      : `${lower.slice(0, -1).join(", ")} and ${lower[lower.length - 1]}`;
+  return joined.charAt(0).toUpperCase() + joined.slice(1);
 }
 
 /**

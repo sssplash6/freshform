@@ -1,89 +1,90 @@
-import { Select } from "@/components/select";
 import { StudentsTable } from "@/components/students-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
-import { SearchForm } from "@/components/ui/search-form";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
+import {
+  STUDENT_PRESETS,
+  activeFilterCount,
+  filterSummary,
+  readParam,
+  studentsWhere,
+  type SearchParams,
+} from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
-import { EmptyState } from "@/components/ui/empty-state";
 
 /**
- * Every student across programs in one table, searchable by name or email and
- * filterable by program. Rows link to the student's detail page (approval,
- * per-mentor allocations).
+ * Every student across programs in one table: found by name or email, narrowed
+ * by program and by the five states worth a chip.
  *
- * Both narrowings happen in the query. The program filter used to be a JS
+ * Every narrowing happens in the query. The program filter used to be a JS
  * `.filter()` over every student in the school, which meant the cost of showing
- * one program was the cost of loading all of them.
+ * one program was the cost of loading all of them — and the search box, the
+ * program select and the page number each read the URL their own way, so
+ * searching lost the program.
  */
 export default async function AdminStudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ program?: string; q?: string; page?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   await requireRole(ROLES.ADMIN);
-  const { program = "", q = "", page: rawPage } = await searchParams;
-  const query = q.trim();
-  const page = parsePage(rawPage);
+  const params = await searchParams;
+  const page = parsePage(readParam(params, "page"));
+  // One instant for the whole page: the "expiring" and "expired" chips and the
+  // forfeiture the table shows have to be judged against the same clock, or a
+  // student can be in the filtered list and unexpired in the row.
+  const now = new Date();
 
-  const where = {
-    ...(program ? { programId: program } : {}),
-    ...(query
-      ? {
-          user: {
-            OR: [{ name: { contains: query } }, { email: { contains: query } }],
-          },
-        }
-      : {}),
-  };
+  // An admin sees every program, so the scope adds nothing — but it is passed
+  // rather than omitted, because this is the line a per-program grant lands on
+  // (REDESIGN.md phase 3) and the params must never be what decides reach.
+  const where = studentsWhere(params, {}, now);
 
   const [programs, students, total, anyCohorts] = await Promise.all([
     prisma.program.findMany({ orderBy: { name: "asc" } }),
-    studentsWithHours(where, {
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
+    studentsWithHours(where, { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }, now),
     prisma.studentProfile.count({ where }),
     // Whether the cohort column is worth its width at all, asked of the whole
     // table rather than of whichever students landed on this page.
     prisma.studentProfile.count({ where: { cohortId: { not: null } } }),
   ]);
-  const programOptions = programs.map((p) => ({ value: p.id, label: p.name }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold text-ink">Students</h1>
 
-      <SearchForm
-        action="/admin/students"
-        label="Find a student"
-        placeholder="Name or email"
-        defaultValue={query}
-      >
-        <label className="block text-sm">
-          <span className="text-muted-fg">Program</span>
-          <div className="mt-0.5 w-56">
-            <Select
-              name="program"
-              ariaLabel="Filter by program"
-              options={programOptions}
-              placeholder="All programs"
-              defaultValue={program}
-              required={false}
-            />
-          </div>
-        </label>
-      </SearchForm>
+      <FilterBar
+        basePath="/admin/students"
+        params={params}
+        q="students"
+        selects={
+          // One program is not a choice, and a select that offers exactly one
+          // option is a fold, a tap and a line of height for nothing.
+          programs.length > 1
+            ? [
+                {
+                  name: "program",
+                  label: "Program",
+                  all: "All programs",
+                  options: programs.map((p) => ({ value: p.id, label: p.name })),
+                },
+              ]
+            : []
+        }
+        presets={STUDENT_PRESETS}
+        summary={filterSummary(total, { one: "student", many: "students" }, params)}
+      />
 
       {total === 0 ? (
-        query ? (
-          <EmptyState variant="no-results" title={`No student matches “${query}”`}>
-            Check the spelling, or clear the search to see everyone.
-          </EmptyState>
-        ) : program ? (
-          <EmptyState title="Nobody in this program">
-            Students are registered into a program from its own page.
+        // No title: the bar above has just said in words that nothing matches,
+        // and saying it twice makes one fact read as two. What is left to add
+        // is the way out.
+        activeFilterCount(params) > 0 ? (
+          <EmptyState variant="no-results">
+            Check the spelling, or reset to see everyone.
           </EmptyState>
         ) : (
           <EmptyState title="No students registered">
@@ -100,7 +101,7 @@ export default async function AdminStudentsPage({
           />
           <Pagination
             basePath="/admin/students"
-            params={{ program, q: query }}
+            params={params}
             page={page}
             total={total}
             unit="students"

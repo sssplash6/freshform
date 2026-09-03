@@ -2,14 +2,22 @@ import Link from "next/link";
 
 import { CreateMentorForm } from "@/components/forms/create-mentor-form";
 import { MentorList, type MentorListRow } from "@/components/forms/mentor-list";
+import { FilterBar } from "@/components/ui/filter-bar";
 import {
   PAGE_SIZE,
   Pagination,
   parsePage,
 } from "@/components/ui/pagination";
-import { SearchForm } from "@/components/ui/search-form";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
+import {
+  MENTOR_PRESETS,
+  activeFilterCount,
+  filterSummary,
+  mentorsWhere,
+  readParam,
+  type SearchParams,
+} from "@/lib/filters";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,23 +29,16 @@ const UNASSIGNED_SHOWN = 10;
 export default async function AdminMentorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   await requireRole(ROLES.ADMIN);
-  const { q = "", page: rawPage } = await searchParams;
-  const query = q.trim();
-  const page = parsePage(rawPage);
+  const params = await searchParams;
+  const page = parsePage(readParam(params, "page"));
 
-  // Plain mentors plus dual-role admins who also mentor.
+  // Plain mentors plus dual-role admins who also mentor. `mentorsWhere` states
+  // that rule once and adds the program, the two chips and the search on top.
   const isMentor = { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] };
-  const where = query
-    ? {
-        AND: [
-          isMentor,
-          { OR: [{ name: { contains: query } }, { email: { contains: query } }] },
-        ],
-      }
-    : isMentor;
+  const where = mentorsWhere(params, {});
 
   const [mentors, total, unassigned, unassignedCount, programs] =
     await Promise.all([
@@ -132,16 +133,32 @@ export default async function AdminMentorsPage({
 
       <div className="space-y-3">
         <h2 className="text-base font-semibold text-ink">All mentors</h2>
-        <SearchForm
-          action="/admin/mentors"
-          label="Find a mentor"
-          placeholder="Name or email"
-          defaultValue={query}
+        <FilterBar
+          basePath="/admin/mentors"
+          params={params}
+          q="mentors"
+          selects={
+            // One program is not a choice.
+            programs.length > 1
+              ? [
+                  {
+                    name: "program",
+                    label: "Program",
+                    all: "All programs",
+                    options: programs.map((p) => ({ value: p.id, label: p.name })),
+                  },
+                ]
+              : []
+          }
+          presets={MENTOR_PRESETS}
+          summary={filterSummary(total, { one: "mentor", many: "mentors" }, params)}
         />
         {rows.length === 0 ? (
-          query ? (
-            <EmptyState variant="no-results" title={`No mentor matches “${query}”`}>
-              Check the spelling, or clear the search to see everyone.
+          // The bar has already said in words that nothing matched, so the
+          // state below it adds the way out and not the count again.
+          activeFilterCount(params) > 0 ? (
+            <EmptyState variant="no-results">
+              Check the spelling, or reset to see everyone.
             </EmptyState>
           ) : (
             <EmptyState title="No mentors registered">
@@ -153,7 +170,7 @@ export default async function AdminMentorsPage({
             <MentorList mentors={rows} programs={programSelectOptions} />
             <Pagination
               basePath="/admin/mentors"
-              params={{ q: query }}
+              params={params}
               page={page}
               total={total}
               unit="mentors"

@@ -2,20 +2,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MeetingsLog } from "@/components/meetings-log";
-import {
-  MentorHoursFilter,
-  resolveWindow,
-  type HoursQuery,
-} from "@/components/mentor-hours-filter";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { Meter } from "@/components/ui/meter";
 import { PageTitle } from "@/components/ui/section";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
+import {
+  DATE_PRESETS,
+  readDateWindow,
+  readParam,
+  type SearchParams,
+} from "@/lib/filters";
 import { formatDate, formatDuration } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorOverview, mentorPrograms } from "@/lib/queries";
@@ -41,10 +43,10 @@ export default async function AdminMentorDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<HoursQuery>;
+  searchParams: Promise<SearchParams>;
 }) {
   await requireRole(ROLES.ADMIN);
-  // One instant for every use-by date on the page.
+  // One instant for every use-by date and every window bound on the page.
   const now = new Date();
   const { id } = await params;
   const query = await searchParams;
@@ -57,10 +59,15 @@ export default async function AdminMentorDetailPage({
   }
 
   const programs = await mentorPrograms(mentor.id);
-  const programId = programs.some((p) => p.id === query.program)
-    ? query.program
-    : undefined;
-  const win = resolveWindow(query);
+  // Checked against this mentor's own programs, not taken from the URL: a
+  // pasted id from a program they do not work in has to narrow to nothing, not
+  // widen the read.
+  const wanted = readParam(query, "program");
+  const programId = programs.some((p) => p.id === wanted) ? wanted : undefined;
+  const win = readDateWindow(query, now);
+  // A typed range leaves the label empty on purpose — the two date fields are
+  // already showing it — so the sentences below need a phrase either way.
+  const over = win.label || "this range";
 
   const [overview, assignments, feedback] = await Promise.all([
     mentorOverview(mentor.id, { programId, from: win.from, to: win.to }),
@@ -81,7 +88,7 @@ export default async function AdminMentorDetailPage({
 
   const logCaption =
     totals.sessions === 0
-      ? `Nothing logged over ${win.label}`
+      ? `Nothing logged over ${over}`
       : `${totals.sessions} meeting${totals.sessions === 1 ? "" : "s"} · ${formatDuration(loggedMinutes)}${
           overview.sessions.length > shownMeetings.length
             ? ` · showing the ${LOG_LIMIT} most recent`
@@ -161,19 +168,35 @@ export default async function AdminMentorDetailPage({
           title="Delivery record"
       >
 
-        <MentorHoursFilter
-          base={`/admin/mentors/${mentor.id}`}
-          programs={programs}
-          programId={programId}
-          window={win}
+        {/*
+          The window the numbers were read through is the bar's own summary
+          line, beside its Reset — it used to be a second strip underneath,
+          which said the same thing the controls above it were already showing
+          and put a whole row between the filter and its answer.
+        */}
+        <FilterBar
+          basePath={`/admin/mentors/${mentor.id}`}
+          params={query}
+          selects={
+            // One program is not a choice.
+            programs.length > 1
+              ? [
+                  {
+                    name: "program",
+                    label: "Program",
+                    all: "All programs",
+                    options: programs.map((p) => ({ value: p.id, label: p.name })),
+                  },
+                ]
+              : []
+          }
+          presets={DATE_PRESETS}
+          dateRange={win}
+          summary={`${capitalize(over)} · ${scope ?? "all programs"}`}
           framed={false}
         />
 
-        {/* The window the numbers below were read through, stated once. */}
         <div className="border-t border-line px-4 sm:px-5">
-          <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand">
-            {capitalize(win.label)} · {scope ?? "all programs"}
-          </p>
           <FigureRow framed={false} className="pt-4">
             <Figure
               label="Time delivered"
@@ -304,7 +327,7 @@ export default async function AdminMentorDetailPage({
                 <span className="font-semibold tabular-nums text-ink">
                   {formatDuration(totals.delivered)}
                 </span>{" "}
-                delivered over {win.label}
+                delivered over {over}
                 {totals.missed > 0 && (
                   <>
                     {" · "}
@@ -345,7 +368,7 @@ export default async function AdminMentorDetailPage({
         eyebrow={`Logged by ${mentor.name?.split(" ")[0] ?? name}`}
         caption={logCaption}
         emptyBody={
-          win.active === "all"
+          !win.from && !win.to
             ? "This mentor has logged no sessions."
             : "No sessions logged inside this window — widen the period above."
         }
