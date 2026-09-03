@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { ProgramTabs } from "@/components/program-tabs";
+import { TabLinks } from "@/components/ui/segmented";
 import { PageTitle } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -51,8 +51,9 @@ export default async function ProgramLayout({
         subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} remaining.`}
       />
 
-      <ProgramTabs
-        tabs={[
+      <TabLinks
+        label="Program sections"
+        items={[
           { href: base, label: "Overview" },
           {
             href: `${base}/students`,

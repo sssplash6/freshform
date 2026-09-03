@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Figure } from "@/components/ui/figure";
 import { ArrowLink } from "@/components/ui/link";
 import { PageTitle, Section } from "@/components/ui/section";
+import { TabLinks } from "@/components/ui/segmented";
 import { DeadlineText } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
@@ -305,18 +306,18 @@ export default async function MentorHomePage({
         count={inView.length || undefined}
         action={
           <div className="flex flex-wrap items-center gap-3">
-            {programs.size > 1 && (
-              <div className="flex flex-wrap gap-1 rounded-lg border border-line bg-canvas p-0.5">
-                <ProgramTab href="/mentor" label="All" active={!selected} />
-                {[...programs.entries()].map(([id, name]) => (
-                  <ProgramTab
-                    key={id}
-                    href={`/mentor?program=${id}`}
-                    label={name}
-                    active={selected === id}
-                  />
-                ))}
-              </div>
+                        {programs.size > 1 && (
+              <TabLinks
+                label="Program"
+                className="text-xs"
+                items={[
+                  { href: "/mentor", label: "All" },
+                  ...[...programs.entries()].map(([id, name]) => ({
+                    href: `/mentor?program=${id}`,
+                    label: name,
+                  })),
+                ]}
+              />
             )}
             {inView.length > CASELOAD_ROWS && (
               <ArrowLink href="/mentor/sessions" className="text-xs">
@@ -400,29 +401,5 @@ export default async function MentorHomePage({
         )}
       </Section>
     </div>
-  );
-}
-
-/** One program in the caseload filter. Phase 4 replaces this with SegmentedRadio. */
-function ProgramTab({
-  href,
-  label,
-  active,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-        active ? "bg-surface text-ink shadow-sm" : "text-muted-fg hover:text-ink"
-      )}
-    >
-      {label}
-    </Link>
   );
 }
