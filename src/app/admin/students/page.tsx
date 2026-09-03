@@ -6,6 +6,7 @@ import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /**
  * Every student across programs in one table, searchable by name or email and
@@ -76,13 +77,19 @@ export default async function AdminStudentsPage({
       </SearchForm>
 
       {total === 0 ? (
-        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-          {query
-            ? `No student matches “${query}”.`
-            : program
-              ? "No students in this program yet."
-              : "No students yet."}
-        </p>
+        query ? (
+          <EmptyState variant="no-results" title={`No student matches “${query}”`}>
+            Check the spelling, or clear the search to see everyone.
+          </EmptyState>
+        ) : program ? (
+          <EmptyState title="Nobody in this program">
+            Students are registered into a program from its own page.
+          </EmptyState>
+        ) : (
+          <EmptyState title="No students registered">
+            Staff register them; each then confirms their name on first sign-in.
+          </EmptyState>
+        )
       ) : (
         <>
           <StudentsTable

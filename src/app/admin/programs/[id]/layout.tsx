@@ -29,15 +29,12 @@ export default async function ProgramLayout({
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();
 
-  const [students, mentorPairings, position] = await Promise.all([
+  const [students, mentorPairings] = await Promise.all([
     studentsWithHours({ programId: program.id }),
     prisma.mentorAssignment.findMany({
       where: { programId: program.id },
       select: { mentorId: true },
     }),
-    // Program has no createdAt; cuids are timestamp-prefixed, so id order is
-    // creation order, and this must match the ranking on the dashboard.
-    prisma.program.count({ where: { id: { lt: program.id } } }),
   ]);
 
   const mentorCount = new Set(mentorPairings.map((m) => m.mentorId)).size;

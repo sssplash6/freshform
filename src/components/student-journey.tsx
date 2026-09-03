@@ -50,8 +50,8 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
 
       {sessions.length === 0 ? (
         <EmptyState framed={false} title="No meetings yet">
-          Once a mentor logs a session with you it appears here, with what you
-          covered together and how long it took.
+          No meetings logged yet. Your mentors add them after each
+              session.
         </EmptyState>
       ) : (
         <ol className="px-4 py-5 sm:px-6">

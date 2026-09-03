@@ -15,6 +15,7 @@ import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/l
 import { prisma } from "@/lib/prisma";
 import { StatusChip } from "@/components/ui/status-chip";
 import { severityOrNeutral } from "@/lib/status";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -176,9 +177,9 @@ export default async function MentorSessionsPage({
       </div>
 
       {everLogged === 0 ? (
-        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-          No sessions logged yet.
-        </p>
+        <EmptyState title="No sessions logged">
+          Your first logged meeting starts this ledger.
+        </EmptyState>
       ) : (
         <>
           <form className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-surface p-4">
@@ -235,9 +236,9 @@ export default async function MentorSessionsPage({
           </form>
 
           {sessions.length === 0 ? (
-            <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-              No sessions match these filters.
-            </p>
+            <EmptyState variant="no-results" title="No sessions match">
+              Your filters exclude every session. Reset them to see the rest.
+            </EmptyState>
           ) : (
             <>
               <Table columns={columns}>

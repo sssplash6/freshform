@@ -68,7 +68,7 @@ export function MeetingsLog({
   sessions,
   title = "Meetings log",
   eyebrow = "Logged by mentors",
-  emptyBody = "Every session a mentor logs shows up here, newest first.",
+  emptyBody = "Nothing logged yet.",
   caption,
   mentorBase,
   manage,

@@ -201,7 +201,6 @@ export function ScheduledMeetings({
   title?: string;
   emptyBody?: React.ReactNode;
 }) {
-  const view = viewer.audience;
   const { upcoming, overdue } = splitMeetings(meetings, viewer.now);
   const unanswered = upcoming.filter(awaitingAnswer).length;
   const confirmed = upcoming.filter(

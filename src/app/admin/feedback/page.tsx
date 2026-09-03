@@ -6,6 +6,7 @@ import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { mentorFeedbackGroups } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** Mentors per page of the grouped list, and site comments per page. */
 const MENTORS_PER_PAGE = 10;
@@ -75,9 +76,9 @@ export default async function AdminFeedbackPage({
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-ink">Website feedback</h2>
         {websiteFeedback.length === 0 ? (
-          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-            No website feedback yet.
-          </p>
+          <EmptyState title="No website feedback">
+            Students leave this from their own feedback page; most never do.
+          </EmptyState>
         ) : (
           <ul className="space-y-2">
             {websiteFeedback.map((f) => (

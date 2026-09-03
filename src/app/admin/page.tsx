@@ -143,7 +143,7 @@ export default async function AdminHomePage() {
         sessions={meetings}
         title="Latest meetings"
         eyebrow="Logged by mentors · every program"
-        emptyBody="As mentors log sessions across the programs, the newest ones land here."
+        emptyBody="Nothing has been logged across the programs yet."
         mentorBase="/admin/mentors"
         manage={{ isAdmin: true, tasksBySession: meetingTasks }}
       />

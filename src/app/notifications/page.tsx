@@ -85,7 +85,7 @@ export default async function NotificationsPage({
 
         {notifications.length === 0 ? (
           <EmptyState framed={false} title="Nothing yet">
-            {blurb} It all lands here, newest first.
+            {blurb} Changes to time, sessions and deadlines arrive here.
           </EmptyState>
         ) : (
           <>

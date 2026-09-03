@@ -17,7 +17,6 @@ import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDate, formatDuration } from "@/lib/format";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorOverview, mentorPrograms } from "@/lib/queries";
 import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
@@ -347,7 +346,7 @@ export default async function AdminMentorDetailPage({
         caption={logCaption}
         emptyBody={
           win.active === "all"
-            ? "Every session this mentor logs shows up here, newest first."
+            ? "This mentor has logged nothing yet."
             : "No sessions logged inside this window — widen the period above."
         }
       />
@@ -358,8 +357,8 @@ export default async function AdminMentorDetailPage({
       >
         {overview.students.length === 0 ? (
           <EmptyState framed={false} title="No students yet">
-            An admin allocates a student&apos;s time from a mentor on the
-            student&apos;s own page; those students appear here.
+            An admin allocates a student&apos;s time from a mentor, on the
+                student&apos;s own page.
           </EmptyState>
         ) : (
           <Table framed={false} columns={studentColumns}>

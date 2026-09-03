@@ -23,7 +23,6 @@ import { requireMentor } from "@/lib/dal";
 import { deadlinePassed } from "@/lib/deadlines";
 import { formatDate, formatDuration } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import {
   studentLedger,

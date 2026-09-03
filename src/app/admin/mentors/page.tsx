@@ -12,6 +12,7 @@ import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** How many unregistered sign-ins to name before the list is just a count. */
 const UNASSIGNED_SHOWN = 10;
@@ -137,11 +138,15 @@ export default async function AdminMentorsPage({
           defaultValue={query}
         />
         {rows.length === 0 ? (
-          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-            {query
-              ? `No mentor matches “${query}”.`
-              : "No mentors registered yet."}
-          </p>
+          query ? (
+            <EmptyState variant="no-results" title={`No mentor matches “${query}”`}>
+              Check the spelling, or clear the search to see everyone.
+            </EmptyState>
+          ) : (
+            <EmptyState title="No mentors registered">
+              Staff on the mentor domain are added on their first sign-in.
+            </EmptyState>
+          )
         ) : (
           <>
             <MentorList mentors={rows} programs={programSelectOptions} />

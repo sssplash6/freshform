@@ -12,7 +12,6 @@ import {
   ATTENDANCE_META,
   attendanceOf,
   chargesAllocation,
-  INTERVIEW_STATUS_META,
   SESSION_STATUS,
 } from "@/lib/constants";
 import {
@@ -333,7 +332,7 @@ export function LedgerBoard({
           />
           {ahead.length === 0 && logged.length === 0 ? (
             <p className="px-4 pb-5 text-sm text-muted-fg sm:px-5">
-              No meetings yet — scheduled ones and logged ones both land here.
+              No meetings yet, scheduled or held.
             </p>
           ) : (
             <>

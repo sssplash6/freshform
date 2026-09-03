@@ -10,7 +10,6 @@ import { PageTitle } from "@/components/ui/section";
 import { Section } from "@/components/ui/section";
 import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere, mentorAssignments } from "@/lib/queries";
 import { StatusChip } from "@/components/ui/status-chip";

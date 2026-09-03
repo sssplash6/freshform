@@ -1,6 +1,5 @@
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { StudentsTable } from "@/components/students-table";
-import { LinkButton } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDuration } from "@/lib/format";
@@ -13,7 +12,6 @@ import { studentsWithHours, type StudentWithHours } from "@/lib/queries";
  */
 export async function ProgramDashboard({
   programId,
-  studentsHref,
 }: {
   programId: string;
   studentsHref: string;
@@ -75,15 +73,8 @@ export async function ProgramDashboard({
       </FigureRow>
 
       {students.length === 0 ? (
-        <EmptyState
-          title={`No students in ${program.name} yet`}
-          action={
-            <LinkButton href={studentsHref} variant="secondary" size="sm">
-              Add students
-            </LinkButton>
-          }
-        >
-          Add students by email to start tracking their mentoring time.
+        <EmptyState title="Nobody enrolled yet">
+          Students are registered by email on the Students page.
         </EmptyState>
       ) : (
         [...byCohort.entries()].map(([cohortName, cohortStudents]) => (

@@ -20,10 +20,10 @@ import { deadlinePassed } from "@/lib/deadlines";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDuration } from "@/lib/format";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorMeetings, recentMeetings } from "@/lib/queries";
 import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type MentorStudent = {
   profile: {
@@ -462,24 +462,23 @@ export default async function MentorHomePage({
         meetings={myDiary}
         viewer={viewer}
         title="Your diary"
-        emptyBody="Open a student and schedule an interview; it appears here once it's booked."
+        emptyBody="Nothing in the diary. Meetings are scheduled from a student's page."
       />
 
       <MeetingsLog
         sessions={myMeetings}
         title="Your recent meetings"
         eyebrow="Logged by you"
-        emptyBody="Log a session at the bottom of this page and it appears here."
+        emptyBody="Nothing logged yet."
         moreHref="/mentor/sessions"
         moreLabel="All your sessions"
       />
 
       {visible.length === 0 ? (
-        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-          {selected
-            ? "No students have time allocated with you in this program yet — you can still log a meeting with anyone in it using the form below."
-            : "No students have time allocated with you yet. An admin assigns those, but you can already log a meeting with anyone in your programs using the form below."}
-        </p>
+        <EmptyState title="No students hold time with you">
+          An admin allocates it; you can still log a meeting with anyone in your
+          programs.
+        </EmptyState>
       ) : (
         [...byProgram.entries()].map(([programId, group]) => (
           <Section key={programId}

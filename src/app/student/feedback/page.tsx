@@ -7,6 +7,7 @@ import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function StudentFeedbackPage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -66,10 +67,9 @@ export default async function StudentFeedbackPage() {
         {mentors.length > 0 ? (
           <MentorFeedbackForm mentors={mentors} />
         ) : (
-          <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-            You&apos;ll be able to rate mentors once one is assigned to your
-            program.
-          </p>
+          <EmptyState variant="blocked" title="No mentor to rate yet">
+            Your program assigns one before you can leave feedback.
+          </EmptyState>
         )}
         <WebsiteFeedbackForm />
       </div>

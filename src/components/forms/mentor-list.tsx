@@ -12,6 +12,7 @@ import { updateMentor } from "@/lib/actions/mentors";
 import { USER_STATUS } from "@/lib/constants";
 import type { ProgramOption } from "@/lib/queries";
 import { StatusChip } from "@/components/ui/status-chip";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type MentorListRow = {
   id: string;
@@ -152,9 +153,9 @@ export function MentorList({
 }) {
   if (mentors.length === 0) {
     return (
-      <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-        No mentors registered yet.
-      </p>
+      <EmptyState title="No mentors registered">
+        Staff on the mentor domain are added on their first sign-in.
+      </EmptyState>
     );
   }
   return (

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Rating } from "@/components/rating";
 import type { MentorFeedback, StudentProfile, User } from "@/generated/prisma/client";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type FeedbackRow = MentorFeedback & {
   student: StudentProfile & { user: User };
@@ -37,9 +38,9 @@ export function MentorFeedbackList({
 }) {
   if (groups.length === 0) {
     return (
-      <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-        No mentor feedback yet.
-      </p>
+      <EmptyState title="No ratings yet">
+        Rating a mentor is optional, so a quiet list is normal.
+      </EmptyState>
     );
   }
 

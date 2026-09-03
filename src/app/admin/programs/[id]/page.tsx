@@ -325,8 +325,8 @@ export default async function AdminProgramOverviewPage({
       >
         {pairings.length === 0 ? (
           <EmptyState framed={false} title="No mentors yet">
-            Assign mentors to {program.name} in Settings, and their booking links
-            appear here as they set them.
+            Nobody is assigned to {program.name} yet. Settings pairs a mentor
+                with it.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-line/60 text-sm">

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLink } from "@/components/arrow-link";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
-import { Figure, FigureRow } from "@/components/ui/figure";
+import { Figure } from "@/components/ui/figure";
 import { StudentCorrections } from "@/components/forms/student-corrections";
 import { StudentFolderForm } from "@/components/forms/student-folder-form";
 import { StudentFolderLink } from "@/components/student-folder-link";
@@ -26,7 +26,6 @@ import { requireRole } from "@/lib/dal";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMinutes, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import {
   programOptions,
@@ -232,8 +231,8 @@ export default async function AdminStudentDetailPage({
       >
         {hours.perMentor.length === 0 ? (
           <EmptyState framed={false} title="No time yet">
-            Time appears here as they&apos;re granted in the panel above — under
-            their mentor, or unassigned until one is chosen.
+            No time granted yet. The panel above grants it, with or without a
+                mentor named.
           </EmptyState>
         ) : (
           <Table

@@ -16,7 +16,6 @@ import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { allocationSummary } from "@/lib/hours";
-import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { studentLedger, studentMeetings } from "@/lib/queries";
 
@@ -50,8 +49,7 @@ export default async function StudentHomePage() {
           subtitle="You're on the list. There's one step left before your time appear."
         />
         <Callout tone="info">
-          An admin is reviewing your registration. Once approved, your mentoring
-          time will be allocated and appear here.
+          An admin is reviewing your registration. Your time is allocated once approved.
         </Callout>
       </div>
     );
@@ -155,7 +153,7 @@ export default async function StudentHomePage() {
       <ScheduledMeetings
         meetings={meetings}
         viewer={viewer}
-        emptyBody="When a mentor books an interview with you, it appears here and you can confirm you'll be there."
+        emptyBody="Nothing scheduled. A mentor books meetings with you and you confirm them."
       />
 
       <StudentJourney sessions={ledger.sessions} />

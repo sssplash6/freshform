@@ -3,6 +3,7 @@ import { Figure, FigureRow } from "@/components/ui/figure";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /**
  * A mentor's own ratings. Anonymous by policy: no student names or
@@ -51,9 +52,9 @@ export default async function MentorFeedbackPage({
       </FigureRow>
 
       {stats._count === 0 ? (
-        <p className="rounded-xl border border-line bg-surface p-8 text-[15px] text-muted-fg">
-          No feedback yet.
-        </p>
+        <EmptyState title="No ratings yet">
+          Students rate a mentor when they choose to; many never do.
+        </EmptyState>
       ) : (
         <>
           <ul className="space-y-2">
