@@ -173,6 +173,55 @@ Everything else it found is wording or reach, not correctness:
 
 ---
 
+## Owner feedback, 4 September — not yet acted on
+
+Voice notes, transcribed automatically from a phone, so the wording below is my
+reading of them. **Check each against what he meant before building it.**
+
+**The frame: he is going to use this on a phone, and he means the ADMIN side
+too.** That is a change to a settled decision — the plan has students and
+mentors phone-first and admin desktop-first (`REDESIGN.md` §10). Every admin
+surface still to be built should now assume a phone.
+
+1. **Round the figures. There are too many digits and he is lost in them.**
+   "130h 07m" should read "130+ hours"; "1,240+ hours". Today `formatDuration`
+   is exact everywhere.
+   **This needs a rule, not a global change**, because exactness is the
+   product's promise elsewhere (`PRODUCT.md`: "the numbers are trusted by
+   everyone"). The line to draw: a figure a reader *orients* by — a program
+   total, a caseload total, a dashboard headline — rounds and takes a "+"; a
+   figure that is *the record* — one allocation, one logged session, a balance
+   a mentor is about to spend against, anything beside money — stays exact.
+   Ask him to confirm that split.
+2. **A "+" to add hours, and to log, in one tap.** He wants adding time and
+   logging a session to be immediate, not a page away. `/sessions/new` exists
+   and the mentor inbox has a "Log a session" button in its title row; he is
+   asking for something lighter and always to hand — a persistent "+", probably
+   in the shell.
+3. **Stop repeating the same thing.** He named it as something that keeps
+   happening. This is already the rule in §5.3 and §6.3 ("remaining is never
+   stated twice"), so it is not new — it means the rule is not being applied
+   widely enough. Sweep for it.
+4. **Cut the scrolling. Everywhere.** The strongest of the six. He wants a
+   compact summary that opens on demand: *"show them, and if it's interesting
+   I'll open it further"*. `ui/disclosure.tsx` exists for exactly this (§5.4)
+   and is barely used. Every list should default to a short, dense form.
+5. **One page, everything visible, no confusion — and simple.** His two sides:
+   no confusion on one hand, maximally simple and efficient on the other.
+6. **NEW, and not in `REDESIGN.md` at all: an hours-DYNAMICS dashboard.**
+   *"who is missing hours, who is performing how."* Everything in the plan is a
+   snapshot — balances, totals, what needs attention today. This is asking for
+   change over time: who is falling behind, who is delivering, and the trend.
+   It needs its own spec section before anything is built. It also has a
+   dependency: no table currently records a *rate*, so decide the window (per
+   week? per month?) and whether it is derived from `Session.date` alone.
+
+Items 1, 4 and 5 point the same way — **the phone screen is the constraint, and
+density plus disclosure is the answer.** Item 6 is a genuinely new feature and
+should be scoped separately rather than folded into the reorganisation.
+
+---
+
 ## ⚠ START HERE: one bug is actively rotting
 
 **`/mentor`'s "Up next" never filters `interviewIsOpen`.** `src/app/mentor/page.tsx:181-183`
