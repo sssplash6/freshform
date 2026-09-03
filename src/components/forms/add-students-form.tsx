@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input, inputClasses } from "@/components/ui/field";
 import { createStudents } from "@/lib/actions/students";
-import { EMAIL_RE, normalizeEmail } from "@/lib/actions/shared";
+import { EMAIL_RE, normalizeEmail, type ActionState } from "@/lib/actions/shared";
 import { cn } from "@/lib/cn";
 import type { ProgramOption } from "@/lib/queries";
 
@@ -20,30 +20,58 @@ type Row = { id: number; email: string; name: string; folderUrl: string };
  * is a helpful default.
  */
 export function AddStudentsForm({ program }: { program: ProgramOption }) {
-  const [state, action, pending] = useActionState(createStudents, null);
-  // Ids only advance in handlers/effects, never during render.
-  const nextId = useRef(2);
-  const blank = (): Row => ({
-    id: nextId.current++,
-    email: "",
-    name: "",
-    folderUrl: "",
-  });
+  // Empty rows after a successful add, without an effect that re-renders to do
+  // it: the wrapped action bumps a counter, and the counter is the child's
+  // `key`, so React discards the filled-in rows and mounts blank ones. Setting
+  // state inside the action is an ordinary update — setting it in an effect
+  // body is the cascade react-hooks/set-state-in-effect warns about, and it
+  // also painted the submitted values once before clearing them.
+  const [attempt, setAttempt] = useState(0);
+  const [state, action, pending] = useActionState(
+    async (previous: ActionState, formData: FormData) => {
+      const result = await createStudents(previous, formData);
+      if (result?.ok) setAttempt((n) => n + 1);
+      return result;
+    },
+    null as ActionState,
+  );
+
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="programId" value={program.id} />
+      <StudentRows key={attempt} program={program} pending={pending} />
+      <ActionFeedback state={state} />
+    </form>
+  );
+}
+
+/**
+ * The rows themselves, plus everything whose value depends on them. Its own
+ * component so that a change of `key` is all it takes to clear the form.
+ */
+function StudentRows({
+  program,
+  pending,
+}: {
+  program: ProgramOption;
+  pending: boolean;
+}) {
   const [rows, setRows] = useState<Row[]>([
     { id: 0, email: "", name: "", folderUrl: "" },
     { id: 1, email: "", name: "", folderUrl: "" },
   ]);
+  // Ids only advance in handlers, never during render.
+  const [nextId, setNextId] = useState(2);
+  const addRow = () => {
+    setRows((rs) => [...rs, { id: nextId, email: "", name: "", folderUrl: "" }]);
+    setNextId((n) => n + 1);
+  };
 
   // A row is ready when it has both halves of an identity: the address they sign
   // in with, and the name everyone will read them by.
   const validCount = rows.filter(
     (r) => EMAIL_RE.test(normalizeEmail(r.email)) && r.name.trim().length > 0,
   ).length;
-
-  // Reset to two empty rows once the students have been added.
-  useEffect(() => {
-    if (state?.ok) setRows([blank(), blank()]);
-  }, [state]);
 
   const update = (
     id: number,
@@ -53,9 +81,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
 
   return (
-    <form action={action} className="space-y-3">
-      <input type="hidden" name="programId" value={program.id} />
-
+    <>
       <div className="space-y-2">
         <div className="text-sm font-medium text-ink">Add students</div>
         {rows.map((r, i) => (
@@ -103,7 +129,7 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <button
             type="button"
-            onClick={() => setRows((rs) => [...rs, blank()])}
+            onClick={addRow}
             className="text-sm font-medium text-brand transition-colors hover:text-brand-dark"
           >
             + Add another student
@@ -159,7 +185,6 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
           </Button>
         </div>
       </div>
-      <ActionFeedback state={state} />
-    </form>
+    </>
   );
 }
