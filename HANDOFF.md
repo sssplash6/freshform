@@ -216,9 +216,30 @@ surface still to be built should now assume a phone.
    dependency: no table currently records a *rate*, so decide the window (per
    week? per month?) and whether it is derived from `Session.date` alone.
 
-Items 1, 4 and 5 point the same way — **the phone screen is the constraint, and
-density plus disclosure is the answer.** Item 6 is a genuinely new feature and
-should be scoped separately rather than folded into the reorganisation.
+7. **Text that fills its space must go DOWN, not slide left. All of it visible.**
+   Two readings, and both are real — do both:
+   - **Wrap, do not truncate.** `truncate` is `white-space: nowrap` plus an
+     ellipsis, so a long name slides out of view instead of taking a second
+     line. `scripts/check-copy.mjs` currently enforces that every `truncate`
+     has `min-w-0` beside it — that makes truncation *work*, which is the
+     opposite of what he is asking for. **The guard needs rewriting to push
+     toward wrapping**, and the ~13 anchored truncates need revisiting one by
+     one: keep it only where a single line is structurally required, and let
+     everything else wrap. `StatusChip` was already made wrappable in Phase 1
+     for exactly this reason (`ui/status-chip.tsx:58-60`) — extend it.
+   - **A one-line `<input>` cannot wrap.** The session note on `/sessions/new`
+     is `<input type="text">` (`forms/log-session-form.tsx`), so a long note
+     scrolls sideways inside the box as it is typed and the writer cannot see
+     what they wrote. It wants a `<textarea>` that grows with its content. Same
+     for every other free-text field — audit them.
+
+   This is the closest thing yet to the original complaint that started the
+   whole reorganisation: *"long text not rendering right."*
+
+Items 1, 4, 5 and 7 point the same way — **the phone screen is the constraint,
+and density, disclosure and wrapping are the answer.** Item 6 is a genuinely
+new feature and should be scoped separately rather than folded into the
+reorganisation.
 
 ---
 
