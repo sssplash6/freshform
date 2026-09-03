@@ -5,6 +5,7 @@ import { InterviewRowActions } from "@/components/forms/interview-row-actions";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExternalLink } from "@/components/ui/link";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Section } from "@/components/ui/section";
 import { INTERVIEW_STATUS } from "@/lib/constants";
@@ -125,15 +126,13 @@ function MeetingRow({
         )}
 
         {meeting.link && (
-          <a
+          <ExternalLink
             href={meeting.link}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
+            icon={<LinkIcon className="h-3.5 w-3.5" />}
+            className="mt-1.5"
           >
-            <LinkIcon className="h-3.5 w-3.5" />
             Join the meeting
-          </a>
+          </ExternalLink>
         )}
 
         {overdue && (

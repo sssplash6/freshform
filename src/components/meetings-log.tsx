@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExpandableText } from "@/components/expandable-text";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
+import { ArrowLink } from "@/components/ui/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
@@ -145,12 +146,9 @@ export function MeetingsLog({
           moreHref ? (
             <span className="flex items-center gap-3 text-xs text-muted-fg">
               {tally}
-              <Link
-                href={moreHref}
-                className="font-medium text-brand hover:underline"
-              >
-                {moreLabel} →
-              </Link>
+              <ArrowLink href={moreHref} className="text-xs">
+                {moreLabel}
+              </ArrowLink>
             </span>
           ) : undefined
         }

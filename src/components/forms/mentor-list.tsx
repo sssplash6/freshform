@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { updateMentor } from "@/lib/actions/mentors";
 import { USER_STATUS } from "@/lib/constants";
 import type { ProgramOption } from "@/lib/queries";
+import { ExternalLink } from "@/components/ui/link";
 import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -70,14 +71,9 @@ function MentorRow({
                     {a.label}
                   </StatusChip>
                   {a.calendlyUrl ? (
-                    <a
-                      href={a.calendlyUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-brand underline decoration-line underline-offset-2 hover:decoration-brand"
-                    >
+                    <ExternalLink href={a.calendlyUrl} className="text-xs">
                       link
-                    </a>
+                    </ExternalLink>
                   ) : (
                     <span className="text-xs text-muted-fg">no link</span>
                   )}

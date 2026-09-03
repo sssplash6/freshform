@@ -25,6 +25,7 @@ import { splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
 import { cn } from "@/lib/cn";
 import { meetingStatus, severityOrNeutral, type ViewerContext } from "@/lib/status";
+import { ExternalLink } from "@/components/ui/link";
 import { StatusChip } from "@/components/ui/status-chip";
 
 /**
@@ -129,15 +130,13 @@ function UpcomingMeetingRow({
           </div>
         )}
         {meeting.link && (
-          <a
+          <ExternalLink
             href={meeting.link}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+            icon={<LinkIcon className="h-3 w-3" />}
+            className="mt-0.5 text-xs"
           >
-            <LinkIcon className="h-3 w-3" />
             Meeting link
-          </a>
+          </ExternalLink>
         )}
       </div>
     </li>

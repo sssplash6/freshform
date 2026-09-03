@@ -4,10 +4,9 @@ import { Avatar } from "@/components/avatar";
 import { AvatarForm } from "@/components/forms/avatar-form";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { OwnNameForm } from "@/components/forms/own-name-form";
-import { ArrowUpRightIcon } from "@/components/icons";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageTitle } from "@/components/ui/section";
-import { Section } from "@/components/ui/section";
+import { ExternalLink } from "@/components/ui/link";
+import { PageTitle, Section } from "@/components/ui/section";
 import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
@@ -180,15 +179,9 @@ export default async function MentorProfilePage({
                   )}
                 </div>
                 {a.calendlyUrl ? (
-                  <a
-                    href={a.calendlyUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-[15px] font-semibold text-white transition-colors hover:bg-accent-dark"
-                  >
+                  <ExternalLink variant="action" href={a.calendlyUrl}>
                     Book with {mentor.name?.split(" ")[0] ?? "them"}
-                    <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                  </a>
+                  </ExternalLink>
                 ) : (
                   <StatusChip severity="attention">No booking link yet</StatusChip>
                 )}

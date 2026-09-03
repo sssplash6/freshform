@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import { FolderIcon } from "@/components/icons";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
-import { StudentFolderLink } from "@/components/student-folder-link";
 import { Input } from "@/components/ui/field";
+import { ExternalLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { setStudentFolder } from "@/lib/actions/students";
@@ -27,7 +28,13 @@ export function StudentFolderForm({
     <Section
         eyebrow="Set by staff"
         title="Student folder"
-        action={currentFolderUrl ? <StudentFolderLink url={currentFolderUrl} /> : undefined}
+        action={
+currentFolderUrl ? (
+<ExternalLink variant="chip" href={currentFolderUrl} icon={<FolderIcon className="h-3.5 w-3.5" />} title="Open the student's folder">
+Folder
+</ExternalLink>
+) : undefined
+}
       >
       <div className="px-4 py-4 sm:px-5">
       <p className="text-xs text-muted-fg">

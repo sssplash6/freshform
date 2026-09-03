@@ -11,6 +11,7 @@ import {
   RenameProgramForm,
 } from "@/components/forms/program-settings-forms";
 import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
+import { ArrowLink } from "@/components/ui/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
@@ -155,12 +156,9 @@ export default async function AdminProgramSettingsPage({
           eyebrow="People"
           title="Mentors"
           action={
-            <Link
-              href="/admin/mentors"
-              className="text-sm font-medium text-ink hover:text-accent-ink"
-            >
-              Register a new mentor →
-            </Link>
+            <ArrowLink href="/admin/mentors" className="text-sm">
+              Register a new mentor
+            </ArrowLink>
           }
       >
         {pairings.length === 0 ? (

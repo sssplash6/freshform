@@ -1204,8 +1204,22 @@ student; an out-of-scope student page 404s and an out-of-scope action returns it
 32. One `error.tsx` per shell (7 → 2); `PublicShell` for `/login`, `/unsubscribe` and onboarding;
     the minimal shell while PENDING or UNASSIGNED.
 
+**Touch targets, measured at 390px** (found while consolidating the links in commit 14; `md`
+buttons are already 44px, these are what is left):
+
+| Control | Now | Where |
+|---|---|---|
+| Notification bell | 40px | every shell — `h-10 w-10` |
+| `<Select>` | 40px | `/mentor` log form, every filter |
+| RSVP `I'll be there` / `I can't make it` | 32px | `/student` — a student's only reply to an invite |
+| `PersonChip` as a link | 40px | `/student/book`, program pages |
+
+The RSVP pair is the one that matters: it is `size="sm"`, it is the primary action of the view on a
+phone, and it sits next to its opposite, so a mis-tap declines a meeting. It becomes `md`.
+
 *Verify:* ⌥M on a student page keeps the URL and removes no control; the bell and a mentor page no
-longer flip the nav to Admin; 390px and 1280px screenshots of both shells.
+longer flip the nav to Admin; 390px and 1280px screenshots of both shells; every control on
+`/student` and `/mentor` measures ≥44px.
 
 ### Phase 5 — Shared renderers (6 commits)
 
@@ -1233,6 +1247,10 @@ names returns nothing); `npm test`; a keyboard-only pass over a row menu and a c
     (`notify.ts:81-90`) **plus** the `/n/[id]` handler — one commit, so no link ever points at a
     route that does not exist yet. No stored rows are rewritten.
 40. `/students` (FilterBar, 6 columns, presets, pagination) and `/programs/[id]/students`.
+    The 8 columns today are Student · Program · Telegram · Folder · Allotted · Completed · Missed ·
+    Remaining. **Telegram and Folder merge into one `Contact` cell** — two columns that are an
+    em-dash in most rows — and `Program` goes, because the page is reached from a program or
+    carries a program filter. That is 6.
 41. `/students/[id]` — the workspace (§6.7); delete `ledger-board.tsx`, `student-ledger.tsx`,
     `forms/student-corrections.tsx`, `forms/student-folder-form.tsx`, and both old student pages.
 42. `/sessions` with both tabs (the TODO-batch-1 admin ledger) and the `MeetingsLog` mounts on six

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { ArrowUpRightIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExternalLink } from "@/components/ui/link";
 import { Meter } from "@/components/ui/meter";
 import { PageTitle } from "@/components/ui/section";
 import { ROLES, USER_STATUS } from "@/lib/constants";
@@ -142,15 +142,13 @@ export default async function StudentBookPage() {
 
                   <div className="mt-auto pt-5">
                     {a.calendlyUrl ? (
-                      <a
+                      <ExternalLink
+                        variant="action"
                         href={a.calendlyUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-[15px] font-semibold text-white transition-colors hover:bg-accent-dark"
+                        className="w-full"
                       >
                         Book with {a.mentor.name?.split(" ")[0] ?? "them"}
-                        <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                      </a>
+                      </ExternalLink>
                     ) : (
                       <p className="flex min-h-11 items-center justify-center rounded-lg border border-dashed border-line px-4 text-center text-sm text-muted-fg">
                         No calendar shared yet

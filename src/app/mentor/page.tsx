@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { FolderIcon, SendIcon } from "@/components/icons";
 
-import { ArrowLink } from "@/components/arrow-link";
+import { ArrowLink, ExternalLink } from "@/components/ui/link";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { MeetingsLog } from "@/components/meetings-log";
 import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { Figure, FigureRow } from "@/components/ui/figure";
-import { StudentFolderLink } from "@/components/student-folder-link";
-import { TelegramHandle } from "@/components/telegram-handle";
 import { PageTitle } from "@/components/ui/section";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
@@ -525,14 +524,18 @@ export default async function MentorHomePage({
                   </Td>
                   <Td label="Telegram">
                     {s.profile.telegramUsername ? (
-                      <TelegramHandle username={s.profile.telegramUsername} />
+                      <ExternalLink variant="chip" href={`https://t.me/${s.profile.telegramUsername}`} icon={<SendIcon className="h-3.5 w-3.5" />} title={`Open @${s.profile.telegramUsername} on Telegram`}>
+@{s.profile.telegramUsername}
+</ExternalLink>
                     ) : (
                       <span className="text-muted-fg">—</span>
                     )}
                   </Td>
                   <Td label="Folder">
                     {s.profile.folderUrl ? (
-                      <StudentFolderLink url={s.profile.folderUrl} />
+                      <ExternalLink variant="chip" href={s.profile.folderUrl} icon={<FolderIcon className="h-3.5 w-3.5" />} title="Open the student's folder">
+Folder
+</ExternalLink>
                     ) : (
                       <span className="text-muted-fg">—</span>
                     )}

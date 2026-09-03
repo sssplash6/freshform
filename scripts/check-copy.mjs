@@ -40,6 +40,15 @@ const BANNED = [
     allow: ["src/lib/format.ts"],
   },
   { re: /Nothing (yet|here)\b/i, why: "generic empty state — say what is empty" },
+  {
+    // A TRAILING arrow — nothing after it but the end of the text node — is a
+    // link affordance drawn as a character: it cannot be tabbed to, screen
+    // readers say "right arrow", and it was on five links whose real hover
+    // colour was orange. An arrow BETWEEN two values ("2h 30m → 4h") is a
+    // change, not a link, so it must keep working.
+    re: /→\s*(["'<}]|$)/,
+    why: "a trailing arrow is not a link — use ArrowLink or ExternalLink",
+  },
 ];
 
 /**

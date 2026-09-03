@@ -1,13 +1,13 @@
 import Link from "next/link";
+import { FolderIcon, SendIcon } from "@/components/icons";
 
-import { StudentFolderLink } from "@/components/student-folder-link";
-import { TelegramHandle } from "@/components/telegram-handle";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ExternalLink } from "@/components/ui/link";
+import { StatusChip } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDuration } from "@/lib/format";
 import type { StudentWithHours } from "@/lib/queries";
-import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * Students with derived hour totals (allotted = sum of per-mentor
@@ -74,14 +74,18 @@ export function StudentsTable({
           {showCohort && <Td label="Cohort">{s.cohort?.name ?? "—"}</Td>}
           <Td label="Telegram">
             {s.telegramUsername ? (
-              <TelegramHandle username={s.telegramUsername} />
+              <ExternalLink variant="chip" href={`https://t.me/${s.telegramUsername}`} icon={<SendIcon className="h-3.5 w-3.5" />} title={`Open @${s.telegramUsername} on Telegram`}>
+@{s.telegramUsername}
+</ExternalLink>
             ) : (
               <span className="text-muted-fg">—</span>
             )}
           </Td>
           <Td label="Folder">
             {s.folderUrl ? (
-              <StudentFolderLink url={s.folderUrl} />
+              <ExternalLink variant="chip" href={s.folderUrl} icon={<FolderIcon className="h-3.5 w-3.5" />} title="Open the student's folder">
+Folder
+</ExternalLink>
             ) : (
               <span className="text-muted-fg">—</span>
             )}

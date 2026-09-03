@@ -5,6 +5,7 @@ import { MeetingsLog } from "@/components/meetings-log";
 import { PersonChip } from "@/components/person-chip";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ArrowLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
@@ -315,12 +316,12 @@ export default async function AdminProgramOverviewPage({
           eyebrow="Teaching here"
           title="Mentors"
           action={
-            <Link
+            <ArrowLink
               href={`/admin/programs/${program.id}/settings`}
-              className="text-sm font-medium text-ink hover:text-accent-ink"
+              className="text-sm"
             >
-              Assign or remove mentors →
-            </Link>
+              Assign or remove mentors
+            </ArrowLink>
           }
       >
         {pairings.length === 0 ? (

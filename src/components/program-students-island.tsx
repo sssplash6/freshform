@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
+import { ArrowLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { formatDuration } from "@/lib/format";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
@@ -36,9 +35,7 @@ export function ProgramStudentsIsland({
         eyebrow="Program"
         title={
           programHref ? (
-            <Link href={programHref} className="hover:text-brand">
-              {program.name} →
-            </Link>
+            <ArrowLink href={programHref}>{program.name}</ArrowLink>
           ) : (
             program.name
           )

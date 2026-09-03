@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ArrowLink } from "@/components/arrow-link";
+import { ArrowLink } from "@/components/ui/link";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { CreateProgramForm } from "@/components/forms/program-forms";
 import { ArrowRightIcon } from "@/components/icons";

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { FolderIcon, SendIcon } from "@/components/icons";
 
-import { ArrowLink } from "@/components/arrow-link";
+import { ArrowLink, ExternalLink } from "@/components/ui/link";
 import { AssignmentsPanel } from "@/components/assignments-panel";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
@@ -8,8 +9,6 @@ import { HoursBreakdown } from "@/components/hours-breakdown";
 import { MeetingsLog } from "@/components/meetings-log";
 import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { Figure, FigureRow } from "@/components/ui/figure";
-import { StudentFolderLink } from "@/components/student-folder-link";
-import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { PageTitle } from "@/components/ui/section";
 import {
@@ -162,10 +161,11 @@ export default async function MentorStudentDetailPage({
             {profile.telegramUsername ? (
               <>
                 {" · "}
-                <TelegramHandle
-                  username={profile.telegramUsername}
-                  className="align-middle"
-                />
+                <ExternalLink
+                  variant="inline"
+                  href={`https://t.me/${profile.telegramUsername}`} icon={<SendIcon className="h-3.5 w-3.5" />} title={`Open @${profile.telegramUsername} on Telegram`} className="align-middle">
+@{profile.telegramUsername}
+</ExternalLink>
               </>
             ) : (
               " · Telegram not set yet"
@@ -173,10 +173,11 @@ export default async function MentorStudentDetailPage({
             {profile.folderUrl && (
               <>
                 {" · "}
-                <StudentFolderLink
-                  url={profile.folderUrl}
-                  className="align-middle"
-                />
+                <ExternalLink
+                  variant="inline"
+                  href={profile.folderUrl} icon={<FolderIcon className="h-3.5 w-3.5" />} title="Open the student's folder" className="align-middle">
+Folder
+</ExternalLink>
               </>
             )}
             {allocation?.deadline && (
