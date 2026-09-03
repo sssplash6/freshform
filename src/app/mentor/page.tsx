@@ -13,7 +13,11 @@ import { TabLinks } from "@/components/ui/segmented";
 import { DeadlineText } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
-import { SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import {
+  SESSION_STATUS,
+  USER_STATUS,
+  interviewIsOpen,
+} from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatDuration, toDateInputValue, toTimeInputValue } from "@/lib/format";
@@ -33,6 +37,8 @@ import { bucketOf, daysAway } from "@/lib/when";
 const DEADLINE_HORIZON_DAYS = 7;
 /** Students shown before the table defers to the full list. */
 const CASELOAD_ROWS = 8;
+/** Attention rows shown before the section says how many it is holding back. */
+const NEEDS_YOU_ROWS = 10;
 
 const STUDENT_COLUMNS: Column[] = [
   { label: "Student" },
@@ -160,7 +166,12 @@ export default async function MentorHomePage({
         },
         viewer
       );
-      if (!state || state.kind === "informational") return [];
+            // Informational rows are kept. §6.2 puts "awaiting the student's answer"
+      // in this list on purpose, and dropping it here meant a mentor who booked
+      // an interview for the 25th never learned the student had not replied —
+      // Up next only reaches seven days out, so the row existed nowhere. They
+      // do not count toward the badge; `attentionList` sorts them last.
+      if (!state) return [];
       return [
         state.type === "MEETING_UNLOGGED"
           ? // The row's job is to discharge itself: the form arrives knowing
@@ -170,7 +181,8 @@ export default async function MentorHomePage({
       ];
     }),
   ];
-  const needsYou = attentionList(rows, viewer, { limit: 10 });
+    const attentionRows = attentionList(rows, viewer).length;
+  const needsYou = attentionList(rows, viewer, { limit: NEEDS_YOU_ROWS });
 
   // ------------------------------------------------------------------ Up next
   //
@@ -178,12 +190,23 @@ export default async function MentorHomePage({
   // out matters more than a meeting next month and a mentor should not have to
   // merge two lists to see that.
   const entries: TimelineEntry[] = [
-    ...diary
+        ...diary
+      // `mentorMeetings` returns every interview ever, and logging a session
+      // sets HELD while cancelling sets CANCELLED — so without this every
+      // meeting the mentor has ever finished sat under Overdue forever, with a
+      // live Move/Cancel menu on a meeting that is already closed. Overdue is
+      // the first bucket and sorts ascending, so "Up next" opened with their
+      // oldest meeting ever. Every other reader of this query already filters
+      // it; this page was the one that forgot.
+      .filter(interviewIsOpen)
       .filter((m) => bucketOf(m.scheduledAt, viewer.now) !== "later")
       .map((m) => ({
         id: m.id,
         at: m.scheduledAt,
         hasTime: m.hasTime,
+        // A time still to be set is not an all-day event. The student's page
+        // says so; the mentor who booked it was told nothing.
+        timePending: !m.hasTime,
         title: "Interview",
         status: meetingStatus(
           {
@@ -289,7 +312,14 @@ export default async function MentorHomePage({
         }
       />
 
-      <AttentionList statuses={needsYou} empty="Nothing needs you." />
+            <AttentionList
+        statuses={needsYou}
+        empty="Nothing needs you."
+        // A cap that discards row 11 in silence reads as a complete list.
+        {...(attentionRows > NEEDS_YOU_ROWS
+          ? { moreLabel: `${attentionRows - NEEDS_YOU_ROWS} more` }
+          : {})}
+      />
 
             {/* No "see all" link yet on purpose: this section is what is SCHEDULED,
           and /mentor/sessions is a log of what was delivered. Pointing one at

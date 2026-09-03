@@ -50,7 +50,7 @@ export function AttentionList({
       title={title}
       count={count > 0 ? count : undefined}
       className={className}
-      action={
+            action={
         moreHref ? (
           <Link
             href={moreHref}
@@ -58,6 +58,12 @@ export function AttentionList({
           >
             {moreLabel ?? "See all"}
           </Link>
+        ) : moreLabel ? (
+          // A label with nowhere to go still has something to say: a capped
+          // list that discards its eleventh row in silence reads as a complete
+          // list. `Timeline` already does this; this side did not, so a mentor
+          // with twelve things needing them saw ten and no hint of the rest.
+          <span className="text-xs text-muted-fg">{moreLabel}</span>
         ) : undefined
       }
     >
