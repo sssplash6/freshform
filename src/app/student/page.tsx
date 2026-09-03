@@ -16,7 +16,12 @@ import { Meter } from "@/components/ui/meter";
 import { PageTitle, Section } from "@/components/ui/section";
 import { StatusChip } from "@/components/ui/status-chip";
 import { cn } from "@/lib/cn";
-import { ASSIGNMENT_PROGRESS, ROLES, interviewIsOpen } from "@/lib/constants";
+import {
+  ASSIGNMENT_PROGRESS,
+  INTERVIEW_STATUS,
+  ROLES,
+  interviewIsOpen,
+} from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatMinutes } from "@/lib/format";
@@ -330,15 +335,38 @@ export default async function StudentHomePage() {
     viewer
   ).filter((s) => s.type !== "ALL_CLEAR");
 
-  const upNext: TimelineEntry[] = open.map(({ meeting: m, status }) => ({
+    const upNext: TimelineEntry[] = open.map(({ meeting: m, status }) => ({
     id: m.id,
     at: m.scheduledAt,
     hasTime: m.hasTime,
-    title: "Meeting",
-    status,
+    // A meeting with no time yet is waiting on the mentor, not an all-day
+    // event — the wording the section this replaced got right.
+    timePending: !m.hasTime,
+            // No title: the mentor's chip beside it in a section called "Up next" is
+    // already the whole sentence.
+    // The chip goes when the answer buttons are here: `InterviewResponse`
+    // renders the chosen answer as the quieter of its two buttons, so a
+    // "✓ You're confirmed" chip beside a "You're confirmed" button is the
+    // same fact twice — the redundancy the section this replaced also had.
+    // A meeting still awaiting an answer keeps its chip, because its buttons
+    // are up in Needs you and the row would otherwise say nothing.
+    status: m.status === INTERVIEW_STATUS.PROPOSED ? status : undefined,
     person: m.mentor,
     joinUrl: m.link,
     note: m.note,
+    // The answer lives with the meeting once it HAS an answer, because
+    // changing your mind is not something that "needs you" — it is something
+    // you go and do. `InterviewResponse` keeps both buttons live and quiets
+    // the one already chosen, so a student who confirmed on Monday can still
+    // say they cannot make Thursday. Putting the control only on the awaiting
+    // row in Needs you removed that, and silence is not an answer.
+    //
+    // Never both places at once: an unanswered meeting is answered up in Needs
+    // you, and this branch is the complement of that condition.
+    action:
+      m.status === INTERVIEW_STATUS.PROPOSED ? undefined : (
+        <InterviewResponse interviewId={m.id} status={m.status} />
+      ),
   }));
 
   const finished = tasks.filter((t) => t.task.progress === ASSIGNMENT_PROGRESS.DONE);

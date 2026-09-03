@@ -7,11 +7,15 @@ import { Eyebrow, Section } from "@/components/ui/section";
 import { ExternalLink } from "@/components/ui/link";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { Status } from "@/lib/status";
+import { formatUntil } from "@/lib/format";
 import {
   BUCKET_LABEL,
   bucketOf,
+  daysAway,
   formatDay,
   formatTimeOfDay,
+  PROGRAM_ZONE,
+  programWallClock,
   type Bucket,
 } from "@/lib/when";
 
@@ -36,10 +40,27 @@ export type TimelineEntry = {
   id: string;
   /** The program's wall clock, as `Interview.scheduledAt` stores it. */
   at: Date;
-  /** False for a whole-day thing — a use-by date, a task due date. */
+    /** False for a whole-day thing — a use-by date, a task due date. */
   hasTime: boolean;
-  /** What it is, in two or three words: "Interview", "Time expires". */
-  title: string;
+  /**
+   * A time is expected here and has not been set yet.
+   *
+   * Not the same as having no time. A use-by date genuinely has none; a
+   * meeting booked for "September 8, time to follow" is waiting on somebody.
+   * Rendering both as "All day" told a student their interview was a whole-day
+   * event, which is what the section this replaced got right and this got
+   * wrong.
+   */
+  timePending?: boolean;
+    /**
+   * What it is, in two or three words: "Interview", "Time expires".
+   *
+   * Optional, because a row with a person chip on it in a section called "Up
+   * next" is already a meeting, and "Meeting" beside the mentor's name is a
+   * word spent saying what the chip says. A dated row with no person — a
+   * use-by date, a task — needs one.
+   */
+  title?: string;
   /** Already in this reader's voice, from `lib/status.ts`. */
   status?: Status | null;
   /** Whoever the reader is NOT: a student sees the mentor, a mentor the student. */
@@ -97,25 +118,36 @@ export function Timeline({
     else grouped.set(bucket, [entry]);
   }
 
-  let remaining = limit ?? Infinity;
+    let remaining = limit ?? Infinity;
   const total = [...grouped.values()].reduce((n, g) => n + g.length, 0);
   const hidden = limit != null ? Math.max(0, total - limit) : 0;
+  // The zone belongs to the LIST, not to each row. Every meeting in this app
+  // is Tashkent time, so printing it on every line spent twenty characters a
+  // row saying one thing — and on a phone that was the line that wrapped and
+  // made each meeting two lines taller than it needed to be. Said once, and
+  // only when something here actually carries a time.
+  const anyTimed = entries.some((e) => e.hasTime);
 
   return (
     <Section
       title={title}
       className={className}
-      action={
-        moreHref ? (
-          <Link href={moreHref} className="text-xs font-medium text-brand hover:underline">
-            {hidden > 0 ? `${hidden} more · ${moreLabel}` : moreLabel}
-          </Link>
-        ) : hidden > 0 ? (
-          // A cap that hides rows must say so even with nowhere to send the
-          // reader. Before this, an eleventh meeting simply was not there, and
-          // a list that silently truncates reads as a complete list.
-          <p className="text-xs text-muted-fg">{hidden} more not shown</p>
-        ) : undefined
+            action={
+        <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+          {anyTimed && (
+            <span className="text-muted-fg">Times in {PROGRAM_ZONE}</span>
+          )}
+          {moreHref ? (
+            <Link href={moreHref} className="font-medium text-brand hover:underline">
+              {hidden > 0 ? `${hidden} more · ${moreLabel}` : moreLabel}
+            </Link>
+          ) : hidden > 0 ? (
+            // A cap that hides rows must say so even with nowhere to send the
+            // reader. Before this, an eleventh meeting simply was not there,
+            // and a list that silently truncates reads as a complete list.
+            <span className="text-muted-fg">{hidden} more not shown</span>
+          ) : null}
+        </span>
       }
     >
       {total === 0 ? (
@@ -161,43 +193,76 @@ export function TimelineItem({
   now: Date;
   bucket?: Bucket;
 }) {
-  const { title, status, person, counterpart, href, joinUrl, note, action, at, hasTime } =
-    entry;
+    const {
+    title,
+    status,
+    person,
+    counterpart,
+    href,
+    joinUrl,
+    note,
+    action,
+    at,
+    hasTime,
+    timePending,
+  } = entry;
   const day = formatDay(at, now);
   const time = formatTimeOfDay(at, hasTime);
   const inferred = bucket ?? bucketOf(at, now);
+  // How far off, for anything beyond tomorrow. "Sep 8" is a fact a reader has
+  // to place against today's date; "in 5 days" is the answer they wanted.
+  const away = daysAway(at, now);
+  const distance = away > 1 ? formatUntil(at, programWallClock(now)) : null;
 
-  const when = (
-    <span className="w-[7.5rem] shrink-0 text-[13px] leading-snug sm:w-36">
-      <span className="block font-semibold text-ink">{day}</span>
-      {/* No time on a whole-day row rather than a fake 00:00, and the zone is
-          named: a student who moved abroad reads the same digits as the mentor
-          who typed them, and only one of them is right about local noon. */}
-      <span className="block text-muted-fg">{time ?? "All day"}</span>
+      // Two lines, not three. The day and the clock are one fact and belong on one
+  // line; how far off it is is the footnote. The zone is said once in the
+  // section header — see `anyTimed` — because it is the same for every row.
+  // The row this replaced ran to five lines a meeting, which is what made ten
+  // of them a page rather than a list.
+  const clock = time?.split(" ")[0] ?? null;
+
+      const when = (
+    <span className="w-[6.5rem] shrink-0 text-[13px] leading-tight sm:w-32">
+            <span className="block font-semibold text-ink">
+        {day}
+        {clock && <> {clock}</>}
+      </span>
+      {/* No fake 00:00 on a whole-day row, and the zone is named: a student who
+          moved abroad reads the same digits as the mentor who typed them, and
+          only one of them is right about local noon. */}
+            <span className="mt-0.5 block text-xs text-muted-fg">
+        {distance ?? (timePending ? "Time to follow" : null)}
+      </span>
     </span>
   );
 
   const body = (
     <span className="min-w-0 flex-1">
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-[15px] font-medium text-ink">{title}</span>
+                {title && <span className="text-sm font-medium text-ink">{title}</span>}
         {person && <PersonChip person={person} size="sm" />}
         {counterpart && <PersonChip person={counterpart} size="sm" />}
         {status && <StatusChip status={status} />}
+                {/* Inline and as a chip, not the `quiet` variant: quiet is 44px tall
+            by design, which is right on its own line and wrong here, where it
+            would set the height of every row including the ones with no link.
+            A 36px pill beside the status chip stays tappable and scans as the
+            control it is. */}
+        {joinUrl && (
+          <ExternalLink
+            variant="chip"
+            href={joinUrl}
+            icon={<LinkIcon className="h-3.5 w-3.5" />}
+            title="Open the meeting link"
+          >
+            Join
+          </ExternalLink>
+        )}
       </span>
       {note && (
-        <span className="mt-1 block text-[13px] text-muted-fg">
+        <span className="mt-0.5 block text-[13px] leading-snug text-muted-fg">
           <ExpandableText text={note} lines={2} />
         </span>
-      )}
-      {joinUrl && (
-        <ExternalLink
-          href={joinUrl}
-          icon={<LinkIcon className="h-3.5 w-3.5" />}
-          className="mt-0.5"
-        >
-          Join the meeting
-        </ExternalLink>
       )}
     </span>
   );
@@ -205,7 +270,7 @@ export function TimelineItem({
   return (
     <li
       className={
-        "flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-5" +
+                "flex flex-wrap items-start gap-x-3 gap-y-1.5 px-4 py-2.5 sm:px-5" +
         // An overdue row is the only one that is not simply information. It
         // gets a left edge, not a tinted panel: the status chip already carries
         // the colour, and a whole amber row for every stale meeting was the
@@ -214,7 +279,7 @@ export function TimelineItem({
       }
     >
       {href && !action ? (
-        <Link href={href} className="group flex min-w-0 flex-1 items-start gap-4">
+                                <Link href={href} className="group flex min-w-0 flex-1 items-start gap-3">
           {when}
           {body}
           <ArrowRightIcon className="mt-1 h-4 w-4 shrink-0 text-muted-fg transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
