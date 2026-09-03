@@ -58,6 +58,28 @@ export function ChevronDownIcon({ className }: { className?: string }) {
   );
 }
 
+/** A state that wants attention, or a problem. Same glyph, tone tells them apart. */
+export function AlertIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4.5" />
+      <path d="M12 16h.01" />
+    </Svg>
+  );
+}
+
+/** Something worth knowing that blocks nothing. */
+export function InfoIcon({ className }: { className?: string }) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 8h.01" />
+    </Svg>
+  );
+}
+
 export function CheckIcon({ className }: { className?: string }) {
   return (
     <Svg className={className}>

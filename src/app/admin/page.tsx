@@ -95,7 +95,7 @@ export default async function AdminHomePage() {
 
       {pending.length > 0 && (
         <Callout
-          tone="warning"
+          tone="warn"
           title={`Pending approvals (${pending.length})`}
         >
           These students signed up themselves. Approve them, then allocate

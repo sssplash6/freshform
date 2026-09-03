@@ -190,7 +190,7 @@ export default async function AdminStudentDetailPage({
 
       {isPending && (
         <Callout
-          tone="warning"
+          tone="warn"
           title="Approve this student"
           action={<ApproveStudentButtons studentProfileId={profile.id} />}
         >

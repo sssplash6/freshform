@@ -50,7 +50,7 @@ export default async function StudentHomePage() {
           tone="warm"
           monogram={initials(user.name, user.email)}
         />
-        <Callout tone="brand">
+        <Callout tone="info">
           An admin is reviewing your registration. Once approved, your mentoring
           time will be allocated and appear here.
         </Callout>

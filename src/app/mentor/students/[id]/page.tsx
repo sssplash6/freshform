@@ -264,7 +264,7 @@ export default async function MentorStudentDetailPage({
       />
 
       {!approved ? (
-        <Callout tone="warning" title="Waiting on admin approval">
+        <Callout tone="warn" title="Waiting on admin approval">
           Sessions can be logged for this student once they&apos;re approved.
         </Callout>
       ) : expired ? (
@@ -277,7 +277,7 @@ export default async function MentorStudentDetailPage({
       ) : (
         <>
           {pool ? (
-            <Callout tone="brand" title="Unassigned time available">
+            <Callout tone="info" title="Unassigned time available">
               This student holds {formatDuration(pool.minutes)} no mentor
               was named for, usable until {formatDate(pool.deadline)}. Log a
               session below and the hours you log become yours.
@@ -288,7 +288,7 @@ export default async function MentorStudentDetailPage({
                instead: the meeting is loggable either way, and the tick is
                what decides whether it needs hours nobody has granted yet. */
             !allocation && (
-              <Callout tone="brand" title="No time allocated to you yet">
+              <Callout tone="info" title="No time allocated to you yet">
                 You work in {profile.program.name}, so you can log meetings
                 with {profile.user.name?.split(" ")[0] ?? "them"} now. In-plan
                 hours will show as an overdraw until an admin allocates them —

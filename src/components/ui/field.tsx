@@ -50,7 +50,7 @@ export function Field({
         <span className="block text-xs text-muted-fg">{hint}</span>
       )}
       {error && (
-        <span role="alert" className="block text-xs text-red-700">
+        <span role="alert" className="block text-xs text-danger-ink">
           {error}
         </span>
       )}

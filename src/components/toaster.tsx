@@ -49,7 +49,7 @@ export function Toaster() {
         <div
           key={t.id}
           role="alert"
-          className="rise-in flex items-center gap-3 rounded-xl border border-red-200 bg-surface px-4 py-2.5 text-sm text-red-600 shadow-lg"
+          className="rise-in flex items-center gap-3 rounded-xl border border-danger-line bg-surface px-4 py-2.5 text-sm text-danger-ink shadow-lg"
         >
           <span>{t.message}</span>
           <button
