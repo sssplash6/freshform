@@ -543,15 +543,15 @@ describe("rollUp", () => {
 
   it("leaves three named students expanded", () => {
     const three = ["a", "b", "c"].flatMap(noneFor);
-    expect(rollUp(three)).toHaveLength(3);
-    expect(rollUp(three)[0].count).toBeUndefined();
+    expect(rollUp(three, view("staff"))).toHaveLength(3);
+    expect(rollUp(three, view("staff"))[0].count).toBeUndefined();
   });
 
   it("collapses the imported cohort into one honest line", () => {
     // Ten students with sessions and no allocation is the real state of the
     // Master's import. Printed in full it buries everything unusual.
     const ten = "abcdefghij".split("").flatMap(noneFor);
-    const rolled = rollUp(ten);
+    const rolled = rollUp(ten, view("staff"));
     expect(rolled).toHaveLength(1);
     expect(rolled[0]).toMatchObject({
       type: "BALANCE_NONE",
@@ -572,7 +572,7 @@ describe("rollUp", () => {
         )
       ),
     ];
-    const rolled = rollUp(mixed);
+    const rolled = rollUp(mixed, view("staff"));
     expect(rolled.map((s) => [s.type, s.count])).toEqual([
       ["BALANCE_OVERDRAWN", 4],
       ["BALANCE_NONE", 10],
@@ -581,21 +581,26 @@ describe("rollUp", () => {
 
   it("respects a caller's threshold", () => {
     const four = ["a", "b", "c", "d"].flatMap(noneFor);
-    expect(rollUp(four, { threshold: 10 })).toHaveLength(4);
+    expect(rollUp(four, view("staff"), { threshold: 10 })).toHaveLength(4);
   });
 });
 
 describe("attentionList", () => {
-  it("says so out loud when nothing needs anyone", () => {
-    const list = attentionList([], view("mentor"));
-    expect(list).toMatchObject([{ type: "ALL_CLEAR", severity: "ok" }]);
+  it("returns nothing when nothing needs anyone", () => {
+    // The section still says so — `AttentionList` renders its own `empty`
+    // text — but the list itself does not invent a row. It used to, and every
+    // page had to filter that row back out.
+    expect(attentionList([], view("mentor"))).toEqual([]);
   });
 
   it("drops states that are merely facts", () => {
     const facts = studentStatuses(student({ telegramUsername: null }), view("staff"));
     expect(types(facts)).toEqual(["STUDENT_NOT_SIGNED_IN"]);
-    // A fact is worth a chip on a row; it is not worth a line on a home page.
-    expect(attentionList(facts, view("staff"))[0].type).toBe("ALL_CLEAR");
+        // A fact is worth a chip on a row; it is not worth a line on a home page.
+    // It survives as informational, below anything actionable, and counts for
+    // nothing.
+    const rows = attentionList(facts, view("staff"));
+    expect(actionableCount(rows)).toBe(0);
   });
 
   it("keeps what needs doing, rolled up and sorted", () => {
@@ -634,10 +639,8 @@ describe("EXPIRY_WINDOW_DAYS", () => {
 describe("attentionList", () => {
   const v: ViewerContext = { audience: "mentor", userId: "m1", now: new Date("2026-03-01T09:00:00Z") };
 
-  it("says so out loud when nothing needs the viewer", () => {
-    const rows = attentionList([], v);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].type).toBe("ALL_CLEAR");
+    it("returns nothing when nothing needs the viewer", () => {
+    expect(attentionList([], v)).toEqual([]);
   });
 
   it("keeps informational rows and puts them under the actionable ones", () => {
@@ -651,20 +654,21 @@ describe("attentionList", () => {
     expect(rows.some((r) => r.type === "ALL_CLEAR")).toBe(false);
   });
 
-  it("still says nothing needs you when every row is informational", () => {
-    // The honest case: things on screen, none of them yours to do.
+    it("counts nothing when every row is informational", () => {
+    // The honest case: things on screen, none of them yours to do. Both rows
+    // stay — a mentor waiting on an answer wants to see that — and the badge
+    // reads zero.
     const list = [status("MEETING_AWAITING_ANSWER", v)!, status("MEETING_CONFIRMED", v)!];
     const rows = attentionList(list, v);
-    expect(rows[0].type).toBe("ALL_CLEAR");
+    expect(rows).toHaveLength(2);
     expect(actionableCount(rows)).toBe(0);
-    expect(rows).toHaveLength(3);
   });
 
-  it("does not say nothing needs you over a blocked row", () => {
+  it("keeps a blocked row, which counts for nothing but is not nothing", () => {
     // A mentor with no program cannot act, but "Nothing needs you" above
     // "Waiting for a program" is a redundant line: the blocked row already
     // explains the whole state of the page.
-    const rows = attentionList([status("MENTOR_UNASSIGNED", v)!], v);
+        const rows = attentionList([status("MENTOR_UNASSIGNED", v)!], v);
     expect(rows.map((r) => r.type)).toEqual(["MENTOR_UNASSIGNED"]);
     expect(rows[0].kind).toBe("blocked");
     expect(actionableCount(rows)).toBe(0);
@@ -761,12 +765,12 @@ describe("rollUp", () => {
 
   it("leaves three named students named", () => {
     // Three names are more useful than the sentence "3 students…".
-    expect(rollUp(many(3))).toHaveLength(3);
-    expect(rollUp(many(3))[0].subject?.name).toBe("Student 0");
+    expect(rollUp(many(3), v)).toHaveLength(3);
+    expect(rollUp(many(3), v)[0].subject?.name).toBe("Student 0");
   });
 
   it("collapses a wall into one counted row", () => {
-    const rolled = rollUp(many(9));
+    const rolled = rollUp(many(9), v);
     expect(rolled).toHaveLength(1);
     expect(rolled[0].count).toBe(9);
     expect(rolled[0].label).toContain("9");
@@ -775,13 +779,44 @@ describe("rollUp", () => {
   it("drops the link as well as the subject", () => {
     // A row reading "9 students have no time allocated" that navigates to one
     // of the nine is an arbitrary choice dressed up as an answer.
-    const rolled = rollUp(many(9));
+    const rolled = rollUp(many(9), v);
     expect(rolled[0].subject).toBeUndefined();
     expect(rolled[0].href).toBeUndefined();
   });
 
   it("keeps the count honest when the group is exactly at the threshold", () => {
-    expect(rollUp(many(4))).toHaveLength(1);
-    expect(rollUp(many(4))[0].count).toBe(4);
+    expect(rollUp(many(4), v)).toHaveLength(1);
+    expect(rollUp(many(4), v)[0].count).toBe(4);
+  });
+});
+
+describe("roll-up wording is the reader's, not the staff's", () => {
+  const linkless = (audience: Audience, n: number) => {
+    const v: ViewerContext = { audience, userId: "u1", now: new Date("2026-03-01T09:00:00Z") };
+    return rollUp(
+      Array.from({ length: n }, (_, i) =>
+        status("BOOKING_LINK_MISSING", v, undefined, {
+          subject: { kind: "mentor" as const, id: `m${i}`, name: `Mentor ${i}` },
+        })!
+      ),
+      v
+    );
+  };
+
+  it("does not say 'pairings' to a student", () => {
+    // A pairing is a row in a staff table. A student read "5 pairings have no
+    // booking link" on their own home page, which is the per-audience wording
+    // rule leaking at exactly the point it stops applying.
+    const [row] = linkless("student", 5);
+    expect(row.label).toBe("5 mentors have not shared a calendar");
+    expect(row.label).not.toContain("pairing");
+  });
+
+  it("still says 'pairings' to staff, who manage them", () => {
+    expect(linkless("staff", 5)[0].label).toBe("5 pairings have no booking link");
+  });
+
+  it("falls back to the shared wording for an audience with none of its own", () => {
+    expect(linkless("mentor", 5)[0].label).toBe("5 pairings have no booking link");
   });
 });

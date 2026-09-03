@@ -62,11 +62,17 @@ export function Figure({
           tone === "hours" && size === "inline" ? TONE.ink : TONE[tone]
         )}
       >
-        {value}
+                {value}
         {suffix && (
-          <span className="ml-1 text-base font-semibold tracking-normal text-muted-fg">
-            {suffix}
-          </span>
+          // The literal space matters: `ml-1` separates them on screen but not
+          // in the accessibility tree, where "4h 30mleft across 1 student" is
+          // what a screen reader reads out.
+          <>
+            {" "}
+            <span className="text-base font-semibold tracking-normal text-muted-fg">
+              {suffix}
+            </span>
+          </>
         )}
       </div>
       {label && (

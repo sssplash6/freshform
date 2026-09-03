@@ -39,8 +39,9 @@ export function HoursBreakdown({
   completed,
   missed,
   forfeited,
-  remaining,
+    remaining,
   extra = 0,
+  statesRemaining = true,
   className,
 }: {
   allotted: number;
@@ -49,6 +50,16 @@ export function HoursBreakdown({
   forfeited: number;
   remaining: number;
   extra?: number;
+  /**
+   * Whether the key names what is still left.
+   *
+   * False on the student's home, where the ring beside the `h1` already is
+   * that number and §6.3's rule is that remaining is never stated twice. The
+   * SEGMENT stays either way: dropping the bar's tail would leave a bar that
+   * cannot show an overdraw, and a chart that hides the worst case is worse
+   * than a repeated figure.
+   */
+  statesRemaining?: boolean;
   className?: string;
 }) {
   const overdrawn = remaining < 0;
@@ -98,7 +109,13 @@ export function HoursBreakdown({
   const drawn = completed + missed + forfeited;
   const span = Math.max(allotted, drawn + (overdrawn ? -remaining : 0), 0.01);
 
-  const shown = segments.filter((s) => s.minutes > 0.001);
+    const shown = segments.filter((s) => s.minutes > 0.001);
+  // An overdraw is always named, whatever the caller said: it is not the
+  // reassuring half of "remaining", and a page that suppressed it would be
+  // hiding the one figure a student most needs to see.
+  const keyed = shown.filter(
+    (s) => s.key !== "remaining" || statesRemaining || overdrawn
+  );
 
   return (
     <div className={className}>
@@ -123,7 +140,7 @@ export function HoursBreakdown({
             {formatDuration(allotted)}
           </dd>
         </div>
-        {shown.map((s) => (
+                {keyed.map((s) => (
           <div key={s.key}>
             <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
               <span

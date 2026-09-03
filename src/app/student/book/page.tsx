@@ -80,8 +80,17 @@ export default async function StudentBookPage() {
           {cards.map((a, i) => {
             const withMentor = hoursByMentor.get(a.mentorId);
             const remaining = withMentor?.remaining;
-            const allocated = withMentor?.allocated ?? 0;
-            const used = allocated - (remaining ?? 0);
+                        const allocated = withMentor?.allocated ?? 0;
+            // Not `allocated - remaining`: `allocationSummary` writes an
+            // expired allocation's remaining down to zero, so an untouched
+            // grant that ran out of time read as fully used and filled the bar
+            // to 100%. Forfeited minutes are gone, but they were never spent
+            // with this mentor, and a bar that says otherwise tells a student
+            // they had their sessions.
+            const used = Math.max(
+              0,
+              (withMentor?.completed ?? 0) + (withMentor?.missed ?? 0)
+            );
             const tone = personTone(a.mentorId);
             return (
               <li

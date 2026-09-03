@@ -44,6 +44,15 @@ export type TimelineEntry = {
   status?: Status | null;
   /** Whoever the reader is NOT: a student sees the mentor, a mentor the student. */
   person?: { id: string; name: string | null; email: string } | null;
+  /**
+   * The other party, when the reader is neither.
+   *
+   * Staff watch meetings they are not in, so a row naming only one side leaves
+   * them to guess which. Two chips, not a name folded into the title: a title
+   * that says "Meeting with Malika" cannot be scanned down a column the way a
+   * chip can.
+   */
+  counterpart?: { id: string; name: string | null; email: string } | null;
   /** Where the row goes when tapped. */
   href?: string;
   /** A call link — the one thing on this page a reader needs mid-meeting. */
@@ -101,6 +110,11 @@ export function Timeline({
           <Link href={moreHref} className="text-xs font-medium text-brand hover:underline">
             {hidden > 0 ? `${hidden} more · ${moreLabel}` : moreLabel}
           </Link>
+        ) : hidden > 0 ? (
+          // A cap that hides rows must say so even with nowhere to send the
+          // reader. Before this, an eleventh meeting simply was not there, and
+          // a list that silently truncates reads as a complete list.
+          <p className="text-xs text-muted-fg">{hidden} more not shown</p>
         ) : undefined
       }
     >
@@ -147,7 +161,8 @@ export function TimelineItem({
   now: Date;
   bucket?: Bucket;
 }) {
-  const { title, status, person, href, joinUrl, note, action, at, hasTime } = entry;
+  const { title, status, person, counterpart, href, joinUrl, note, action, at, hasTime } =
+    entry;
   const day = formatDay(at, now);
   const time = formatTimeOfDay(at, hasTime);
   const inferred = bucket ?? bucketOf(at, now);
@@ -167,6 +182,7 @@ export function TimelineItem({
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-[15px] font-medium text-ink">{title}</span>
         {person && <PersonChip person={person} size="sm" />}
+        {counterpart && <PersonChip person={counterpart} size="sm" />}
         {status && <StatusChip status={status} />}
       </span>
       {note && (

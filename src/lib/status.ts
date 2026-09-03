@@ -102,7 +102,7 @@ export type Status = {
   /** ≤ 12 words, says what to do about it. */
   explanation?: string;
   href?: string;
-  subject?: { kind: "student" | "mentor" | "program"; id: string; name: string };
+  subject?: { kind: "student" | "mentor" | "program" | "task"; id: string; name: string };
   program?: { id: string; name: string };
   /** Orders rows inside a severity band: soonest or oldest first. */
   at?: Date;
@@ -179,6 +179,14 @@ type Voice = {
   kind: Kind;
   label: (d: Detail) => string;
   explanation?: (d: Detail) => string;
+  /**
+   * This audience's wording when `rollUp` collapses several into one row.
+   *
+   * Needed because the shared `many` below is written in staff vocabulary, and
+   * it leaked: a student with five link-less mentors read "5 pairings have no
+   * booking link" on their own home page. A pairing is a row in a staff table.
+   */
+  many?: (count: number) => string;
 };
 
 type Meta = {
@@ -188,8 +196,8 @@ type Meta = {
    * audience never gets the status — which is how a student is spared "Needs a
    * real email" and a mentor is spared "Low rating".
    */
-  voices: Partial<Record<Audience, Voice>>;
-  /** Wording when `rollUp` collapses several of these into one row. */
+    voices: Partial<Record<Audience, Voice>>;
+  /** The default roll-up wording, overridden per audience by `Voice.many`. */
   many?: (count: number) => string;
 };
 
@@ -549,7 +557,11 @@ const META: Record<StatusType, Meta> = {
         label: () => "No booking link",
         explanation: () => "Students cannot book you until you add one.",
       },
-      student: { kind: "informational", label: () => "No booking link yet" },
+            student: {
+        kind: "informational",
+        label: () => "No booking link yet",
+        many: (n) => `${n} mentors have not shared a calendar`,
+      },
     },
     many: (n) => `${n} pairings have no booking link`,
   },
@@ -716,7 +728,15 @@ export function studentStatuses(
     id: s.id,
     name: s.name ?? s.email,
   };
-  const extra = { subject, href: `/students/${s.id}`, ...(s.program ? { program: s.program } : {}) };
+    // A student reading their own rows is not a subject to be named, and
+  // `/students/<id>` is a staff route that only bounces them home: every row
+  // was a link that navigated to the page it was already on, captioned with
+  // the reader's own name. Staff and mentors get both; the student gets
+  // neither, and the page supplies its own destinations.
+  const extra =
+    v.audience === "student"
+      ? {}
+      : { subject, href: `/students/${s.id}`, ...(s.program ? { program: s.program } : {}) };
   const of = (type: StatusType, detail: Detail = {}, at?: Date) =>
     status(type, v, detail, at ? { ...extra, at } : extra);
 
@@ -850,17 +870,25 @@ export type TaskStatusInput = {
    * `dueNote` + `dueOn`, so `TASK_OVERDUE` stays dormant until then rather than
    * guessing at "March-May".
    */
-  dueOn?: Date | null;
+    dueOn?: Date | null;
   student?: { id: string; name: string };
+  program?: { id: string; name: string };
 };
 
 export function taskStatuses(t: TaskStatusInput, v: ViewerContext): Status[] {
-  const extra = t.student
-    ? {
-        subject: { kind: "student" as const, id: t.student.id, name: t.student.name },
-        href: `/students/${t.student.id}`,
-      }
-    : {};
+    const extra = {
+    ...(t.student
+      ? {
+          subject: { kind: "student" as const, id: t.student.id, name: t.student.name },
+          href: `/students/${t.student.id}`,
+        }
+      : // With no student to name, the task names itself. A row reading
+        // "Overdue" with nothing beside it is a row about nothing.
+        { subject: { kind: "task" as const, id: t.id, name: t.purpose } }),
+    // Named for the same reason a student's row names it: a staff list spans
+    // programs, and a row without one leaves the reader to guess whose it is.
+    ...(t.program ? { program: t.program } : {}),
+  };
   const of = (type: StatusType, detail: Detail = {}, at?: Date) =>
     status(type, v, detail, at ? { ...extra, at } : extra);
   const out: (Status | null)[] = [];
@@ -921,9 +949,10 @@ export type MeetingStatusInput = {
   id: string;
   /** `INTERVIEW_STATUS`. */
   status: string;
-  scheduledAt: Date;
+    scheduledAt: Date;
   sessionId: string | null;
   student?: { id: string; name: string };
+  program?: { id: string; name: string };
 };
 
 /**
@@ -935,7 +964,7 @@ export type MeetingStatusInput = {
  * question.
  */
 export function meetingStatus(i: MeetingStatusInput, v: ViewerContext): Status | null {
-  const extra = {
+    const extra = {
     at: i.scheduledAt,
     ...(i.student
       ? {
@@ -943,6 +972,7 @@ export function meetingStatus(i: MeetingStatusInput, v: ViewerContext): Status |
           href: `/students/${i.student.id}`,
         }
       : {}),
+    ...(i.program ? { program: i.program } : {}),
   };
   const detail = { name: i.student?.name ?? null };
 
@@ -1009,7 +1039,11 @@ export function sortStatuses(list: Status[]): Status[] {
  * A group at or under the threshold stays expanded, because three named students
  * are more useful than the sentence "3 students…".
  */
-export function rollUp(list: Status[], opts: { threshold?: number } = {}): Status[] {
+export function rollUp(
+  list: Status[],
+  v: ViewerContext,
+  opts: { threshold?: number } = {}
+): Status[] {
   const threshold = opts.threshold ?? 3;
   const groups = new Map<StatusType, Status[]>();
   for (const s of list) {
@@ -1020,7 +1054,9 @@ export function rollUp(list: Status[], opts: { threshold?: number } = {}): Statu
 
   const out: Status[] = [];
   for (const [type, group] of groups) {
-    const many = META[type].many;
+        // This reader's wording first: a roll-up is still a sentence said to
+    // somebody, and the shared fallback is written for staff.
+    const many = META[type].voices[v.audience]?.many ?? META[type].many;
     if (group.length <= threshold || !many) {
       out.push(...group);
       continue;
@@ -1037,23 +1073,29 @@ export function rollUp(list: Status[], opts: { threshold?: number } = {}): Statu
       label: many(group.length),
       count: group.length,
       ...(program ? { program } : {}),
-      ...(at ? { at } : {}),
+            ...(at ? { at } : {}),
     });
   }
   return sortStatuses(out);
 }
 
 /**
- * What an attention list renders: rolled up, sorted, and never empty — an empty
- * list says so out loud rather than showing nothing, so "all clear" and "still
- * loading" can never look the same.
+ * What an attention list renders: rolled up and sorted.
  *
  * Informational rows are kept and sorted below the actionable ones, because
  * §6.2 puts two of them in a mentor's list on purpose ("awaiting the student's
  * answer", "pending approval"): a mentor who cannot log a session needs the
  * reason on the same screen as the disabled control. They do not count toward
- * the section's badge and they never suppress "Nothing needs you" — a list of
- * three things you cannot act on is not a list of three things to do.
+ * the section's badge — a list of three things you cannot act on is not a list
+ * of three things to do.
+ *
+ * It returns an empty array when there is nothing, and does NOT insert an
+ * `ALL_CLEAR` row. It used to, and that was a mistake: `AttentionList` already
+ * renders its own `empty` text, so every page had to filter the injected row
+ * back out — both pages built against it did, independently — and a page is
+ * the thing that knows whether the right words are "Nothing needs you" or
+ * "Nothing to do right now". `ALL_CLEAR` stays in the model for a caller that
+ * genuinely wants an all-clear row in a list of rows.
  */
 export function attentionList(
   list: Status[],
@@ -1062,20 +1104,16 @@ export function attentionList(
 ): Status[] {
   const actionable = rollUp(
     list.filter((s) => s.kind !== "informational"),
+    v,
     opts
   );
   const informational = rollUp(
     list.filter((s) => s.kind === "informational"),
+    v,
     opts
   );
 
-  const head: Status[] = [];
-  if (actionable.length === 0) {
-    const clear = status("ALL_CLEAR", v);
-    if (clear) head.push(clear);
-  }
-
-  const rows = [...head, ...actionable, ...informational];
+  const rows = [...actionable, ...informational];
   return opts.limit ? rows.slice(0, opts.limit) : rows;
 }
 

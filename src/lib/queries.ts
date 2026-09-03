@@ -24,7 +24,17 @@ import type { Prisma } from "@/generated/prisma/client";
  */
 export async function studentsWithHours(
   where: Prisma.StudentProfileWhereInput = {},
-  slice?: { skip: number; take: number }
+  slice?: { skip: number; take: number },
+  /**
+   * The instant forfeiture is judged against.
+   *
+   * A parameter rather than a call to the clock, so a page that hands one
+   * `now` to every component cannot get a different answer from its own
+   * query — the impurity `status.ts` exists to remove, and the reason the
+   * HoursRing and the ledger once disagreed by 4h 38m. Defaulted, because
+   * every existing caller means "right now".
+   */
+  now: Date = new Date()
 ) {
   const profiles = await prisma.studentProfile.findMany({
     where,
@@ -80,9 +90,13 @@ export async function studentsWithHours(
     }
   }
 
-  // allotted per student, plus forfeited hours from allocations past deadline.
-  const now = Date.now();
+    // allotted per student, plus forfeited hours from allocations past deadline.
+  const at = now.getTime();
   const allottedById = new Map<string, number>();
+  // The soonest use-by date that still has time behind it. Expiry is only
+  // worth warning about while the hours can still be spent, so a passed
+  // deadline is not a candidate — those minutes are already forfeited above.
+  const nextDeadlineById = new Map<string, Date>();
   const forfeitedById = new Map<string, number>();
   const paidById = new Map<string, number>();
   for (const a of allocations) {
@@ -90,7 +104,7 @@ export async function studentsWithHours(
     if (a.amountPaid != null) {
       paidById.set(a.studentId, (paidById.get(a.studentId) ?? 0) + a.amountPaid);
     }
-    if (a.deadline.getTime() < now) {
+        if (a.deadline.getTime() < at) {
       const used = usedByPair.get(`${a.studentId}:${a.mentorId}`) ?? 0;
       const forfeited = Math.max(0, a.minutes - used);
       if (forfeited > 0) {
@@ -98,6 +112,11 @@ export async function studentsWithHours(
           a.studentId,
           (forfeitedById.get(a.studentId) ?? 0) + forfeited
         );
+      }
+    } else {
+      const soonest = nextDeadlineById.get(a.studentId);
+      if (!soonest || a.deadline < soonest) {
+        nextDeadlineById.set(a.studentId, a.deadline);
       }
     }
   }
@@ -114,8 +133,9 @@ export async function studentsWithHours(
       missedMinutes: missed,
       extraMinutes: extraById.get(profile.id) ?? 0,
       forfeitedMinutes: forfeited,
-      amountPaid: paidById.get(profile.id) ?? 0,
+            amountPaid: paidById.get(profile.id) ?? 0,
       remainingMinutes: allotted - used - forfeited,
+      nextDeadline: nextDeadlineById.get(profile.id) ?? null,
     };
   });
 }
@@ -220,14 +240,17 @@ export async function recentMeetings({
   programId?: string;
   take?: number;
 } = {}) {
-  return prisma.session.findMany({
+    return prisma.session.findMany({
     where: {
       ...(mentorId ? { mentorId } : {}),
       ...(programId ? { student: { programId } } : {}),
     },
-    include: {
+        include: {
       mentor: true,
-      student: { include: { user: true } },
+      // The program comes along because a one-line session row names it —
+      // "Malika logged 90 min with Aziza · Master's Program" — and looking it
+      // up separately meant a second query for a string already one join away.
+      student: { include: { user: true, program: true } },
       assignment: { select: { id: true, purpose: true } },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
