@@ -8,11 +8,10 @@ import { MeetingsLog } from "@/components/meetings-log";
 import { ProgramIslandCard } from "@/components/program-island-card";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { Callout } from "@/components/ui/callout";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageTitle } from "@/components/ui/section";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatDuration } from "@/lib/format";
-import { monogramOf, programTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import {
   recentMeetings,
@@ -57,15 +56,6 @@ export default async function AdminHomePage() {
       recentMeetings({ take: 10 }),
     ]);
 
-  // Program colors go by creation order, so the card here and the banner on the
-  // program's own page always agree. Program has no createdAt, but its cuids are
-  // timestamp-prefixed, so sorting by id IS creation order. Ranked separately
-  // from the name ordering used for display.
-  const positionById = new Map(
-    [...programs]
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map((p, i) => [p.id, i] as const)
-  );
 
   const meetingTasks = await taskOptionsForSessions(meetings);
   const overall = totals(students);
@@ -75,7 +65,7 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
+      <PageTitle
         eyebrow="Freshman Academy"
         title="Cross-program dashboard"
         subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatDuration(overall.remaining)} mentoring time still to deliver.`}
@@ -138,7 +128,6 @@ export default async function AdminHomePage() {
         <StatCard
           label="Time completed"
           value={formatDuration(overall.completed)}
-          tone="brand"
         />
         {overall.missed > 0 && (
           <StatCard label="Time missed" value={formatDuration(overall.missed)} />
@@ -193,8 +182,6 @@ export default async function AdminHomePage() {
                 ]}
                 caption={`${formatDuration(pt.completed)} of ${formatDuration(pt.allotted)} completed`}
                 completion={{ completed: pt.completed, allotted: pt.allotted }}
-                tone={programTone(positionById.get(p.id) ?? 0)}
-                monogram={monogramOf(p.name)}
               />
             );
           })}

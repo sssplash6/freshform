@@ -4,7 +4,7 @@ import { ArrowUpRightIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageTitle } from "@/components/ui/section";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
@@ -57,7 +57,7 @@ export default async function StudentBookPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageTitle
         eyebrow={
           profile.cohort
             ? `${profile.program.name} / ${profile.cohort.name}`
@@ -69,7 +69,6 @@ export default async function StudentBookPage() {
             ? "Pick a mentor and choose a time on their calendar. The session shows up in your history once they log it."
             : "Your mentors haven't shared their calendars yet. Reach them on Telegram in the meantime."
         }
-        tone="warm"
       />
 
       {cards.length === 0 ? (

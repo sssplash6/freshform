@@ -63,66 +63,6 @@ export function personTone(id: string): PersonTone {
 }
 
 /**
- * DYING. The same three hues as a banner treatment, kept only so the four
- * call sites that still read it compile: the admin dashboard's program cards,
- * the program layout's banner, and the two mentor-page banners. Every one of
- * them loses its wash when `PageHeader` becomes a single plain treatment, and
- * this goes with them — a program is a place, not a face, and is identified by
- * its name.
- *
- * Keyed off the program's POSITION in creation order rather than a hash, so
- * two programs never collide while it survives.
- */
-export type ProgramTone = {
-  /** Gradient wash for a banner body. */
-  wash: string;
-  /** The hairline across the top of a banner or card. */
-  rule: string;
-  /** Small-caps eyebrow text. */
-  eyebrow: string;
-  /** Border + background for a hovered card. */
-  cardHover: string;
-};
-
-const PROGRAM_TONES: ProgramTone[] = [
-  {
-    wash: "from-tone-teal-soft to-surface",
-    rule: "bg-tone-teal-dot",
-    eyebrow: "text-tone-teal-ink",
-    cardHover: "hover:border-tone-teal-dot/60",
-  },
-  {
-    wash: "from-tone-plum-soft to-surface",
-    rule: "bg-tone-plum-dot",
-    eyebrow: "text-tone-plum-ink",
-    cardHover: "hover:border-tone-plum-dot/60",
-  },
-  {
-    wash: "from-tone-moss-soft to-surface",
-    rule: "bg-tone-moss-dot",
-    eyebrow: "text-tone-moss-ink",
-    cardHover: "hover:border-tone-moss-dot/60",
-  },
-];
-
-export function programTone(position: number): ProgramTone {
-  const i = Number.isFinite(position) && position >= 0 ? Math.floor(position) : 0;
-  return PROGRAM_TONES[i % PROGRAM_TONES.length];
-}
-
-/**
- * DYING, with `programTone`. One person's own hue as a banner treatment.
- * PROGRAM_TONES lists the same three hues in the same order as TONES, so
- * hashing an id through either lands on the same colour.
- */
-export function personBanner(id: string): ProgramTone {
-  return PROGRAM_TONES[hashIndex(id, PROGRAM_TONES.length)];
-}
-
-/** How many hues exist before they repeat. Dies with PROGRAM_TONES. */
-export const PROGRAM_TONE_COUNT = PROGRAM_TONES.length;
-
-/**
  * Up to two letters standing in for a name: first and last word, so
  * "Global Admissions Program" reads GP and "Master's Program" MP.
  */

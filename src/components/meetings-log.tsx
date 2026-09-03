@@ -4,7 +4,7 @@ import { ExpandableText } from "@/components/expandable-text";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ATTENDANCE,
@@ -138,9 +138,7 @@ export function MeetingsLog({
         }`);
 
   return (
-    <Panel tone="log">
-      <PanelHeader
-        tone="log"
+    <Section
         eyebrow={eyebrow}
         title={title}
         action={
@@ -157,7 +155,7 @@ export function MeetingsLog({
           ) : undefined
         }
         caption={tally}
-      />
+      >
 
       {sessions.length === 0 ? (
         <EmptyState framed={false} title="No meetings logged yet">
@@ -222,7 +220,7 @@ export function MeetingsLog({
                     <ExpandableText
                       text={s.assignment.purpose}
                       lines={2}
-                      className={`text-plan-ink ${voided ? "opacity-55" : ""}`}
+                      className={`text-ink ${voided ? "opacity-55" : ""}`}
                     />
                   ) : (
                     <span className="text-muted-fg">—</span>
@@ -290,6 +288,6 @@ export function MeetingsLog({
           })}
         </Table>
       )}
-    </Panel>
+    </Section>
   );
 }

@@ -11,7 +11,7 @@ import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageTitle } from "@/components/ui/section";
 import {
   ASSIGNMENT_PROGRESS,
   chargesAllocation,
@@ -130,11 +130,10 @@ export default async function MentorStudentDetailPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
+      <PageTitle
         backHref="/mentor"
         backLabel="My students"
         eyebrow={`Your student · ${profile.program.name}`}
-        monogram={initials(profile.user.name, profile.user.email)}
         // Admins who also mentor came here to look at their student, and half
         // of what they may want to DO about them — grant hours, edit the plan,
         // correct the record — only exists in the admin view of this same
@@ -197,7 +196,6 @@ export default async function MentorStudentDetailPage({
         <StatCard
           label="Completed with you"
           value={formatDuration(completed)}
-          tone="brand"
         />
         {missed > 0 && (
           <StatCard label="Missed (no-show)" value={formatDuration(missed)} />

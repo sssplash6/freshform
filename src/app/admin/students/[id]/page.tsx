@@ -13,8 +13,8 @@ import { PersonChip } from "@/components/person-chip";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageTitle } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
@@ -135,11 +135,10 @@ export default async function AdminStudentDetailPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
+      <PageTitle
         backHref={`/admin/programs/${profile.programId}/students`}
         backLabel={`${profile.program.name} students`}
         eyebrow={`Student · ${profile.program.name}`}
-        monogram={initials(profile.user.name, profile.user.email)}
         actions={
           mentorsThem ? (
             // Marked so the Alt+M shortcut can find it: this link is the only
@@ -226,13 +225,11 @@ export default async function AdminStudentDetailPage({
         }
       />
 
-      <Panel tone="total">
-        <PanelHeader
-          tone="total"
+      <Section
           eyebrow="Granted by an admin"
           title="Time by mentor"
           caption="What sessions draw down, and the date each pool expires"
-        />
+      >
         {hours.perMentor.length === 0 ? (
           <EmptyState framed={false} title="No time yet">
             Time appears here as they&apos;re granted in the panel above — under
@@ -330,7 +327,7 @@ export default async function AdminStudentDetailPage({
             ))}
           </Table>
         )}
-      </Panel>
+      </Section>
 
       <StudentFolderForm
         studentProfileId={profile.id}
@@ -346,12 +343,11 @@ export default async function AdminStudentDetailPage({
         hasSessions={ledger.sessions.length > 0}
       />
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="Audit trail"
           title="Allocation history"
           caption="Every change to this student's time, and who made it"
-        />
+      >
         {profile.allotmentChanges.length === 0 ? (
           <EmptyState framed={false}>No allocation changes yet.</EmptyState>
         ) : (
@@ -385,7 +381,7 @@ export default async function AdminStudentDetailPage({
             ))}
           </ul>
         )}
-      </Panel>
+      </Section>
     </div>
   );
 }

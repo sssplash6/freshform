@@ -4,7 +4,7 @@ import { AssignmentRowActions } from "@/components/forms/assignment-row-actions"
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ASSIGNMENT_PROGRESS, ASSIGNMENT_PROGRESS_GLYPH, ASSIGNMENT_PROGRESS_LABELS, ASSIGNMENT_PROGRESS_STATUS } from "@/lib/constants";
 import { formatDuration, formatMinutes } from "@/lib/format";
@@ -70,9 +70,7 @@ export function AssignmentsPanel({
   ];
 
   return (
-    <Panel tone="plan">
-      <PanelHeader
-        tone="plan"
+    <Section
         eyebrow="What the time is for"
         title="Tasks"
         caption={
@@ -80,7 +78,7 @@ export function AssignmentsPanel({
             ? "Nothing assigned yet"
             : `${done} of ${assignments.length} done · ${formatDuration(planned)} budgeted`
         }
-      />
+      >
 
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="No tasks yet">
@@ -227,6 +225,6 @@ export function AssignmentsPanel({
           />
         </div>
       )}
-    </Panel>
+    </Section>
   );
 }

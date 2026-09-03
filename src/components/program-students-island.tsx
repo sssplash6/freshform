@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { formatDuration } from "@/lib/format";
 import type { ProgramOption, StudentWithHours } from "@/lib/queries";
 
@@ -32,9 +32,7 @@ export function ProgramStudentsIsland({
   );
 
   return (
-    <Panel tone="total">
-      <PanelHeader
-        tone="total"
+    <Section
         eyebrow="Program"
         title={
           programHref ? (
@@ -46,7 +44,7 @@ export function ProgramStudentsIsland({
           )
         }
         caption={`${students.length} student${students.length === 1 ? "" : "s"} · ${formatDuration(totals.completed)} of ${formatDuration(totals.allotted)} completed`}
-      />
+      >
       <StudentsTable
         students={students}
         showProgram={false}
@@ -57,6 +55,6 @@ export function ProgramStudentsIsland({
       <div className="border-t border-line px-4 py-4 sm:px-5">
         <AddStudentsForm program={program} />
       </div>
-    </Panel>
+    </Section>
   );
 }

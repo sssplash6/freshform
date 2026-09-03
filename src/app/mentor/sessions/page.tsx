@@ -268,7 +268,7 @@ export default async function MentorSessionsPage({
                       </Td>
                       <Td
                         label="Task"
-                        className="text-plan-ink sm:max-w-56 sm:truncate"
+                        className="text-ink sm:max-w-56 sm:truncate"
                       >
                         {s.assignment?.purpose ?? "—"}
                       </Td>

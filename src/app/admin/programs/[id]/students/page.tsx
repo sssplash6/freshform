@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { AddStudentsForm } from "@/components/forms/add-students-form";
 import { StudentsTable } from "@/components/students-table";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
@@ -39,9 +39,7 @@ export default async function AdminProgramStudentsPage({
 
   return (
     <div className="space-y-8">
-      <Panel tone="total">
-        <PanelHeader
-          tone="total"
+      <Section
           eyebrow="Enrolled"
           title="Students"
           caption={
@@ -49,7 +47,7 @@ export default async function AdminProgramStudentsPage({
               ? "Nobody enrolled yet"
               : `${students.length} student${students.length === 1 ? "" : "s"} · ${formatDuration(totals.completed)} of ${formatDuration(totals.allotted)} completed`
           }
-        />
+      >
         <StudentsTable
           students={students}
           showProgram={false}
@@ -60,7 +58,7 @@ export default async function AdminProgramStudentsPage({
         <div className="border-t border-line px-4 py-4 sm:px-5">
           <AddStudentsForm program={programOption} />
         </div>
-      </Panel>
+      </Section>
     </div>
   );
 }

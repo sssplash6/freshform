@@ -9,7 +9,7 @@ import {
 } from "@/lib/actions/students";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Input } from "@/components/ui/field";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { ProgramOption } from "@/lib/queries";
 
@@ -44,8 +44,8 @@ export function StudentCorrections({
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
   return (
-    <Panel>
-      <PanelHeader eyebrow="Admin only" title="Corrections" />
+    <Section eyebrow="Admin only" title="Corrections"
+      >
       <div className="px-4 py-4 sm:px-5">
       <p className="text-xs text-muted-fg">
         The address they sign in with. Students brought over from the tracking
@@ -160,6 +160,6 @@ export function StudentCorrections({
         <ActionFeedback state={deleteState} />
       </div>
       </div>
-    </Panel>
+    </Section>
   );
 }

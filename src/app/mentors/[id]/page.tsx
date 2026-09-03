@@ -6,11 +6,11 @@ import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { OwnNameForm } from "@/components/forms/own-name-form";
 import { ArrowUpRightIcon } from "@/components/icons";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageTitle } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
-import { initials, personBanner } from "@/lib/person-tone";
+import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere, mentorAssignments } from "@/lib/queries";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -79,7 +79,6 @@ export default async function MentorProfilePage({
   }
 
   const name = mentor.name ?? mentor.email;
-  const banner = personBanner(mentor.id);
   const bookable = visible.filter((a) => a.calendlyUrl);
 
   return (
@@ -88,7 +87,7 @@ export default async function MentorProfilePage({
           so the page opens with the mentor's face; for the owner it is left out
           here because the edit panel below shows it next to the upload button,
           and one page does not need two of the same face. */}
-      <PageHeader
+      <PageTitle
         backHref={isStudent ? "/student/book" : undefined}
         backLabel={isStudent ? "Book a session" : undefined}
         eyebrow="Mentor"
@@ -117,13 +116,11 @@ export default async function MentorProfilePage({
         // The ghost initials say the same thing the picture beside them already
         // does, and a long subtitle runs into them. Only the owner's banner —
         // which carries no picture — keeps the watermark.
-        monogram={isSelf ? initials(mentor.name, mentor.email) : undefined}
-        programTone={banner}
       />
 
       {isSelf && (
-        <Panel tone="neutral">
-          <PanelHeader eyebrow="Yours to edit" title="Picture and name" />
+        <Section eyebrow="Yours to edit" title="Picture and name"
+      >
           <div className="space-y-5 p-4 sm:p-5">
             <AvatarForm
               person={{
@@ -137,7 +134,7 @@ export default async function MentorProfilePage({
               <OwnNameForm defaultName={mentor.name ?? ""} />
             </div>
           </div>
-        </Panel>
+        </Section>
       )}
 
       {/* Booking links. Editable for the owner, one scoped link for a student,
@@ -158,9 +155,7 @@ export default async function MentorProfilePage({
           </EmptyState>
         )
       ) : (
-        <Panel tone={bookable.length > 0 ? "total" : "neutral"}>
-          <PanelHeader
-            tone={bookable.length > 0 ? "total" : "neutral"}
+        <Section
             eyebrow="Booking"
             title={isStudent ? "Book a session" : "Booking links"}
             caption={
@@ -168,7 +163,7 @@ export default async function MentorProfilePage({
                 ? undefined
                 : `${bookable.length} of ${visible.length} set`
             }
-          />
+      >
           <ul className="divide-y divide-line">
             {visible.map((a) => (
               <li
@@ -201,7 +196,7 @@ export default async function MentorProfilePage({
               </li>
             ))}
           </ul>
-        </Panel>
+        </Section>
       )}
     </div>
   );

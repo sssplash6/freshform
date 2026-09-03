@@ -4,8 +4,8 @@ import { setWeeklyDigest } from "@/lib/actions/email-prefs";
 import { ROLES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageTitle } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { requireUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
@@ -63,16 +63,13 @@ export default async function NotificationsPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
+      <PageTitle
         eyebrow={unread > 0 ? `${unread} unread` : "All caught up"}
         title="Notifications"
         subtitle={blurb}
-        tone={unread > 0 ? "warm" : "brand"}
       />
 
-      <Panel tone={unread > 0 ? "total" : "neutral"}>
-        <PanelHeader
-          tone={unread > 0 ? "total" : "neutral"}
+      <Section
           eyebrow="Newest first"
           title={unread > 0 ? "New for you" : "Recent activity"}
           action={
@@ -84,7 +81,7 @@ export default async function NotificationsPage({
               </form>
             ) : undefined
           }
-        />
+      >
 
         {notifications.length === 0 ? (
           <EmptyState framed={false} title="Nothing yet">
@@ -104,12 +101,12 @@ export default async function NotificationsPage({
             />
           </>
         )}
-      </Panel>
+      </Section>
 
       {/* The signed-in way to switch the weekly email off. The other way is the
           link in its own footer, for people who won't sign in to say stop. */}
-      <Panel tone="neutral">
-        <PanelHeader eyebrow="By email" title="Weekly time summary" />
+      <Section eyebrow="By email" title="Weekly time summary"
+      >
         <form
           action={setWeeklyDigest}
           className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-4 sm:p-5"
@@ -132,7 +129,7 @@ export default async function NotificationsPage({
             Save
           </Button>
         </form>
-      </Panel>
+      </Section>
     </div>
   );
 }

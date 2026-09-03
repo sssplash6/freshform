@@ -44,20 +44,6 @@
   --color-ink: #1a2733; /* primary text */
   --color-muted-fg: #6b7480; /* secondary text */
 
-  /* ---- Panel identity ------------------------------------------------- *
-   * The student ledger has two halves with two different owners, and the
-   * spreadsheet it replaces already colored them apart. Amber = the meetings
-   * log, which mentors fill in by logging sessions. Violet = the plan, which
-   * only an admin assigns. The hue tells you who owns the half before you
-   * read a word of it. */
-  --color-log-soft: #fdf3de;
-  --color-log-line: #f2dcb0;
-  --color-log-ink: #8a5a08;
-
-  --color-plan-soft: #efecfd;
-  --color-plan-line: #dbd4fa;
-  --color-plan-ink: #5638cf;
-
   /* ---- Person identity ------------------------------------------------ *
    * One stable colour per person, so the same mentor is the same colour in
    * every table (see lib/person-tone.ts). THREE, not eight: eight hues meant

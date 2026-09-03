@@ -12,7 +12,7 @@ import {
 } from "@/components/forms/program-settings-forms";
 import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../../config/app-config";
 import { requireRole } from "@/lib/dal";
@@ -87,8 +87,7 @@ export default async function AdminProgramSettingsPage({
 
   return (
     <div className="space-y-8">
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="Identity"
           title="Name"
           caption={
@@ -96,14 +95,13 @@ export default async function AdminProgramSettingsPage({
               ? "Billing rules match on this name — renaming it turns them off"
               : "Shown everywhere this program appears"
           }
-        />
+      >
         <div className="px-4 py-4 sm:px-5">
           <RenameProgramForm programId={program.id} currentName={program.name} />
         </div>
-      </Panel>
+      </Section>
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="Structure"
           title="Cohorts"
           caption={
@@ -111,7 +109,7 @@ export default async function AdminProgramSettingsPage({
               ? "Flat program — students belong to it directly"
               : `${program.cohorts.length} cohort${program.cohorts.length === 1 ? "" : "s"}`
           }
-        />
+      >
         {program.cohorts.length > 0 && (
           <ul className="divide-y divide-line/60 text-sm">
             {program.cohorts.map((c) => {
@@ -151,10 +149,9 @@ export default async function AdminProgramSettingsPage({
           </p>
           <CreateCohortForm programId={program.id} />
         </div>
-      </Panel>
+      </Section>
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="People"
           title="Mentors"
           action={
@@ -165,7 +162,7 @@ export default async function AdminProgramSettingsPage({
               Register a new mentor →
             </Link>
           }
-        />
+      >
         {pairings.length === 0 ? (
           <EmptyState framed={false} title="No mentors assigned">
             Assign one below, or allocate a student time from any mentor and
@@ -207,14 +204,13 @@ export default async function AdminProgramSettingsPage({
             />
           </div>
         )}
-      </Panel>
+      </Section>
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="People"
           title="Enrolled students"
           caption="Removing a student deletes their account, enrollment and allocations"
-        />
+      >
         {students.length === 0 ? (
           <EmptyState framed={false} title="Nobody enrolled">
             Register students on the Students tab.
@@ -248,14 +244,13 @@ export default async function AdminProgramSettingsPage({
             ))}
           </ul>
         )}
-      </Panel>
+      </Section>
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="Danger zone"
           title="Close this program"
           caption="Only possible once nothing is left in it"
-        />
+      >
         <div className="px-4 py-4 sm:px-5">
           <DeleteProgramButton
             programId={program.id}
@@ -263,7 +258,7 @@ export default async function AdminProgramSettingsPage({
             blockedReason={blockedReason}
           />
         </div>
-      </Panel>
+      </Section>
     </div>
   );
 }

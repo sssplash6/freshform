@@ -9,7 +9,8 @@ import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StudentGoals } from "@/components/student-goals";
 import { StudentJourney } from "@/components/student-journey";
 import { Callout } from "@/components/ui/callout";
-import { PageHeader } from "@/components/ui/page-header";
+import { Eyebrow } from "@/components/ui/section";
+import { PageTitle } from "@/components/ui/section";
 import { ROLES, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
@@ -43,12 +44,10 @@ export default async function StudentHomePage() {
   if (user.status === USER_STATUS.PENDING) {
     return (
       <div className="space-y-4">
-        <PageHeader
+        <PageTitle
           eyebrow={enrollmentLabel}
           title="Registration received"
           subtitle="You're on the list. There's one step left before your time appear."
-          tone="warm"
-          monogram={initials(user.name, user.email)}
         />
         <Callout tone="info">
           An admin is reviewing your registration. Once approved, your mentoring
@@ -75,27 +74,24 @@ export default async function StudentHomePage() {
       {/* The one question a student opens this app to answer, given a shape —
           and immediately under it, where the rest of the allotment went, so the
           balance never has to be taken on trust. */}
-      <section className="lift-in relative overflow-hidden rounded-2xl border border-line bg-surface">
-        <div className="h-[3px] w-full bg-accent" aria-hidden="true" />
-        <div className="relative bg-gradient-to-br from-accent-soft to-surface px-5 py-6 sm:px-7">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-8 right-4 select-none text-[120px] font-black leading-none tracking-tighter text-ink/[0.045]"
-          >
-            {initials(user.name, user.email)}
-          </span>
-          <div className="relative flex flex-wrap items-center justify-between gap-x-8 gap-y-6">
+      {/* The one question a student opens this app to answer, given a shape —
+          and immediately under it, where the rest of the allotment went, so the
+          balance never has to be taken on trust.
+
+          A plain card: the orange gradient wash and the 120px ghost initials
+          behind the text are gone. The ring is the page's colour. */}
+      <section className="lift-in overflow-hidden rounded-2xl border border-line bg-surface">
+        <div className="px-5 py-6 sm:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-6">
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.11em] text-accent-ink">
-                {enrollmentLabel}
-              </div>
+              <Eyebrow>{enrollmentLabel}</Eyebrow>
               <h1 className="mt-1.5 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[34px]">
                 Hi, {firstName}
               </h1>
               <p className="mt-2 max-w-md text-[15px] text-muted-fg">
                 {hours.remaining > 0
-                  ? `You have ${formatDuration(hours.remaining)} mentoring time left to use${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
-                  : "Your mentoring time are all used up. Talk to your program contact about topping up."}
+                  ? `You have ${formatDuration(hours.remaining)} of mentoring time left${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
+                  : "Your mentoring time is used up. Ask your program contact about more."}
               </p>
 
               <Link

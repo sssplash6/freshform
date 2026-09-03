@@ -1,0 +1,140 @@
+import Link from "next/link";
+import type { ComponentProps } from "react";
+
+import { ArrowLeftIcon } from "@/components/icons";
+import { cn } from "@/lib/cn";
+
+/**
+ * Page and section chrome: one treatment each, no tones.
+ *
+ * What this replaces was a system where a region's colour said who owned its
+ * data — amber for what mentors logged, violet for what admins planned, blue
+ * for what was derived — carried over from the spreadsheet these pages
+ * replaced. It was a defensible idea that did not survive contact with a real
+ * screen: the student home stacked violet, amber, violet and blue panels under
+ * an orange hero, and a mentor's identity chip could be the same amber as the
+ * panel behind it. The eyebrow already says who owns the region in words, so
+ * the tint was saying it a second time in a language with four words in it.
+ *
+ * Hierarchy now comes from weight, size and space, per DESIGN.md's own rule:
+ * use a rule and whitespace before reaching for a container.
+ */
+
+/** Small-caps label above a title. One size, one colour, everywhere. */
+export function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    // 11px, not the 10px this replaces in nine variants: 10px uppercase with
+    // letter-spacing is sub-readable on a phone, which is where students are.
+    <div
+      className={cn(
+        "text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The page's title block. A back-link, an eyebrow, the h1, one line of subtitle
+ * and an actions cluster — on the page ground, in no card.
+ *
+ * No wash, no 3px coloured rule, no oversized ghost monogram. The monogram in
+ * particular was a 104px letterform behind the text on eight pages, which is
+ * where a long subtitle went to become unreadable.
+ */
+export function PageTitle({
+  backHref,
+  backLabel,
+  eyebrow,
+  title,
+  subtitle,
+  actions,
+  leading,
+  className,
+}: {
+  backHref?: string;
+  backLabel?: React.ReactNode;
+  eyebrow?: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  actions?: React.ReactNode;
+  /** Left of the title — a profile picture, so a person's page opens with them. */
+  leading?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-2.5", className)}>
+      {backHref && (
+        <Link
+          href={backHref}
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-muted-fg hover:text-ink"
+        >
+          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+          {backLabel}
+        </Link>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+        {leading && <div className="shrink-0">{leading}</div>}
+        <div className="min-w-0 flex-1">
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+          <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
+            {title}
+          </h1>
+          {subtitle && <div className="mt-1.5 text-[15px] text-muted-fg">{subtitle}</div>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A titled region. A hairline header on the page's own card, and nothing else.
+ *
+ * `count` is a slot rather than part of the title because a count belongs to
+ * the thing being counted: eight call sites concatenated their own — "3 logged
+ * · 1 scheduled · 2 of 8 tasks open" — and each invented its own grammar.
+ */
+export function Section({
+  eyebrow,
+  title,
+  count,
+  caption,
+  action,
+  children,
+  className,
+  ...props
+}: Omit<ComponentProps<"section">, "title"> & {
+  eyebrow?: React.ReactNode;
+  title: React.ReactNode;
+  count?: number;
+  caption?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn("overflow-hidden rounded-2xl border border-line bg-surface", className)}
+      {...props}
+    >
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-3.5 sm:px-5">
+        <div className="min-w-0">
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+          <h2 className="mt-0.5 flex items-baseline gap-1.5 text-[17px] font-bold tracking-tight text-ink">
+            {/* min-w-0 so the truncate actually truncates: on a flex child
+                without it the text sets the width and the row grows instead. */}
+            <span className="min-w-0 truncate">{title}</span>
+            {count != null && (
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-fg">
+                {count}
+              </span>
+            )}
+          </h2>
+        </div>
+        {action ?? (caption ? <p className="text-xs text-muted-fg">{caption}</p> : null)}
+      </div>
+      {children}
+    </section>
+  );
+}

@@ -1,6 +1,6 @@
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import {
   ATTENDANCE,
   attendanceOf,
@@ -36,9 +36,7 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
     .reduce((sum, s) => sum + s.minutes, 0);
 
   return (
-    <Panel tone="log">
-      <PanelHeader
-        tone="log"
+    <Section
         eyebrow="Logged by your mentors"
         title="Meetings you've had"
         caption={
@@ -48,7 +46,7 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                 extra > 0 ? ` · ${formatDuration(extra)} extra` : ""
               }`
         }
-      />
+      >
 
       {sessions.length === 0 ? (
         <EmptyState framed={false} title="No meetings yet">
@@ -104,7 +102,7 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                   </div>
 
                   {s.assignment && (
-                    <p className="mt-1.5 text-[13px] font-medium text-plan-ink">
+                    <p className="mt-1.5 text-[13px] font-medium text-ink">
                       {s.assignment.purpose}
                     </p>
                   )}
@@ -140,6 +138,6 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
           })}
         </ol>
       )}
-    </Panel>
+    </Section>
   );
 }

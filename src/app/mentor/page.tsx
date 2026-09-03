@@ -8,8 +8,8 @@ import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
-import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageTitle } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
@@ -401,7 +401,7 @@ export default async function MentorHomePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageTitle
         eyebrow="Mentor"
         title={`Hi, ${user.name?.split(" ")[0] ?? "there"}`}
         subtitle={`Assigned to ${
@@ -411,7 +411,6 @@ export default async function MentorHomePage({
             )
             .join(", ") || "no programs yet"
         }.`}
-        monogram={initials(user.name, user.email)}
       />
 
       <StatCardGrid>
@@ -420,7 +419,6 @@ export default async function MentorHomePage({
         <StatCard
           label="Time delivered"
           value={formatDuration(deliveredMinutes)}
-          tone="brand"
         />
         {missedMinutes > 0 && (
           <StatCard label="Time missed" value={formatDuration(missedMinutes)} />
@@ -484,9 +482,7 @@ export default async function MentorHomePage({
         </p>
       ) : (
         [...byProgram.entries()].map(([programId, group]) => (
-          <Panel key={programId} tone="total">
-            <PanelHeader
-              tone="total"
+          <Section key={programId}
               eyebrow="Your students"
               title={group.name}
               caption={`${group.students.length} student${
@@ -494,7 +490,7 @@ export default async function MentorHomePage({
               } · ${formatDuration(
                 group.students.reduce((sum, s) => sum + s.remaining, 0),
               )} remaining with you`}
-            />
+      >
             <Table columns={studentColumns} framed={false}>
               {group.students.map((s, i) => (
                 <Tr
@@ -584,7 +580,7 @@ export default async function MentorHomePage({
                 </Tr>
               ))}
             </Table>
-          </Panel>
+          </Section>
         ))
       )}
 

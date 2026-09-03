@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { ProgramTabs } from "@/components/program-tabs";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageTitle } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDuration } from "@/lib/format";
-import { monogramOf, programTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
 
@@ -36,7 +35,6 @@ export default async function ProgramLayout({
       where: { programId: program.id },
       select: { mentorId: true },
     }),
-    // Position in creation order picks this program's hue (see programTone).
     // Program has no createdAt; cuids are timestamp-prefixed, so id order is
     // creation order, and this must match the ranking on the dashboard.
     prisma.program.count({ where: { id: { lt: program.id } } }),
@@ -48,12 +46,10 @@ export default async function ProgramLayout({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageTitle
         backHref="/admin"
         backLabel="Dashboard"
         eyebrow="Program"
-        programTone={programTone(position)}
-        monogram={monogramOf(program.name)}
         title={program.name}
         subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} still to deliver.`}
       />

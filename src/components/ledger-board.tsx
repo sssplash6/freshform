@@ -2,7 +2,7 @@ import { ExpandableText } from "@/components/expandable-text";
 import { HoursBreakdown } from "@/components/hours-breakdown";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import {
   ASSIGNMENT_PROGRESS,
   ASSIGNMENT_PROGRESS_GLYPH,
@@ -109,7 +109,7 @@ function UpcomingMeetingRow({
     <li className="flex gap-3 px-4 py-2.5 sm:px-5">
       <span
         aria-hidden="true"
-        className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-plan-line bg-plan-soft text-plan-ink"
+        className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-canvas text-muted-fg"
       >
         <CalendarIcon className="h-4 w-4" />
       </span>
@@ -164,7 +164,7 @@ function LoggedMeetingRow({ session }: { session: LedgerSession }) {
           {formatDate(session.date)}
         </span>
         {session.assignment && (
-          <span className="truncate text-xs font-medium text-plan-ink">
+          <span className="min-w-0 truncate text-xs font-medium text-ink">
             {session.assignment.purpose}
           </span>
         )}
@@ -301,13 +301,11 @@ export function LedgerBoard({
   );
 
   return (
-    <Panel tone="total">
-      <PanelHeader
-        tone="total"
+    <Section
         eyebrow="At a glance"
         title="Meetings and plan"
         caption={`${activeCount} logged · ${ahead.length} scheduled · ${open.length} of ${assignments.length} tasks open`}
-      />
+      >
 
       {/* The sheet's right-hand totals, given the width they deserve. */}
       <div className="border-b border-line px-4 py-4 sm:px-5">
@@ -388,6 +386,6 @@ export function LedgerBoard({
           )}
         </div>
       </div>
-    </Panel>
+    </Section>
   );
 }

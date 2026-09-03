@@ -1,7 +1,7 @@
 import { CheckIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { ASSIGNMENT_PROGRESS } from "@/lib/constants";
 import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -98,9 +98,7 @@ export function StudentGoals({
   );
 
   return (
-    <Panel tone="plan">
-      <PanelHeader
-        tone="plan"
+    <Section
         eyebrow="Planned with your team"
         title="What we're working on"
         caption={
@@ -108,7 +106,7 @@ export function StudentGoals({
             ? undefined
             : `${done.length} of ${assignments.length} finished`
         }
-      />
+      >
 
       {assignments.length === 0 ? (
         <EmptyState framed={false} title="Nothing planned yet">
@@ -119,7 +117,7 @@ export function StudentGoals({
         <div className="space-y-5 px-4 py-4 sm:px-5">
           {active.length > 0 && (
             <section>
-              <h2 className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.08em] text-plan-ink">
+              <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted-fg">
                 In progress now
               </h2>
               <ul className="grid gap-3 sm:grid-cols-2">
@@ -177,6 +175,6 @@ export function StudentGoals({
           )}
         </div>
       )}
-    </Panel>
+    </Section>
   );
 }

@@ -2,7 +2,7 @@ import { DeadlineText } from "@/components/ui/status-chip";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -37,9 +37,7 @@ export function MentorHoursList({
   // show as their own row but aren't a mentor to count.
   const mentorCount = items.filter((m) => m.mentor).length;
   return (
-    <Panel tone="total">
-      <PanelHeader
-        tone="total"
+    <Section
         eyebrow="Your team"
         title="Time with each mentor"
         caption={
@@ -47,7 +45,7 @@ export function MentorHoursList({
             ? undefined
             : `${mentorCount} mentor${mentorCount === 1 ? "" : "s"} working with you`
         }
-      />
+      >
       {items.length === 0 ? (
         <EmptyState framed={false} title="No mentor hours yet">
           An admin will allocate your mentoring time soon. They&apos;ll appear
@@ -89,7 +87,6 @@ export function MentorHoursList({
               <Meter
                 className="mt-2.5"
                 pct={overdrawn ? 100 : pct}
-                tone={overdrawn || m.expired ? "danger" : "accent"}
                 ariaValueNow={used}
                 ariaValueMax={m.allocated}
                 ariaLabel={`Time used with ${m.mentor ? (m.mentor.name ?? m.mentor.email) : "your unassigned pool"}`}
@@ -114,6 +111,6 @@ export function MentorHoursList({
         })}
       </ul>
       )}
-    </Panel>
+    </Section>
   );
 }

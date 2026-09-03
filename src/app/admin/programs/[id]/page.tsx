@@ -5,7 +5,7 @@ import { MeetingsLog } from "@/components/meetings-log";
 import { PersonChip } from "@/components/person-chip";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
@@ -182,7 +182,6 @@ export default async function AdminProgramOverviewPage({
         <StatCard
           label="Time remaining"
           value={formatDuration(totals.remaining)}
-          tone={totals.remaining < 0 ? "danger" : "default"}
         />
         {isMasters && (
           <StatCard label="Total paid" value={formatMoney(totalPaid)} />
@@ -190,12 +189,11 @@ export default async function AdminProgramOverviewPage({
       </StatCardGrid>
 
       {attention.length > 0 && (
-        <Panel>
-          <PanelHeader
+        <Section
             eyebrow="Worth a look"
             title="Needs attention"
             caption={`${attention.length} of ${students.length} student${students.length === 1 ? "" : "s"}`}
-          />
+      >
           <ul className="divide-y divide-line/60">
             {attention.map(({ student, flags }, i) => (
               <li
@@ -219,7 +217,7 @@ export default async function AdminProgramOverviewPage({
               </li>
             ))}
           </ul>
-        </Panel>
+        </Section>
       )}
 
       <MeetingsLog
@@ -231,9 +229,7 @@ export default async function AdminProgramOverviewPage({
         manage={{ isAdmin: true, tasksBySession: meetingTasks }}
       />
 
-      <Panel tone="plan">
-        <PanelHeader
-          tone="plan"
+      <Section
           eyebrow="What the time is for"
           title="Tasks in flight"
           caption={
@@ -241,7 +237,7 @@ export default async function AdminProgramOverviewPage({
               ? "Nothing open"
               : `${openTasks.length} open · ${formatDuration(plannedMinutes)} budgeted${openTasks.length > shownTasks.length ? ` · showing ${shownTasks.length}` : ""}`
           }
-        />
+      >
         {openTasks.length === 0 ? (
           <EmptyState framed={false} title="No open tasks">
             Tasks arrive with the time an admin allocates for them — open a
@@ -313,10 +309,9 @@ export default async function AdminProgramOverviewPage({
             ))}
           </Table>
         )}
-      </Panel>
+      </Section>
 
-      <Panel>
-        <PanelHeader
+      <Section
           eyebrow="Teaching here"
           title="Mentors"
           action={
@@ -327,7 +322,7 @@ export default async function AdminProgramOverviewPage({
               Assign or remove mentors →
             </Link>
           }
-        />
+      >
         {pairings.length === 0 ? (
           <EmptyState framed={false} title="No mentors yet">
             Assign mentors to {program.name} in Settings, and their booking links
@@ -359,7 +354,7 @@ export default async function AdminProgramOverviewPage({
             ))}
           </ul>
         )}
-      </Panel>
+      </Section>
     </div>
   );
 }

@@ -11,13 +11,13 @@ import { StatCard, StatCardGrid } from "@/components/stat-card";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
-import { PageHeader } from "@/components/ui/page-header";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageTitle } from "@/components/ui/section";
+import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { formatDate, formatDuration } from "@/lib/format";
-import { initials, personBanner } from "@/lib/person-tone";
+import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorOverview, mentorPrograms } from "@/lib/queries";
 import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
@@ -102,12 +102,10 @@ export default async function AdminMentorDetailPage({
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <PageHeader
+        <PageTitle
           backHref="/admin/mentors"
           backLabel="Mentors"
           eyebrow="Mentor"
-          programTone={personBanner(mentor.id)}
-          monogram={initials(mentor.name, mentor.email)}
           title={
             <span className="flex flex-wrap items-center gap-3">
               {name}
@@ -159,12 +157,10 @@ export default async function AdminMentorDetailPage({
         be three separate cards, which left the numbers looking unrelated to the
         filter that had just decided them.
       */}
-      <Panel tone="total">
-        <PanelHeader
-          tone="total"
+      <Section
           eyebrow="Time"
           title="Delivery record"
-        />
+      >
 
         <MentorHoursFilter
           base={`/admin/mentors/${mentor.id}`}
@@ -183,7 +179,6 @@ export default async function AdminMentorDetailPage({
             <StatCard
               label="Time delivered"
               value={formatDuration(totals.delivered)}
-              tone="brand"
               lead
             />
             <StatCard label="Meetings" value={String(totals.sessions)} />
@@ -194,7 +189,6 @@ export default async function AdminMentorDetailPage({
             <StatCard
               label="Time remaining"
               value={formatDuration(totals.remaining)}
-              tone={totals.remaining < 0 ? "danger" : "default"}
             />
             {rated && (
               <StatCard
@@ -256,7 +250,6 @@ export default async function AdminMentorDetailPage({
                           className="mt-2 max-w-44"
                           size="sm"
                           pct={row.remaining < 0 ? 100 : pct}
-                          tone={row.remaining < 0 ? "danger" : "accent"}
                           ariaValueNow={gone}
                           ariaValueMax={row.allocated}
                           ariaLabel={`Time used in ${row.name}`}
@@ -344,7 +337,7 @@ export default async function AdminMentorDetailPage({
             </div>
           </>
         )}
-      </Panel>
+      </Section>
 
       <MeetingsLog
         sessions={shownMeetings}
@@ -358,12 +351,10 @@ export default async function AdminMentorDetailPage({
         }
       />
 
-      <Panel tone="total">
-        <PanelHeader
-          tone="total"
+      <Section
           eyebrow="Holding time from this mentor"
           title="Students"
-        />
+      >
         {overview.students.length === 0 ? (
           <EmptyState framed={false} title="No students yet">
             An admin allocates a student&apos;s time from a mentor on the
@@ -434,7 +425,7 @@ export default async function AdminMentorDetailPage({
             ))}
           </Table>
         )}
-      </Panel>
+      </Section>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusChip } from "@/components/ui/status-chip";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { INTERVIEW_STATUS } from "@/lib/constants";
 import { formatMeetingWhen, formatUntil, toDateInputValue, toTimeInputValue } from "@/lib/format";
 import { awaitingAnswer, splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
@@ -32,7 +32,7 @@ function DateLeaf({ date, muted }: { date: Date; muted?: boolean }) {
         "flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border",
         muted
           ? "border-line bg-canvas text-muted-fg"
-          : "border-plan-line bg-plan-soft text-plan-ink",
+          : "border-line bg-canvas text-ink",
       )}
     >
       <span className="text-[10px] font-bold uppercase tracking-[0.08em]">
@@ -218,13 +218,11 @@ export function ScheduledMeetings({
         }`;
 
   return (
-    <Panel tone="plan">
-      <PanelHeader
-        tone="plan"
+    <Section
         eyebrow="Scheduled ahead"
         title={title}
         caption={caption}
-      />
+      >
 
       {toolbar && (
         <div className="border-b border-line px-4 py-3.5 sm:px-5">{toolbar}</div>
@@ -248,6 +246,6 @@ export function ScheduledMeetings({
           ))}
         </ul>
       )}
-    </Panel>
+    </Section>
   );
 }

@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { Input } from "@/components/ui/field";
-import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Section } from "@/components/ui/section";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { setStudentFolder } from "@/lib/actions/students";
 
@@ -24,12 +24,11 @@ export function StudentFolderForm({
   const [state, action] = useActionState(setStudentFolder, null);
 
   return (
-    <Panel>
-      <PanelHeader
+    <Section
         eyebrow="Set by staff"
         title="Student folder"
         action={currentFolderUrl ? <StudentFolderLink url={currentFolderUrl} /> : undefined}
-      />
+      >
       <div className="px-4 py-4 sm:px-5">
       <p className="text-xs text-muted-fg">
         A link to the student&apos;s folder (Drive, Docs, …). Every mentor working
@@ -56,6 +55,6 @@ export function StudentFolderForm({
       </form>
       <ActionFeedback state={state} />
       </div>
-    </Panel>
+    </Section>
   );
 }

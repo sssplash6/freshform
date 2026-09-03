@@ -6,7 +6,6 @@ import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { ArrowRightIcon } from "@/components/icons";
 import { Meter } from "@/components/ui/meter";
 import { cn } from "@/lib/cn";
-import type { ProgramTone } from "@/lib/person-tone";
 
 /**
  * A compact program "island": a few headline numbers on a card that expands
@@ -24,8 +23,6 @@ export function ProgramIslandCard({
   stats,
   caption,
   completion,
-  tone,
-  monogram,
 }: {
   name: string;
   href: string;
@@ -33,8 +30,6 @@ export function ProgramIslandCard({
   stats: { label: string; value: string; danger?: boolean; brand?: boolean }[];
   caption: string;
   completion?: { completed: number; allotted: number };
-  tone?: ProgramTone;
-  monogram?: string;
 }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const [tilt, setTilt] = useState<CSSProperties>({});
@@ -59,21 +54,13 @@ export function ProgramIslandCard({
       style={tilt}
       className={cn(
         "group relative block overflow-hidden rounded-xl border border-line bg-surface pb-5 pl-5 pr-5 pt-[21px] transition-[transform,box-shadow,border-color] duration-150 ease-out [transform-style:preserve-3d] hover:shadow-soft",
-        tone?.cardHover ?? "hover:border-accent/60",
+        "hover:border-brand/40",
       )}
     >
       <span
         aria-hidden="true"
-        className={cn("absolute inset-x-0 top-0 h-[3px]", tone?.rule ?? "bg-line")}
+        className="absolute inset-x-0 top-0 h-[3px] bg-line"
       />
-      {monogram && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-5 right-2 select-none text-[64px] font-black leading-none tracking-tighter text-ink/[0.04]"
-        >
-          {monogram}
-        </span>
-      )}
       <div className="relative flex items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{name}</h3>
         {cohortCount > 0 && (
