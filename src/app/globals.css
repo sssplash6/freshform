@@ -245,3 +245,24 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * The row a link just arrived at.
+ *
+ * `/sessions/new`'s receipt links to `#session-<id>` on the sessions page, and
+ * a browser scrolls there without saying which of twenty-five near-identical
+ * rows it meant. The tint fades out, because after a second the reader has
+ * found it and a permanently highlighted row is a row that looks selected.
+ */
+@keyframes land {
+  from { background-color: var(--color-brand-soft); }
+  to { background-color: transparent; }
+}
+
+:target {
+  animation: land 2.5s ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :target { animation: none; background-color: var(--color-brand-soft); }
+}

@@ -245,7 +245,14 @@ export default async function MentorSessionsPage({
                 {sessions.map((s) => {
                   const voided = s.status === SESSION_STATUS.VOIDED;
                   return (
-                    <Tr key={s.id} className={voided ? "opacity-50" : ""}>
+                    <Tr
+                      key={s.id}
+                      // The receipt on /sessions/new links here, so a mentor
+                      // who reads "90 min" and meant 60 lands on their own row
+                      // with its Correct menu already in front of them.
+                      id={`session-${s.id}`}
+                      className={voided ? "opacity-50" : ""}
+                    >
                       <Td label="Date" className="tabular-nums">
                         {formatDate(s.date)}
                       </Td>

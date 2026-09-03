@@ -1,11 +1,33 @@
 /**
  * Shared result shape for form server actions driven by useActionState.
  * `null` is the initial state before any submission.
+ *
+ * Two optional payloads, both added for `/sessions/new` and both safe to
+ * ignore:
+ *
+ * `values` echoes what was submitted so a failed form can refill itself. React
+ * 19 resets an uncontrolled form once its action settles, which is right after
+ * a success and wrong after a failure — a mentor who mistyped the minutes was
+ * losing the note, the task and the date along with it.
+ *
+ * `receipt` is what happened, structurally, so a page can show the outcome and
+ * link to it instead of parsing a sentence for an id.
  */
 export type ActionState =
-  | { ok: true; message?: string }
-  | { ok: false; error: string }
+  | { ok: true; message?: string; receipt?: ActionReceipt }
+  | { ok: false; error: string; field?: string; values?: Record<string, string> }
   | null;
+
+/** What a completed write produced, for a page that shows a receipt. */
+export type ActionReceipt = {
+  /** The row just written, so "Correct" can open it. */
+  id: string;
+  /** The short version: "Logged 90 min with Aziza." */
+  headline: string;
+  /** The consequences, one clause each — what changed, what is left. */
+  notes: string[];
+  subject?: { kind: "student" | "mentor" | "program"; id: string; name: string };
+};
 
 /**
  * Parse a whole-minutes form field. Returns an error string or the value.

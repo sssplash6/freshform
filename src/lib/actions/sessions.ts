@@ -184,13 +184,49 @@ async function resolveGoal(
  * allocation for them at all; the "Whose hours?" tick decides whether those
  * hours charge, and an in-plan log with nothing to draw on overdraws.
  */
+/**
+ * The form's own fields, echoed back on failure.
+ *
+ * React 19 resets an uncontrolled form once its action settles. That is right
+ * after a success and wrong after a failure: a mentor who typed "1.5" in the
+ * minutes box was losing the note, the task, the date and the attendance
+ * choice along with the correction. The page refills from this.
+ */
+const LOG_FIELDS = [
+  "studentProfileId",
+  "assignmentId",
+  "minutes",
+  "date",
+  "note",
+  "attendance",
+  "timeKind",
+] as const;
+
+function submitted(formData: FormData): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const name of LOG_FIELDS) {
+    const value = formData.get(name);
+    if (value != null) values[name] = String(value);
+  }
+  return values;
+}
+
 export async function logSession(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  const values = submitted(formData);
+  /** An error the mentor can fix, with the field to put it next to. */
+  const bad = (error: string, field?: string): ActionState => ({
+    ok: false,
+    error,
+    ...(field ? { field } : {}),
+    values,
+  });
+
   const mentor = await requireActiveMentor();
   if (!mentor) {
-    return { ok: false, error: "Only assigned mentors can log sessions." };
+    return bad("Only assigned mentors can log sessions.");
   }
 
   const studentProfileId = String(formData.get("studentProfileId") ?? "");
@@ -198,9 +234,9 @@ export async function logSession(
     min: 0.01,
     label: "Minutes",
   });
-  if ("error" in minutesParsed) return { ok: false, error: minutesParsed.error };
+  if ("error" in minutesParsed) return bad(minutesParsed.error, "minutes");
   const dateParsed = parseDateField(formData.get("date"));
-  if ("error" in dateParsed) return { ok: false, error: dateParsed.error };
+  if ("error" in dateParsed) return bad(dateParsed.error, "date");
   const note = String(formData.get("note") ?? "").trim() || null;
   const state = readAttendance(formData.get("attendance"));
   const fields = attendanceFields(state);
@@ -212,12 +248,9 @@ export async function logSession(
     where: { id: studentProfileId },
     include: { user: true },
   });
-  if (!profile) return { ok: false, error: "Student not found." };
+  if (!profile) return bad("Student not found.", "studentProfileId");
   if (profile.user.status !== USER_STATUS.ACTIVE) {
-    return {
-      ok: false,
-      error: "That student hasn't been approved by an admin yet.",
-    };
+    return bad("That student hasn't been approved by an admin yet.", "studentProfileId");
   }
 
   // Sessions draw down hours an admin allocated to THIS mentor — or, when the
@@ -263,11 +296,10 @@ export async function logSession(
         },
       });
   if (!allocation && !scope) {
-    return {
-      ok: false,
-      error:
-        "You aren't assigned to that student's program, so you can't log hours for them.",
-    };
+    return bad(
+      "You aren't assigned to that student's program, so you can't log hours for them.",
+      "studentProfileId"
+    );
   }
 
   // Whether the hours charge is the mentor's own answer to "Whose hours?", and
@@ -291,10 +323,10 @@ export async function logSession(
   // overdraws.
   const source = withinPlan ? (allocation ?? pool) : null;
   if (source && source.deadline.getTime() < Date.now()) {
-    return {
-      ok: false,
-      error: `These hours expired on ${formatDate(source.deadline)} and can no longer be logged against. Ask an admin to extend the deadline, allocate new hours, or log this as extra hours.`,
-    };
+    return bad(
+      `These hours expired on ${formatDate(source.deadline)} and can no longer be logged against. Ask an admin to extend the deadline, allocate new hours, or log this as extra hours.`,
+      "timeKind"
+    );
   }
 
   // Checked after the allocation, so a mentor with no hours for this student
@@ -304,18 +336,40 @@ export async function logSession(
     profile.id,
     mentor.id
   );
-  if ("error" in resolved) return { ok: false, error: resolved.error };
+  if ("error" in resolved) return bad(resolved.error, "assignmentId");
   const goal = resolved.value;
   // Reads "toward "Main essay"" when there is one, and nothing at all when there
   // isn't, rather than an empty pair of quotes.
   const toward = goal ? ` toward "${goal.purpose}"` : "";
   const forTask = goal ? ` for "${goal.purpose}"` : "";
 
+    // A double-tapped submit writes the session twice and charges the time
+  // twice, and the mentor has no way to tell which of the two identical rows to
+  // void. useFormStatus disables the button, but only once React has the
+  // pending state — a fast second tap, or a phone that fires touch and click,
+  // gets there first. So the guard is here, where it cannot be raced: the same
+  // mentor, student, duration and date within a minute is one session.
+  const twin = await prisma.session.findFirst({
+    where: {
+      mentorId: mentor.id,
+      studentId: profile.id,
+      minutes: minutesParsed.value,
+      date: dateParsed.value,
+      status: SESSION_STATUS.ACTIVE,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  });
+  if (twin) {
+    return bad(
+      `That session is already logged — ${formatMinutes(minutesParsed.value)} with ${profile.user.name ?? profile.user.email} on ${formatDate(dateParsed.value)}. Correct it instead of logging it twice.`
+    );
+  }
+
   const staff = await adminIds();
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = profile.user.name ?? profile.user.email;
 
-  const { sync, carved, poolAfter, meeting } = await prisma.$transaction(async (tx) => {
+  const { sessionId, sync, carved, poolAfter, meeting } = await prisma.$transaction(async (tx) => {
     const session = await tx.session.create({
       data: {
         studentId: profile.id,
@@ -475,73 +529,90 @@ export async function logSession(
         message: `"${synced.purpose}" for ${studentName} is complete: ${formatMinutes(synced.loggedMinutes)} of ${formatMinutes(synced.minuteLimit ?? 0)} planned hours logged.`,
       });
     }
-    return { sync: synced, carved, poolAfter, meeting };
+    return { sessionId: session.id, sync: synced, carved, poolAfter, meeting };
   });
 
   revalidatePath("/", "layout");
 
-  const stateNote =
-    state === ATTENDANCE.ATTENDED ? "" : ` Recorded as ${ATTENDANCE_META[state].label.toLowerCase()}.`;
+    // The outcome as separate clauses rather than one built sentence, so
+  // `/sessions/new` can show the headline large, the consequences under it, and
+  // a link to the row itself. `message` is still the whole thing joined, for
+  // the forms that show one line of feedback.
+  const notes: string[] = [];
+  if (state !== ATTENDANCE.ATTENDED) {
+    notes.push(`Recorded as ${ATTENDANCE_META[state].label.toLowerCase()}.`);
+  }
   // Tell the mentor what their own log just did to the task, so an automatic
   // status change is never a surprise they discover later.
-  const goalNote = sync?.becameDone
-    ? ` "${sync.purpose}" hit its ${formatMinutes(sync.minuteLimit ?? 0)} limit and is now marked done.`
-    : sync?.changed
-      ? ` "${sync.purpose}" is now in progress.`
-      : "";
+  if (sync?.becameDone) {
+    notes.push(
+      `"${sync.purpose}" hit its ${formatMinutes(sync.minuteLimit ?? 0)} limit and is now marked done.`
+    );
+  } else if (sync?.changed) {
+    notes.push(`"${sync.purpose}" is now in progress.`);
+  }
   // The diary entry this closed, so an automatic tidy-up is never something the
   // mentor discovers later by finding it gone.
-  const meetingNote = meeting
-    ? ` Your scheduled meeting on ${formatMeetingWhen(meeting.scheduledAt, meeting.hasTime)} is marked as held.`
-    : "";
+  if (meeting) {
+    notes.push(
+      `Your scheduled meeting on ${formatMeetingWhen(meeting.scheduledAt, meeting.hasTime)} is marked as held.`
+    );
+  }
+
   // Out-of-plan first: none of the balance arithmetic below applies to hours
   // that were never going to move a balance.
+  let headline: string;
   if (!withinPlan) {
-    return {
-      ok: true,
-      message: `Logged as extra time.${stateNote}${goalNote}${meetingNote} ${formatMinutes(minutesParsed.value)} on top of the plan, so ${studentName}'s balance is unchanged.`,
-    };
-  }
-  if (rescheduled) {
-    return {
-      ok: true,
-      message: pool
-        ? `Rescheduled meeting recorded — no time charged, and ${studentName}'s unassigned pool is untouched.`
-        : allocation
-          ? `Rescheduled meeting recorded — no time charged. ${studentName} still has ${formatDuration(await remainingWith(profile.id, mentor.id, allocation.minutes))} left with you.`
-          : // Nothing is allocated, so there is no balance to reassure anyone
-            // about — "0h left with you" would read as a loss.
-            `Rescheduled meeting recorded — no time charged.`,
-    };
-  }
-  if (pool) {
+    headline = `Logged ${formatMinutes(minutesParsed.value)} with ${studentName} as extra time.`;
+    notes.push(`On top of the plan, so their balance is unchanged.`);
+  } else if (rescheduled) {
+    headline = `Rescheduled meeting with ${studentName} recorded — no time charged.`;
+    if (pool) {
+      notes.push("Their unassigned pool is untouched.");
+    } else if (allocation) {
+      const left = await remainingWith(profile.id, mentor.id, allocation.minutes);
+      notes.push(`They still have ${formatDuration(left)} left with you.`);
+    }
+    // Nothing allocated means no balance to reassure anyone about — "0h left
+    // with you" would read as a loss.
+  } else if (pool) {
     // What the carve just did, in the mentor's terms: these hours are theirs
     // now, and here is what the pool still holds for whoever meets them next.
     const short = Number((minutesParsed.value - carved).toFixed(2));
-    return {
-      ok: true,
-      message:
-        short > 0
-          ? `Session logged.${stateNote}${goalNote}${meetingNote} ${formatDuration(carved)} unassigned minutes moved to you — the pool came up ${formatDuration(short)} short, so ${studentName} is overdrawn with you.`
-          : `Session logged.${stateNote}${goalNote}${meetingNote} ${formatDuration(carved)} of ${studentName}'s unassigned minutes moved to you; ${formatDuration(poolAfter)} remain in the pool.`,
-    };
-  }
-  const remaining = await remainingWith(
-    profile.id,
-    mentor.id,
-    allocation?.minutes ?? 0
-  );
-  return {
-    ok: true,
-    message:
+    headline = `Logged ${formatMinutes(minutesParsed.value)} with ${studentName}.`;
+    notes.push(
+      short > 0
+        ? `${formatDuration(carved)} unassigned minutes moved to you — the pool came up ${formatDuration(short)} short, so they are overdrawn with you.`
+        : `${formatDuration(carved)} of their unassigned minutes moved to you; ${formatDuration(poolAfter)} remain in the pool.`
+    );
+  } else {
+    const remaining = await remainingWith(
+      profile.id,
+      mentor.id,
+      allocation?.minutes ?? 0
+    );
+    headline = `Logged ${formatMinutes(minutesParsed.value)} with ${studentName}.`;
+    notes.push(
       remaining >= 0
-        ? `Session logged.${stateNote}${goalNote}${meetingNote} ${studentName} has ${formatDuration(remaining)} left with you.`
+        ? `${formatDuration(remaining)} left with you.`
         : allocation
-          ? `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: ${studentName} is now overdrawn by ${formatDuration(-remaining)} with you.`
+          ? `Heads up: they are now overdrawn by ${formatDuration(-remaining)} with you.`
           : // No allocation at all, so this overdraw isn't a balance run down —
             // it is time nobody has granted yet. Name the two ways out rather
             // than leaving a red number the mentor can't act on.
-            `Session logged.${stateNote}${goalNote}${meetingNote} Heads up: no time is allocated to you for ${studentName}, so they're overdrawn by ${formatDuration(-remaining)} with you. Ask an admin to allocate it, or correct this session to extra time.`,
+            `Heads up: no time is allocated to you for them, so they are overdrawn by ${formatDuration(-remaining)} with you. Ask an admin to allocate it, or correct this session to extra time.`
+    );
+  }
+
+  return {
+    ok: true,
+    message: [headline, ...notes].join(" "),
+    receipt: {
+      id: sessionId,
+      headline,
+      notes,
+      subject: { kind: "student", id: profile.id, name: studentName },
+    },
   };
 }
 
