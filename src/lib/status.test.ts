@@ -190,11 +190,21 @@ describe("per-audience wording", () => {
     ).toBe("Awaiting Aziza's answer");
   });
 
-  it("hides staff-only states from the people they are not about", () => {
+    it("hides staff-only states from the people they are not about", () => {
     expect(status("FEEDBACK_LOW", view("mentor"))).toBeNull();
     expect(status("STUDENT_PLACEHOLDER_EMAIL", view("student"))).toBeNull();
     expect(status("STAFF_UNSCOPED", view("student"))).toBeNull();
-    expect(status("MEETING_UNLOGGED", view("student"))).toBeNull();
+  });
+
+  it("tells a student their passed meeting is waiting on their mentor", () => {
+    // This was student-invisible, and the student page could then only solve
+    // an overdue meeting by not showing it — so a meeting that happened
+    // yesterday disappeared without a word, which the page it replaced did
+    // not do. Invisible is a fine answer for a state a reader has no business
+    // knowing; it is the wrong answer for one about their own week.
+    const row = status("MEETING_UNLOGGED", view("student"));
+    expect(row?.label).toBe("Waiting on your mentor");
+    expect(row?.kind).toBe("informational");
   });
 });
 

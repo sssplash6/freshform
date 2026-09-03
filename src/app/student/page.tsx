@@ -26,6 +26,7 @@ import { requireRole } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatMinutes } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
+import { bucketOf } from "@/lib/when";
 import { prisma } from "@/lib/prisma";
 import {
   assignmentsForStudentWhere,
@@ -350,7 +351,11 @@ export default async function StudentHomePage() {
     // same fact twice — the redundancy the section this replaced also had.
     // A meeting still awaiting an answer keeps its chip, because its buttons
     // are up in Needs you and the row would otherwise say nothing.
-    status: m.status === INTERVIEW_STATUS.PROPOSED ? status : undefined,
+        status:
+      bucketOf(m.scheduledAt, now) === "overdue" ||
+      m.status === INTERVIEW_STATUS.PROPOSED
+        ? status
+        : undefined,
     person: m.mentor,
     joinUrl: m.link,
     note: m.note,
@@ -363,8 +368,12 @@ export default async function StudentHomePage() {
     //
     // Never both places at once: an unanswered meeting is answered up in Needs
     // you, and this branch is the complement of that condition.
+        // No answer on a row that cannot be answered: a meeting still awaiting one
+    // is answered up in Needs you, and one whose day has gone is not a
+    // question any more.
     action:
-      m.status === INTERVIEW_STATUS.PROPOSED ? undefined : (
+      m.status === INTERVIEW_STATUS.PROPOSED ||
+      bucketOf(m.scheduledAt, now) === "overdue" ? undefined : (
         <InterviewResponse interviewId={m.id} status={m.status} />
       ),
   }));
@@ -417,9 +426,17 @@ export default async function StudentHomePage() {
         }}
       />
 
-      {/* Today and the next seven days only. A meeting whose day has passed is
-          the mentor's to log or cancel, and a student can do neither. */}
-      <Timeline entries={upNext} now={now} buckets={["today", "week"]} />
+            {/* Overdue is included, and it has to be: a meeting that happened
+          yesterday and has not been written up yet was simply disappearing
+          from a student's week. They can do nothing about it, so the row is
+          informational and says whose move it is. */}
+      <Timeline
+        entries={upNext}
+        now={now}
+        buckets={["overdue", "today", "week"]}
+        moreHref="/student/meetings"
+        moreLabel="All meetings"
+      />
 
       {(hours.allotted > 0 || hours.used > 0 || hours.extra > 0) && (
         <Section title="Your time">

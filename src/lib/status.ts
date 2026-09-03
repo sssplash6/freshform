@@ -414,7 +414,7 @@ const META: Record<StatusType, Meta> = {
     many: (n) => `${n} meetings were declined`,
   },
 
-  MEETING_UNLOGGED: {
+    MEETING_UNLOGGED: {
     severity: "attention",
     voices: {
       staff: { kind: "informational", label: () => "Nothing logged" },
@@ -422,6 +422,16 @@ const META: Record<StatusType, Meta> = {
         kind: "actionable",
         label: () => "Nothing logged",
         explanation: () => "It has passed. Log what happened, or cancel it.",
+      },
+      // A student had no voice here, so their page could only solve it by
+      // hiding the meeting — and a meeting that happened yesterday vanishing
+      // without a word is worse than an unresolved row. It is not theirs to
+      // do anything about, so it is informational, and the explanation is the
+      // reassurance the page this replaced actually gave them.
+      student: {
+        kind: "informational",
+        label: () => "Waiting on your mentor",
+        explanation: () => "It has passed. Your mentor will log the time.",
       },
     },
     many: (n) => `${n} past meetings have nothing logged`,
