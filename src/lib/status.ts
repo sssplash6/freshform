@@ -1,0 +1,1032 @@
+import {
+  ASSIGNMENT_PROGRESS,
+  INTERVIEW_STATUS,
+  SESSION_STATUS,
+  USER_STATUS,
+} from "@/lib/constants";
+import { formatDate, formatDuration } from "@/lib/format";
+
+/**
+ * Every state the product can be in, in one file.
+ *
+ * Before this existed, a state was re-derived wherever it was needed: 19 free-text
+ * `Chip` labels, `flagsFor()` on the program page, the `Deadline` component, three
+ * copies of a progress-to-colour map, and `INTERVIEW_STATUS_META`'s labels that
+ * told a student "Student can't make it" about themself. The same fact wore
+ * different words and different colours depending on which page you were on, and
+ * adding a page meant inventing the wording again.
+ *
+ * So: a state has ONE type, ONE severity, and its wording is a property of the
+ * type and the reader — not of the page. A page asks what is true and renders
+ * what it is told.
+ *
+ * THREE RULES that the rest of the design leans on:
+ *
+ * 1. `severity` is the only thing that picks a colour, and a glyph and a word
+ *    always ride along (see `GLYPH`). Nothing is ever colour-only.
+ * 2. `now` arrives on `ViewerContext` and is never read from the clock in here.
+ *    Every "is it expired" question in the app used to call `Date.now()` during a
+ *    render, which is impure and made the answer depend on when a component
+ *    happened to paint.
+ * 3. `audience` comes from role and lens — never from authority. What a person
+ *    may DO is decided by `lib/authz.ts`; this file decides what they are TOLD.
+ *    A dual-role admin reading in mentor lens keeps every one of their rights and
+ *    simply gets a mentor's wording.
+ */
+
+export type Severity = "neutral" | "ok" | "attention" | "problem";
+
+/**
+ * What the reader can do about it.
+ *
+ * `blocked` is the scarce one: it means an action this person would otherwise
+ * take is unavailable, and the status is the reason. Only a `blocked` state may
+ * become a `Callout`, at most one per page — which is what stops the three
+ * stacked callouts the student home used to open with.
+ */
+export type Kind = "actionable" | "informational" | "blocked";
+
+/** Who is reading. Not who they are — a dual-role admin is `staff` or `mentor`. */
+export type Audience = "staff" | "mentor" | "student";
+
+export type StatusType =
+  // A student's account
+  | "STUDENT_PENDING_APPROVAL"
+  | "STUDENT_NOT_SIGNED_IN"
+  | "STUDENT_PLACEHOLDER_EMAIL"
+  // Their balance
+  | "BALANCE_OVERDRAWN"
+  | "BALANCE_NONE"
+  | "POOL_UNASSIGNED"
+  | "NO_MENTOR"
+  | "ALLOCATION_EXPIRING"
+  | "ALLOCATION_EXPIRED"
+  // A meeting in the diary
+  | "MEETING_AWAITING_ANSWER"
+  | "MEETING_CONFIRMED"
+  | "MEETING_DECLINED"
+  | "MEETING_UNLOGGED"
+  | "MEETING_CLOSED"
+  // A session already logged
+  | "SESSION_NO_SHOW"
+  | "SESSION_LATE"
+  | "SESSION_EXTRA"
+  | "SESSION_RESCHEDULED"
+  | "SESSION_VOIDED"
+  // A piece of planned work
+  | "TASK_NOT_STARTED"
+  | "TASK_IN_PROGRESS"
+  | "TASK_DONE"
+  | "TASK_OVERDUE"
+  | "TASK_OVER_BUDGET"
+  | "TASK_NEEDS_MENTOR"
+  // A mentor's setup
+  | "BOOKING_LINK_MISSING"
+  | "MENTOR_UNASSIGNED"
+  | "MENTOR_NAME_MISSING"
+  | "FEEDBACK_LOW"
+  // A program, and the reader themself
+  | "PROGRAM_ARCHIVED"
+  | "PROGRAM_NO_MENTORS"
+  | "STAFF_UNSCOPED"
+  | "DIGEST_OFF"
+  | "ALL_CLEAR";
+
+export type Status = {
+  type: StatusType;
+  severity: Severity;
+  kind: Kind;
+  /** ≤ 4 words, a formatted figure counting as one. Already in this audience's words. */
+  label: string;
+  /** ≤ 12 words, says what to do about it. */
+  explanation?: string;
+  href?: string;
+  subject?: { kind: "student" | "mentor" | "program"; id: string; name: string };
+  program?: { id: string; name: string };
+  /** Orders rows inside a severity band: soonest or oldest first. */
+  at?: Date;
+  /** Set only by `rollUp`. */
+  count?: number;
+};
+
+export type ViewerContext = {
+  audience: Audience;
+  userId: string;
+  /** Computed once per request, at the query layer. */
+  now: Date;
+};
+
+/** Sort order for an attention list. Problems first; "ok" last and quiet. */
+export const SEVERITY_RANK: Record<Severity, number> = {
+  problem: 0,
+  attention: 1,
+  neutral: 2,
+  ok: 3,
+};
+
+/**
+ * The glyph that rides with every severity, so a status is never colour alone —
+ * which is both WCAG 1.4.1 and the only way the two remaining status hues stay
+ * legible to a colour-blind reader.
+ */
+export const GLYPH: Record<Severity, string> = {
+  neutral: "○",
+  ok: "✓",
+  attention: "!",
+  problem: "×",
+};
+
+/**
+ * How far ahead an expiry starts asking for attention, per reader.
+ *
+ * Different because the useful action is different: a student can book inside a
+ * month, a mentor schedules a week out, and staff want a fortnight's warning to
+ * top someone up before the time is lost.
+ */
+export const EXPIRY_WINDOW_DAYS = { staff: 14, mentor: 7, student: 30 } as const;
+
+const DAY = 24 * 60 * 60 * 1000;
+const daysUntil = (date: Date, now: Date) => (date.getTime() - now.getTime()) / DAY;
+
+/**
+ * Everything a label might need to interpolate.
+ *
+ * One loose bag rather than a per-type parameter map: every producer lives in
+ * this file, so a missing figure is a local mistake caught by this file's tests,
+ * and thirty type-level entries would buy compile-time safety inside a single
+ * module that already has a test asserting each type renders.
+ */
+type Detail = {
+  minutes?: number;
+  date?: Date | null;
+  name?: string | null;
+  closedAs?: "held" | "cancelled";
+};
+
+const dur = (d: Detail) => formatDuration(Math.abs(d.minutes ?? 0));
+const when = (d: Detail) => (d.date ? formatDate(d.date) : "soon");
+const who = (d: Detail) => d.name?.split(" ")[0] ?? "the student";
+
+type Voice = {
+  kind: Kind;
+  label: (d: Detail) => string;
+  explanation?: (d: Detail) => string;
+};
+
+type Meta = {
+  severity: Severity;
+  /**
+   * Present only for the audiences that see this state at all. An absent
+   * audience never gets the status — which is how a student is spared "Needs a
+   * real email" and a mentor is spared "Low rating".
+   */
+  voices: Partial<Record<Audience, Voice>>;
+  /** Wording when `rollUp` collapses several of these into one row. */
+  many?: (count: number) => string;
+};
+
+/**
+ * The table. Severity and wording live here; which states are TRUE is decided by
+ * the producers below.
+ *
+ * Two entries deliberately contradict the written spec, both for the same
+ * reason. `STUDENT_PENDING_APPROVAL` and `BALANCE_NONE` were specified as
+ * invisible to a mentor while also being the mentor's reason they cannot log a
+ * session — but a status nobody can see cannot explain a disabled button, and
+ * `logSession` genuinely refuses both cases (a non-ACTIVE student, and a mentor
+ * with no allocation). A mentor gets told, as `blocked`.
+ */
+const META: Record<StatusType, Meta> = {
+  STUDENT_PENDING_APPROVAL: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "Pending approval",
+        explanation: () => "They signed up themselves. Approve, then allocate time.",
+      },
+      mentor: {
+        kind: "blocked",
+        label: () => "Pending approval",
+        explanation: () => "You cannot log time until an admin approves them.",
+      },
+      student: {
+        kind: "blocked",
+        label: () => "Awaiting approval",
+        explanation: () => "An admin is reviewing your registration.",
+      },
+    },
+    many: (n) => `${n} students awaiting approval`,
+  },
+
+  STUDENT_NOT_SIGNED_IN: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Hasn't signed in" },
+      mentor: { kind: "informational", label: () => "Hasn't signed in" },
+    },
+    many: (n) => `${n} students have never signed in`,
+  },
+
+  STUDENT_PLACEHOLDER_EMAIL: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "Needs a real email",
+        explanation: () => "Imported without one, so they cannot sign in yet.",
+      },
+    },
+    many: (n) => `${n} students cannot sign in yet`,
+  },
+
+  BALANCE_OVERDRAWN: {
+    severity: "problem",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: (d) => `Over by ${dur(d)}`,
+        explanation: () => "More time was logged than was ever granted.",
+      },
+      mentor: { kind: "informational", label: (d) => `Over by ${dur(d)}` },
+      student: {
+        kind: "informational",
+        label: (d) => `Over by ${dur(d)}`,
+        explanation: () => "Your program contact can add more time.",
+      },
+    },
+    many: (n) => `${n} students are overdrawn`,
+  },
+
+  BALANCE_NONE: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "No time allocated",
+        explanation: () => "Allocate time from a mentor on their page.",
+      },
+      mentor: {
+        kind: "blocked",
+        label: () => "No time with you",
+        explanation: () => "An admin allocates it before you can log against it.",
+      },
+      student: {
+        kind: "informational",
+        label: () => "No time yet",
+        explanation: () => "Your team is still arranging it.",
+      },
+    },
+    many: (n) => `${n} students have no time allocated`,
+  },
+
+  POOL_UNASSIGNED: {
+    severity: "neutral",
+    voices: {
+      staff: {
+        kind: "informational",
+        label: (d) => `${dur(d)} unassigned`,
+        explanation: () => "Granted before a mentor was chosen.",
+      },
+      mentor: {
+        kind: "informational",
+        label: (d) => `${dur(d)} unassigned`,
+        explanation: () => "Any mentor here may log against it; logging claims it.",
+      },
+      student: { kind: "informational", label: (d) => `${dur(d)} unassigned` },
+    },
+  },
+
+  NO_MENTOR: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "No mentor yet",
+        explanation: () => "Allocate their time from a mentor to pair them.",
+      },
+      student: { kind: "informational", label: () => "No mentor yet" },
+    },
+    many: (n) => `${n} students have no mentor`,
+  },
+
+  ALLOCATION_EXPIRING: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: (d) => `${dur(d)} expires ${when(d)}`,
+        explanation: () => "Unused time is forfeited on the day it expires.",
+      },
+      mentor: {
+        kind: "actionable",
+        label: (d) => `${dur(d)} expires ${when(d)}`,
+        explanation: () => "Schedule a meeting before it is lost.",
+      },
+      student: {
+        kind: "actionable",
+        label: (d) => `${dur(d)} expires ${when(d)}`,
+        explanation: () => "Book a session before then to use it.",
+      },
+    },
+    many: (n) => `${n} allocations expire soon`,
+  },
+
+  ALLOCATION_EXPIRED: {
+    severity: "problem",
+    voices: {
+      staff: {
+        kind: "informational",
+        label: (d) => `${dur(d)} expired unused`,
+        explanation: () => "Forfeited on its use-by date. Grant more to replace it.",
+      },
+      mentor: {
+        kind: "blocked",
+        label: (d) => `${dur(d)} expired unused`,
+        explanation: () => "You cannot log against an expired allocation.",
+      },
+      student: {
+        kind: "informational",
+        label: (d) => `${dur(d)} expired unused`,
+        explanation: () => "It passed its use-by date. Ask about replacing it.",
+      },
+    },
+    many: (n) => `${n} students lost time to an expiry`,
+  },
+
+  MEETING_AWAITING_ANSWER: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "informational", label: (d) => `Awaiting ${who(d)}'s answer` },
+      mentor: {
+        kind: "informational",
+        label: (d) => `Awaiting ${who(d)}'s answer`,
+        explanation: () => "They have not said whether they will be there.",
+      },
+      student: {
+        kind: "actionable",
+        label: () => "Needs your answer",
+        explanation: () => "Say whether you can make it.",
+      },
+    },
+    many: (n) => `${n} meetings await an answer`,
+  },
+
+  MEETING_CONFIRMED: {
+    severity: "ok",
+    voices: {
+      staff: { kind: "informational", label: () => "Confirmed" },
+      mentor: { kind: "informational", label: () => "Confirmed" },
+      student: { kind: "informational", label: () => "You're confirmed" },
+    },
+  },
+
+  MEETING_DECLINED: {
+    severity: "problem",
+    voices: {
+      staff: { kind: "informational", label: (d) => `${who(d)} can't make it` },
+      mentor: {
+        kind: "actionable",
+        label: (d) => `${who(d)} can't make it`,
+        explanation: () => "Move it to another time, or cancel it.",
+      },
+      student: { kind: "informational", label: () => "You can't make it" },
+    },
+    many: (n) => `${n} meetings were declined`,
+  },
+
+  MEETING_UNLOGGED: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "informational", label: () => "Nothing logged" },
+      mentor: {
+        kind: "actionable",
+        label: () => "Nothing logged",
+        explanation: () => "It has passed. Log what happened, or cancel it.",
+      },
+    },
+    many: (n) => `${n} past meetings have nothing logged`,
+  },
+
+  MEETING_CLOSED: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: (d) => (d.closedAs === "cancelled" ? "Cancelled" : "Held") },
+      mentor: { kind: "informational", label: (d) => (d.closedAs === "cancelled" ? "Cancelled" : "Held") },
+      student: { kind: "informational", label: (d) => (d.closedAs === "cancelled" ? "Cancelled" : "Held") },
+    },
+  },
+
+  SESSION_NO_SHOW: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "informational", label: () => "No-show, time charged" },
+      mentor: { kind: "informational", label: () => "No-show, time charged" },
+      student: { kind: "informational", label: () => "Missed, time charged" },
+    },
+  },
+
+  SESSION_LATE: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Came late" },
+      mentor: { kind: "informational", label: () => "Came late" },
+      student: { kind: "informational", label: () => "Started late" },
+    },
+  },
+
+  SESSION_EXTRA: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Extra, no time charged" },
+      mentor: { kind: "informational", label: () => "Extra, no time charged" },
+      student: { kind: "informational", label: () => "Extra, no time charged" },
+    },
+  },
+
+  SESSION_RESCHEDULED: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Rescheduled, no time charged" },
+      mentor: { kind: "informational", label: () => "Rescheduled, no time charged" },
+      student: { kind: "informational", label: () => "Rescheduled, no time charged" },
+    },
+  },
+
+  SESSION_VOIDED: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Voided, time returned" },
+      mentor: { kind: "informational", label: () => "Voided, time returned" },
+      student: { kind: "informational", label: () => "Cancelled, time returned" },
+    },
+  },
+
+  TASK_NOT_STARTED: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Not started" },
+      mentor: { kind: "informational", label: () => "Not started" },
+      student: { kind: "informational", label: () => "Not started" },
+    },
+  },
+
+  TASK_IN_PROGRESS: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "In progress" },
+      mentor: { kind: "informational", label: () => "In progress" },
+      student: { kind: "informational", label: () => "In progress" },
+    },
+  },
+
+  TASK_DONE: {
+    severity: "ok",
+    voices: {
+      staff: { kind: "informational", label: () => "Done" },
+      mentor: { kind: "informational", label: () => "Done" },
+      student: { kind: "informational", label: () => "Done" },
+    },
+  },
+
+  TASK_OVERDUE: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "actionable", label: (d) => `Due ${when(d)}, not done` },
+      mentor: {
+        kind: "actionable",
+        label: (d) => `Due ${when(d)}, not done`,
+        explanation: () => "Log progress, or ask an admin to move the date.",
+      },
+      student: {
+        kind: "actionable",
+        label: (d) => `Was due ${when(d)}`,
+        explanation: () => "Still outstanding.",
+      },
+    },
+    many: (n) => `${n} tasks are overdue`,
+  },
+
+  TASK_OVER_BUDGET: {
+    severity: "problem",
+    voices: {
+      staff: { kind: "informational", label: (d) => `${dur(d)} over budget` },
+      mentor: { kind: "informational", label: (d) => `${dur(d)} over budget` },
+    },
+  },
+
+  TASK_NEEDS_MENTOR: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "Needs a mentor",
+        explanation: () => "Budgeted, but on nobody's list yet.",
+      },
+      mentor: { kind: "informational", label: () => "Needs a mentor" },
+      student: { kind: "informational", label: () => "Mentor to be confirmed" },
+    },
+    many: (n) => `${n} tasks need a mentor`,
+  },
+
+  BOOKING_LINK_MISSING: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "informational", label: () => "No booking link" },
+      mentor: {
+        kind: "actionable",
+        label: () => "No booking link",
+        explanation: () => "Students cannot book you until you add one.",
+      },
+      student: { kind: "informational", label: () => "No booking link yet" },
+    },
+    many: (n) => `${n} pairings have no booking link`,
+  },
+
+  MENTOR_UNASSIGNED: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "Not in any program",
+        explanation: () => "They signed in but cannot work until assigned.",
+      },
+      mentor: {
+        kind: "blocked",
+        label: () => "Waiting for a program",
+        explanation: () => "An admin assigns you before you can log sessions.",
+      },
+    },
+    many: (n) => `${n} mentors are not in any program`,
+  },
+
+  MENTOR_NAME_MISSING: {
+    severity: "attention",
+    voices: {
+      staff: { kind: "informational", label: () => "Name missing" },
+      mentor: {
+        kind: "actionable",
+        label: () => "Name missing",
+        explanation: () => "Add your full name so students know who you are.",
+      },
+    },
+  },
+
+  FEEDBACK_LOW: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "Low rating",
+        explanation: () => "Worth reading before it becomes a pattern.",
+      },
+    },
+    many: (n) => `${n} mentors are rated low`,
+  },
+
+  PROGRAM_ARCHIVED: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Archived" },
+      mentor: { kind: "informational", label: () => "Archived" },
+    },
+  },
+
+  PROGRAM_NO_MENTORS: {
+    severity: "attention",
+    voices: {
+      staff: {
+        kind: "actionable",
+        label: () => "No mentors",
+        explanation: () => "Nobody can be allocated time here yet.",
+      },
+    },
+    many: (n) => `${n} programs have no mentors`,
+  },
+
+  STAFF_UNSCOPED: {
+    severity: "problem",
+    voices: {
+      staff: {
+        kind: "blocked",
+        label: () => "No programs granted",
+        explanation: () => "A platform admin grants you a program to work in.",
+      },
+    },
+  },
+
+  DIGEST_OFF: {
+    severity: "neutral",
+    voices: {
+      staff: { kind: "informational", label: () => "Weekly email off" },
+      mentor: { kind: "informational", label: () => "Weekly email off" },
+      student: { kind: "informational", label: () => "Weekly email off" },
+    },
+  },
+
+  ALL_CLEAR: {
+    severity: "ok",
+    voices: {
+      staff: { kind: "informational", label: () => "Nothing needs you" },
+      mentor: { kind: "informational", label: () => "Nothing needs you" },
+      student: { kind: "informational", label: () => "Nothing needs you" },
+    },
+  },
+};
+
+/**
+ * Build one status, in this audience's words — or `null` when this audience is
+ * never told about it. Every producer goes through here, so no page can invent a
+ * label or pick a severity of its own.
+ */
+export function status(
+  type: StatusType,
+  v: ViewerContext,
+  detail: Detail = {},
+  extra: Pick<Status, "href" | "subject" | "program" | "at"> = {}
+): Status | null {
+  const meta = META[type];
+  const voice = meta.voices[v.audience];
+  if (!voice) return null;
+  return {
+    type,
+    severity: meta.severity,
+    kind: voice.kind,
+    label: voice.label(detail),
+    ...(voice.explanation ? { explanation: voice.explanation(detail) } : {}),
+    ...extra,
+  };
+}
+
+/** Severity for a type, without building a status. For sorting a mixed list. */
+export const severityOf = (type: StatusType): Severity => META[type].severity;
+
+/** Every type, for the tests that hold the copy rules. */
+export const STATUS_TYPES = Object.keys(META) as StatusType[];
+
+// ---------------------------------------------------------------------------
+// Producers — what is TRUE about a thing. One per kind of thing in the domain.
+// ---------------------------------------------------------------------------
+
+export type StudentStatusInput = {
+  id: string;
+  name: string | null;
+  email: string;
+  /** `USER_STATUS`. */
+  accountStatus: string;
+  telegramUsername: string | null;
+  allottedMinutes: number;
+  remainingMinutes: number;
+  forfeitedMinutes: number;
+  /** Live, unassigned pool minutes. */
+  poolMinutes?: number;
+  /** Soonest use-by date across their live allocations. */
+  nextDeadline?: Date | null;
+  mentorCount?: number;
+  program?: { id: string; name: string };
+};
+
+export function studentStatuses(
+  s: StudentStatusInput,
+  v: ViewerContext
+): Status[] {
+  const subject = {
+    kind: "student" as const,
+    id: s.id,
+    name: s.name ?? s.email,
+  };
+  const extra = { subject, href: `/students/${s.id}`, ...(s.program ? { program: s.program } : {}) };
+  const of = (type: StatusType, detail: Detail = {}, at?: Date) =>
+    status(type, v, detail, at ? { ...extra, at } : extra);
+
+  const out: (Status | null)[] = [];
+
+  if (s.accountStatus === USER_STATUS.PENDING) {
+    out.push(of("STUDENT_PENDING_APPROVAL"));
+  } else if (!s.telegramUsername) {
+    // Never having set a Telegram handle is the only signal we have that a
+    // registered student has not yet completed a first sign-in.
+    out.push(of("STUDENT_NOT_SIGNED_IN"));
+  }
+  if (s.email.endsWith("@import.invalid")) {
+    out.push(of("STUDENT_PLACEHOLDER_EMAIL"));
+  }
+
+  if (s.remainingMinutes < 0) {
+    out.push(of("BALANCE_OVERDRAWN", { minutes: s.remainingMinutes }));
+  }
+  if (s.allottedMinutes === 0) {
+    out.push(of("BALANCE_NONE"));
+  }
+  if (s.forfeitedMinutes > 0) {
+    out.push(of("ALLOCATION_EXPIRED", { minutes: s.forfeitedMinutes }));
+  }
+  if ((s.poolMinutes ?? 0) > 0) {
+    out.push(of("POOL_UNASSIGNED", { minutes: s.poolMinutes }));
+  }
+  if (s.allottedMinutes > 0 && s.mentorCount === 0) {
+    out.push(of("NO_MENTOR"));
+  }
+
+  // Only time that is still spendable can expire: an overdrawn or empty balance
+  // has nothing left to lose, and saying otherwise would be a false alarm.
+  if (s.nextDeadline && s.remainingMinutes > 0) {
+    const days = daysUntil(s.nextDeadline, v.now);
+    if (days >= 0 && days <= EXPIRY_WINDOW_DAYS[v.audience]) {
+      out.push(
+        of(
+          "ALLOCATION_EXPIRING",
+          { minutes: s.remainingMinutes, date: s.nextDeadline },
+          s.nextDeadline
+        )
+      );
+    }
+  }
+
+  return out.filter((x): x is Status => x !== null);
+}
+
+export type MentorStatusInput = {
+  id: string;
+  name: string | null;
+  email: string;
+  /** `USER_STATUS`. */
+  accountStatus: string;
+  programCount: number;
+  /** Pairings with no booking link set. */
+  pairingsMissingLink: number;
+  averageRating?: number | null;
+  ratingCount?: number;
+};
+
+/** Below this a mentor's average is worth an admin reading the comments. */
+export const LOW_RATING = 3.5;
+/** Fewer ratings than this is not yet a pattern. */
+const LOW_RATING_MIN_COUNT = 3;
+
+export function mentorStatuses(m: MentorStatusInput, v: ViewerContext): Status[] {
+  const extra = {
+    subject: { kind: "mentor" as const, id: m.id, name: m.name ?? m.email },
+    href: `/mentors/${m.id}`,
+  };
+  const of = (type: StatusType, detail: Detail = {}) => status(type, v, detail, extra);
+  const out: (Status | null)[] = [];
+
+  if (!m.name?.trim()) out.push(of("MENTOR_NAME_MISSING"));
+  if (m.programCount === 0 || m.accountStatus === USER_STATUS.UNASSIGNED) {
+    out.push(of("MENTOR_UNASSIGNED"));
+  } else if (m.pairingsMissingLink > 0) {
+    // Only worth saying once they have somewhere to be booked for.
+    out.push(of("BOOKING_LINK_MISSING"));
+  }
+  if (
+    m.averageRating != null &&
+    m.averageRating < LOW_RATING &&
+    (m.ratingCount ?? 0) >= LOW_RATING_MIN_COUNT
+  ) {
+    out.push(of("FEEDBACK_LOW"));
+  }
+
+  return out.filter((x): x is Status => x !== null);
+}
+
+export type ProgramStatusInput = {
+  id: string;
+  name: string;
+  /** `ACTIVE` | `ARCHIVED`. Absent until the program-status migration lands. */
+  status?: string;
+  mentorCount: number;
+  studentCount: number;
+};
+
+export function programStatuses(p: ProgramStatusInput, v: ViewerContext): Status[] {
+  const extra = {
+    subject: { kind: "program" as const, id: p.id, name: p.name },
+    program: { id: p.id, name: p.name },
+    href: `/programs/${p.id}`,
+  };
+  const out: (Status | null)[] = [];
+
+  if (p.status === "ARCHIVED") out.push(status("PROGRAM_ARCHIVED", v, {}, extra));
+  // A program with nobody in it is simply new, not broken.
+  if (p.mentorCount === 0 && p.studentCount > 0) {
+    out.push(status("PROGRAM_NO_MENTORS", v, {}, extra));
+  }
+
+  return out.filter((x): x is Status => x !== null);
+}
+
+export type TaskStatusInput = {
+  id: string;
+  purpose: string;
+  /** `ASSIGNMENT_PROGRESS`. */
+  progress: string;
+  mentorId: string | null;
+  minuteLimit: number | null;
+  loggedMinutes: number;
+  /**
+   * A real due date. Null until the free-text `deadline` column is split into
+   * `dueNote` + `dueOn`, so `TASK_OVERDUE` stays dormant until then rather than
+   * guessing at "March-May".
+   */
+  dueOn?: Date | null;
+  student?: { id: string; name: string };
+};
+
+export function taskStatuses(t: TaskStatusInput, v: ViewerContext): Status[] {
+  const extra = t.student
+    ? {
+        subject: { kind: "student" as const, id: t.student.id, name: t.student.name },
+        href: `/students/${t.student.id}`,
+      }
+    : {};
+  const of = (type: StatusType, detail: Detail = {}, at?: Date) =>
+    status(type, v, detail, at ? { ...extra, at } : extra);
+  const out: (Status | null)[] = [];
+
+  const done = t.progress === ASSIGNMENT_PROGRESS.DONE;
+  out.push(
+    of(
+      done
+        ? "TASK_DONE"
+        : t.progress === ASSIGNMENT_PROGRESS.IN_PROGRESS
+          ? "TASK_IN_PROGRESS"
+          : "TASK_NOT_STARTED"
+    )
+  );
+
+  if (!t.mentorId) out.push(of("TASK_NEEDS_MENTOR"));
+  if (!done && t.dueOn && t.dueOn.getTime() < v.now.getTime()) {
+    out.push(of("TASK_OVERDUE", { date: t.dueOn }, t.dueOn));
+  }
+  // Work given beyond its budget still counts toward the task, so this is a
+  // fact about the plan rather than about the hours.
+  if (t.minuteLimit != null && t.loggedMinutes > t.minuteLimit) {
+    out.push(of("TASK_OVER_BUDGET", { minutes: t.loggedMinutes - t.minuteLimit }));
+  }
+
+  return out.filter((x): x is Status => x !== null);
+}
+
+export type SessionStatusInput = {
+  attended: boolean;
+  late: boolean;
+  /** `SESSION_STATUS`. */
+  status: string;
+  withinPlan: boolean;
+};
+
+/**
+ * What a logged session says about itself. Exception states only — a plain,
+ * attended, in-plan session gets no chip at all, which is what removes the
+ * green "Logged" badge from every row of the sessions table.
+ */
+export function sessionStatuses(s: SessionStatusInput, v: ViewerContext): Status[] {
+  const out: (Status | null)[] = [];
+
+  if (s.status === SESSION_STATUS.VOIDED) out.push(status("SESSION_VOIDED", v));
+  else if (s.status === SESSION_STATUS.RESCHEDULED) {
+    out.push(status("SESSION_RESCHEDULED", v));
+  } else {
+    if (!s.attended) out.push(status("SESSION_NO_SHOW", v));
+    else if (s.late) out.push(status("SESSION_LATE", v));
+  }
+  if (!s.withinPlan) out.push(status("SESSION_EXTRA", v));
+
+  return out.filter((x): x is Status => x !== null);
+}
+
+export type MeetingStatusInput = {
+  id: string;
+  /** `INTERVIEW_STATUS`. */
+  status: string;
+  scheduledAt: Date;
+  sessionId: string | null;
+  student?: { id: string; name: string };
+};
+
+/**
+ * One status per meeting: a meeting is in exactly one state, and a row that
+ * carried two chips would be describing two different meetings.
+ *
+ * "Passed with nothing logged" outranks the answer it was waiting for: once the
+ * day is gone, whether the student had confirmed stopped being the open
+ * question.
+ */
+export function meetingStatus(i: MeetingStatusInput, v: ViewerContext): Status | null {
+  const extra = {
+    at: i.scheduledAt,
+    ...(i.student
+      ? {
+          subject: { kind: "student" as const, id: i.student.id, name: i.student.name },
+          href: `/students/${i.student.id}`,
+        }
+      : {}),
+  };
+  const detail = { name: i.student?.name ?? null };
+
+  if (i.status === INTERVIEW_STATUS.HELD || i.status === INTERVIEW_STATUS.CANCELLED) {
+    return status(
+      "MEETING_CLOSED",
+      v,
+      { closedAs: i.status === INTERVIEW_STATUS.CANCELLED ? "cancelled" : "held" },
+      extra
+    );
+  }
+
+  // Same day counts as still ahead: a whole-day meeting has no time to compare
+  // against, and one at 09:00 should not read as overdue over lunch.
+  const overdue = startOfDay(i.scheduledAt) < startOfDay(v.now) && !i.sessionId;
+  if (overdue) return status("MEETING_UNLOGGED", v, detail, extra);
+
+  if (i.status === INTERVIEW_STATUS.DECLINED) {
+    return status("MEETING_DECLINED", v, detail, extra);
+  }
+  if (i.status === INTERVIEW_STATUS.PROPOSED) {
+    return status("MEETING_AWAITING_ANSWER", v, detail, extra);
+  }
+  return status("MEETING_CONFIRMED", v, detail, extra);
+}
+
+/** Midnight UTC of a date, matching how meeting times are stored and read. */
+const startOfDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+// ---------------------------------------------------------------------------
+// Presentation of a whole list
+// ---------------------------------------------------------------------------
+
+/** Problems first, then soonest within a band. Stable for equal rows. */
+export function sortStatuses(list: Status[]): Status[] {
+  return [...list].sort((a, b) => {
+    const bySeverity = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+    if (bySeverity !== 0) return bySeverity;
+    if (a.at && b.at) return a.at.getTime() - b.at.getTime();
+    if (a.at) return -1;
+    if (b.at) return 1;
+    return 0;
+  });
+}
+
+/**
+ * Collapse a run of identical states into one row.
+ *
+ * This is what keeps a first screen calm regardless of the data. Ten imported
+ * students with no allocation are ten true `BALANCE_NONE` statuses; printed in
+ * full they are a wall of red that buries the one thing that is actually
+ * unusual. Collapsed they are a single honest line — "10 students have no time
+ * allocated →" — that hides the rows but never the magnitude.
+ *
+ * A group at or under the threshold stays expanded, because three named students
+ * are more useful than the sentence "3 students…".
+ */
+export function rollUp(list: Status[], opts: { threshold?: number } = {}): Status[] {
+  const threshold = opts.threshold ?? 3;
+  const groups = new Map<StatusType, Status[]>();
+  for (const s of list) {
+    const group = groups.get(s.type);
+    if (group) group.push(s);
+    else groups.set(s.type, [s]);
+  }
+
+  const out: Status[] = [];
+  for (const [type, group] of groups) {
+    const many = META[type].many;
+    if (group.length <= threshold || !many) {
+      out.push(...group);
+      continue;
+    }
+    // The subject is dropped on purpose: the row is about a count, and a link to
+    // one of ten students would be an arbitrary choice.
+    const { href, program, at, severity, kind } = group[0];
+    out.push({
+      type,
+      severity,
+      kind,
+      label: many(group.length),
+      count: group.length,
+      ...(program ? { program } : {}),
+      ...(at ? { at } : {}),
+      ...(href ? { href } : {}),
+    });
+  }
+  return sortStatuses(out);
+}
+
+/**
+ * What an attention list renders: rolled up, sorted, and never empty — an empty
+ * list says so out loud rather than showing nothing, so "all clear" and "still
+ * loading" can never look the same.
+ */
+export function attentionList(
+  list: Status[],
+  v: ViewerContext,
+  opts: { threshold?: number; limit?: number } = {}
+): Status[] {
+  const actionable = list.filter((s) => s.kind !== "informational");
+  if (actionable.length === 0) {
+    const clear = status("ALL_CLEAR", v);
+    return clear ? [clear] : [];
+  }
+  const rolled = rollUp(actionable, opts);
+  return opts.limit ? rolled.slice(0, opts.limit) : rolled;
+}
