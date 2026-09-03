@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
 import {
@@ -159,13 +160,11 @@ export function InterviewRowActions({
 
               <label className={labelClass}>
                 Note
-                <input
+                <GrowingField
                   name="note"
-                  type="text"
                   defaultValue={interview.note ?? ""}
                   placeholder="What it covers"
-                  className={inputClass}
-                />
+                    />
               </label>
 
               <p className="text-xs text-muted-fg">

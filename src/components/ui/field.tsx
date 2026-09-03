@@ -1,4 +1,6 @@
-import type { ComponentProps } from "react";
+"use client";
+
+import { useState, type ComponentProps } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -16,6 +18,65 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
       className={cn(inputClasses, "resize-y leading-relaxed", className)}
       {...props}
     />
+  );
+}
+
+/**
+ * A field that grows downward as it is typed into.
+ *
+ * The owner's words: when he types, the text should go down — not sit in a box
+ * of fixed width while the start of the sentence slides out of view. A
+ * one-line `<input>` cannot do that: it scrolls horizontally by definition, so
+ * anyone writing more than about forty characters loses the beginning of their
+ * own sentence while they are still writing it. Every meeting note, session
+ * note and task purpose in this app was one.
+ *
+ * It grows by LAYOUT, not by measurement. The textarea and an invisible copy of
+ * its own text are stacked in the same grid cell, so the copy — which wraps
+ * like any other text — sets the height and the textarea fills it. No refs, no
+ * `scrollHeight` read, nothing that runs during a render pass or has to be
+ * re-run when the width changes; a resize just re-wraps the copy and the box
+ * follows. `field-sizing: content` will do this natively one day and is set as
+ * a progressive enhancement, but it does not exist in Safari yet.
+ *
+ * The trailing space in the mirror matters: a value ending in a newline has to
+ * still reserve the line the caret is sitting on.
+ */
+export function GrowingField({
+  className,
+  defaultValue,
+  onChange,
+  ...props
+}: ComponentProps<"textarea">) {
+  const [value, setValue] = useState(String(defaultValue ?? ""));
+
+  return (
+    <div className="grid w-full">
+      <textarea
+        {...props}
+        rows={1}
+        value={value}
+        onChange={(event) => {
+          setValue(event.target.value);
+          onChange?.(event);
+        }}
+        className={cn(
+          inputClasses,
+          "col-start-1 row-start-1 resize-none overflow-hidden leading-relaxed [field-sizing:content]",
+          className
+        )}
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          inputClasses,
+          "invisible col-start-1 row-start-1 whitespace-pre-wrap break-words leading-relaxed",
+          className
+        )}
+      >
+        {value + " "}
+      </span>
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
 import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions";
@@ -201,13 +202,11 @@ export function SessionRowActions({
 
               <label className={labelClass}>
                 Notes
-                <input
+                <GrowingField
                   name="note"
-                  type="text"
                   defaultValue={session.note ?? ""}
                   placeholder="What you covered"
-                  className={inputClass}
-                />
+                    />
               </label>
 
               <AttendancePicker defaultValue={session.attendance} compact />

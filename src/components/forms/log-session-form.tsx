@@ -8,6 +8,7 @@ import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { TimeKindPicker } from "@/components/forms/time-kind-picker";
 import { Select } from "@/components/select";
+import { GrowingField } from "@/components/ui/field";
 import { Receipt } from "@/components/ui/receipt";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
@@ -253,12 +254,10 @@ export function LogSessionForm({
           )}
         >
           <span className="text-muted-fg">Notes</span>
-          <input
+          <GrowingField
             name="note"
-            type="text"
             placeholder="Optional — what you covered, and what's next"
             defaultValue={opening.note}
-            className={inputClass}
           />
         </label>
       </div>

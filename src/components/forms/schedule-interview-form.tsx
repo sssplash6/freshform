@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { GrowingField } from "@/components/ui/field";
 
 import { scheduleInterview } from "@/lib/actions/interviews";
 import { ActionFeedback } from "@/components/forms/action-feedback";
@@ -85,12 +86,10 @@ export function ScheduleInterviewForm({
         </label>
         <label className="block min-w-0 text-sm sm:col-span-2">
           <span className="text-muted-fg">Note</span>
-          <input
+          <GrowingField
             name="note"
-            type="text"
             placeholder="Optional — what the interview covers, and how to prepare"
-            className={inputClass}
-          />
+                    />
         </label>
       </div>
 

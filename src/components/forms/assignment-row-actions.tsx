@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
@@ -227,13 +228,11 @@ export function AssignmentRowActions({
                   <input type="hidden" name="progress" value={assignment.progress} />
                   <label className={labelClass}>
                     Task
-                    <input
+                    <GrowingField
                       name="purpose"
-                      type="text"
                       required
                       maxLength={200}
                       defaultValue={assignment.purpose}
-                      className={inputClass}
                     />
                   </label>
                   <div className={labelClass}>
@@ -275,13 +274,11 @@ export function AssignmentRowActions({
                   </div>
                   <label className={labelClass}>
                     Note
-                    <input
+                    <GrowingField
                       name="note"
-                      type="text"
                       maxLength={500}
                       placeholder="Anything the state can't say"
                       defaultValue={assignment.note ?? ""}
-                      className={inputClass}
                     />
                   </label>
                   <div className="flex gap-2">
