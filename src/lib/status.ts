@@ -1036,17 +1036,39 @@ export function rollUp(list: Status[], opts: { threshold?: number } = {}): Statu
  * What an attention list renders: rolled up, sorted, and never empty — an empty
  * list says so out loud rather than showing nothing, so "all clear" and "still
  * loading" can never look the same.
+ *
+ * Informational rows are kept and sorted below the actionable ones, because
+ * §6.2 puts two of them in a mentor's list on purpose ("awaiting the student's
+ * answer", "pending approval"): a mentor who cannot log a session needs the
+ * reason on the same screen as the disabled control. They do not count toward
+ * the section's badge and they never suppress "Nothing needs you" — a list of
+ * three things you cannot act on is not a list of three things to do.
  */
 export function attentionList(
   list: Status[],
   v: ViewerContext,
   opts: { threshold?: number; limit?: number } = {}
 ): Status[] {
-  const actionable = list.filter((s) => s.kind !== "informational");
+  const actionable = rollUp(
+    list.filter((s) => s.kind !== "informational"),
+    opts
+  );
+  const informational = rollUp(
+    list.filter((s) => s.kind === "informational"),
+    opts
+  );
+
+  const head: Status[] = [];
   if (actionable.length === 0) {
     const clear = status("ALL_CLEAR", v);
-    return clear ? [clear] : [];
+    if (clear) head.push(clear);
   }
-  const rolled = rollUp(actionable, opts);
-  return opts.limit ? rolled.slice(0, opts.limit) : rolled;
+
+  const rows = [...head, ...actionable, ...informational];
+  return opts.limit ? rows.slice(0, opts.limit) : rows;
+}
+
+/** How many rows in a list actually ask something of the viewer. */
+export function actionableCount(list: Status[]): number {
+  return list.filter((s) => s.kind === "actionable").length;
 }

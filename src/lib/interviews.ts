@@ -1,4 +1,5 @@
 import { INTERVIEW_STATUS, interviewIsOpen } from "@/lib/constants";
+import { programWallClock } from "@/lib/when";
 
 /**
  * Client-safe helpers for scheduled meetings. The split between "still coming"
@@ -21,7 +22,7 @@ export type ScheduledMeeting = {
   student?: { id: string; user: { name: string | null; email: string } };
 };
 
-/** Midnight UTC on the day of `d` — the boundary a whole-day meeting turns on. */
+/** Midnight on the day of `d` — the boundary a whole-day meeting turns on. */
 function dayStart(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
@@ -43,7 +44,10 @@ export function splitMeetings<T extends { scheduledAt: Date; status: string }>(
   meetings: T[],
   now: Date = new Date()
 ): { upcoming: T[]; overdue: T[]; closed: T[] } {
-  const today = dayStart(now);
+    // `now` is a real instant; a scheduledAt is the program's wall clock kept in
+  // a UTC field. Comparing them raw puts the two on different calendar days for
+  // the five hours after midnight in Tashkent, which is when this list is read.
+  const today = dayStart(programWallClock(now));
   const upcoming: T[] = [];
   const overdue: T[] = [];
   const closed: T[] = [];

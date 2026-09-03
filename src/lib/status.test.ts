@@ -7,6 +7,7 @@ import {
   USER_STATUS,
 } from "@/lib/constants";
 import {
+  actionableCount,
   attentionList,
   EXPIRY_WINDOW_DAYS,
   GLYPH,
@@ -627,5 +628,83 @@ describe("EXPIRY_WINDOW_DAYS", () => {
     // want a fortnight to top someone up before the time is lost.
     expect(EXPIRY_WINDOW_DAYS.student).toBeGreaterThan(EXPIRY_WINDOW_DAYS.staff);
     expect(EXPIRY_WINDOW_DAYS.staff).toBeGreaterThan(EXPIRY_WINDOW_DAYS.mentor);
+  });
+});
+
+describe("attentionList", () => {
+  const v: ViewerContext = { audience: "mentor", userId: "m1", now: new Date("2026-03-01T09:00:00Z") };
+
+  it("says so out loud when nothing needs the viewer", () => {
+    const rows = attentionList([], v);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("ALL_CLEAR");
+  });
+
+  it("keeps informational rows and puts them under the actionable ones", () => {
+    // A mentor whose Monday holds one thing to do and one thing to wait for.
+    const list = [
+      status("MEETING_AWAITING_ANSWER", v, undefined, { at: new Date("2026-03-02T10:00:00Z") })!,
+      status("MEETING_UNLOGGED", v, undefined, { at: new Date("2026-02-26T10:00:00Z") })!,
+    ];
+    const rows = attentionList(list, v);
+    expect(rows.map((r) => r.type)).toEqual(["MEETING_UNLOGGED", "MEETING_AWAITING_ANSWER"]);
+    expect(rows.some((r) => r.type === "ALL_CLEAR")).toBe(false);
+  });
+
+  it("still says nothing needs you when every row is informational", () => {
+    // The honest case: things on screen, none of them yours to do.
+    const list = [status("MEETING_AWAITING_ANSWER", v)!, status("MEETING_CONFIRMED", v)!];
+    const rows = attentionList(list, v);
+    expect(rows[0].type).toBe("ALL_CLEAR");
+    expect(actionableCount(rows)).toBe(0);
+    expect(rows).toHaveLength(3);
+  });
+
+  it("does not say nothing needs you over a blocked row", () => {
+    // A mentor with no program cannot act, but "Nothing needs you" above
+    // "Waiting for a program" is a redundant line: the blocked row already
+    // explains the whole state of the page.
+    const rows = attentionList([status("MENTOR_UNASSIGNED", v)!], v);
+    expect(rows.map((r) => r.type)).toEqual(["MENTOR_UNASSIGNED"]);
+    expect(rows[0].kind).toBe("blocked");
+    expect(actionableCount(rows)).toBe(0);
+  });
+
+  it("counts only actionable rows toward the section's badge", () => {
+    const list = [
+      status("MEETING_UNLOGGED", v)!,
+      status("MEETING_AWAITING_ANSWER", v)!,
+      status("STUDENT_PENDING_APPROVAL", v)!,
+    ];
+    expect(actionableCount(attentionList(list, v))).toBe(1);
+  });
+
+  it("rolls up actionable and informational rows apart", () => {
+    // Four of each: the roll-up must not merge two different kinds into one row.
+    const list = [
+      ...Array.from({ length: 4 }, (_, i) => status("MEETING_UNLOGGED", v, undefined, {
+        subject: { kind: "student" as const, id: `s${i}`, name: `Student ${i}` },
+      })!),
+      ...Array.from({ length: 4 }, (_, i) => status("MEETING_AWAITING_ANSWER", v, undefined, {
+        subject: { kind: "student" as const, id: `t${i}`, name: `Other ${i}` },
+      })!),
+    ];
+    const rows = attentionList(list, v);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].count).toBe(4);
+    expect(rows[1].count).toBe(4);
+    expect(rows[0].kind).toBe("actionable");
+    expect(rows[1].kind).toBe("informational");
+  });
+
+  it("caps the list without hiding a problem behind an informational row", () => {
+    const list = [
+      status("MEETING_AWAITING_ANSWER", v)!,
+      status("MEETING_AWAITING_ANSWER", v)!,
+      status("MEETING_UNLOGGED", v)!,
+    ];
+    const rows = attentionList(list, v, { limit: 1 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("MEETING_UNLOGGED");
   });
 });

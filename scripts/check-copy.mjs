@@ -65,7 +65,11 @@ function walk(dir, out = []) {
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) {
       if (!SKIP_DIRS.has(entry)) walk(path, out);
-    } else if (/\.(ts|tsx)$/.test(entry)) {
+        } else if (/\.(ts|tsx)$/.test(entry) && !/\.test\.tsx?$/.test(entry)) {
+      // A test's strings are assertions ABOUT copy, not copy: `when.test.ts`
+      // must be free to write an ISO date, since proving the day arithmetic is
+      // the whole point of the file. The copy itself still lives in source and
+      // is still checked there.
       out.push(path);
     }
   }
