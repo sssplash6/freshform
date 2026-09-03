@@ -748,3 +748,40 @@ describe("meetingStatus and the program's clock", () => {
     expect(meetingStatus(meeting, v)?.type).toBe("MEETING_CONFIRMED");
   });
 });
+
+describe("rollUp", () => {
+  const v: ViewerContext = { audience: "staff", userId: "a1", now: new Date("2026-03-01T09:00:00Z") };
+  const many = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      status("BALANCE_NONE", v, undefined, {
+        subject: { kind: "student" as const, id: `s${i}`, name: `Student ${i}` },
+        href: `/students/s${i}`,
+      })!
+    );
+
+  it("leaves three named students named", () => {
+    // Three names are more useful than the sentence "3 students…".
+    expect(rollUp(many(3))).toHaveLength(3);
+    expect(rollUp(many(3))[0].subject?.name).toBe("Student 0");
+  });
+
+  it("collapses a wall into one counted row", () => {
+    const rolled = rollUp(many(9));
+    expect(rolled).toHaveLength(1);
+    expect(rolled[0].count).toBe(9);
+    expect(rolled[0].label).toContain("9");
+  });
+
+  it("drops the link as well as the subject", () => {
+    // A row reading "9 students have no time allocated" that navigates to one
+    // of the nine is an arbitrary choice dressed up as an answer.
+    const rolled = rollUp(many(9));
+    expect(rolled[0].subject).toBeUndefined();
+    expect(rolled[0].href).toBeUndefined();
+  });
+
+  it("keeps the count honest when the group is exactly at the threshold", () => {
+    expect(rollUp(many(4))).toHaveLength(1);
+    expect(rollUp(many(4))[0].count).toBe(4);
+  });
+});

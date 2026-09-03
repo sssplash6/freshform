@@ -1025,9 +1025,11 @@ export function rollUp(list: Status[], opts: { threshold?: number } = {}): Statu
       out.push(...group);
       continue;
     }
-    // The subject is dropped on purpose: the row is about a count, and a link to
-    // one of ten students would be an arbitrary choice.
-    const { href, program, at, severity, kind } = group[0];
+        // Subject AND href are both dropped, for the same reason: the row is about
+    // a count, and sending a reader who tapped "8 students are overdrawn" to
+    // one of the eight is an arbitrary choice dressed up as an answer. The
+    // filtered list this should link to arrives with `/students` in Phase 6.
+    const { program, at, severity, kind } = group[0];
     out.push({
       type,
       severity,
@@ -1036,7 +1038,6 @@ export function rollUp(list: Status[], opts: { threshold?: number } = {}): Statu
       count: group.length,
       ...(program ? { program } : {}),
       ...(at ? { at } : {}),
-      ...(href ? { href } : {}),
     });
   }
   return sortStatuses(out);

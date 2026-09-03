@@ -95,7 +95,7 @@ function AttentionRow({
   status: Status;
   action?: React.ReactNode;
 }) {
-  const { explanation, subject, program, href, count } = status;
+  const { explanation, subject, program, href } = status;
 
   const body = (
     <>
@@ -104,9 +104,7 @@ function AttentionRow({
         {subject && (
           <span className="min-w-0 truncate font-medium text-ink">{subject.name}</span>
         )}
-        {count != null && !subject && (
-          <span className="text-sm tabular-nums text-muted-fg">{count}</span>
-        )}
+        
       </span>
       {explanation && (
         <span className="mt-1 block text-[13px] text-muted-fg">{explanation}</span>
