@@ -1,6 +1,5 @@
 import { PersonBadge } from "@/components/person-chip";
 import { ArrowRightIcon } from "@/components/icons";
-import { openNotification } from "@/lib/actions/notifications";
 import { NOTIFICATION_META } from "@/lib/constants";
 import { formatAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -46,15 +45,21 @@ function NotificationRow({
       className="deal-in"
       style={{ animationDelay: `${Math.min(index, 12) * 24}ms` }}
     >
-      <form action={openNotification}>
-        <input type="hidden" name="notificationId" value={n.id} />
-        <button
-          type="submit"
-          className={cn(
-            "group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors sm:px-5",
-            n.read ? "hover:bg-canvas" : "bg-brand-soft/40 hover:bg-brand-soft/70",
-          )}
-        >
+            {/*
+        A plain anchor, deliberately NOT `next/link`: `/n/[id]` marks the row
+        read as its side effect, and `<Link>` prefetches on hover — which
+        executes the handler, so a reader who merely scrolled past a row would
+        find it already read. `<a>` is also why this is no longer a form: the
+        route handler owns the mutation and the per-reader redirect, so the row
+        does not need to submit anything.
+      */}
+      <a
+        href={`/n/${n.id}`}
+        className={cn(
+          "group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors sm:px-5",
+          n.read ? "hover:bg-canvas" : "bg-brand-soft/40 hover:bg-brand-soft/70",
+        )}
+      >
           <span
             aria-hidden="true"
             className={cn(
@@ -89,8 +94,7 @@ function NotificationRow({
           {n.href && (
             <ArrowRightIcon className="mt-1 h-4 w-4 shrink-0 text-muted-fg transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
           )}
-        </button>
-      </form>
+      </a>
     </li>
   );
 }

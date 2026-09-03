@@ -77,14 +77,61 @@ export async function adminIds(): Promise<string[]> {
   return admins.map((a) => a.id);
 }
 
-/** Canonical destinations, so producers don't hand-build path strings. */
+/**
+ * Canonical destinations, so producers don't hand-build path strings.
+ *
+ * A notice names a SUBJECT; it does not name a role's view of one. Until now it
+ * had to: `/admin/students/x` and `/mentor/students/x` are the same student
+ * twice, so the producer of a notice had to guess which of the two each reader
+ * was entitled to, and one session logged sent admins to one address and
+ * mentors to another. Whoever was handed the wrong one was bounced to their own
+ * home by the role gate, having been told something happened and not where.
+ *
+ * `/students/x` moves that decision to the only place that can make it — the
+ * read, where the reader is known (src/app/students/[id]/page.tsx).
+ *
+ * The member NAMES still say admin/mentor. They are what thirty producers
+ * spell, and renaming them is a diff across six action modules that says
+ * nothing this comment doesn't; the commit that takes the last role-scoped
+ * student page down renames them with its call sites.
+ */
+const studentSubject = (studentProfileId: string) =>
+  `/students/${studentProfileId}`;
+
 export const notificationHref = {
-  adminStudent: (studentProfileId: string) =>
-    `/admin/students/${studentProfileId}`,
-  mentorStudent: (studentProfileId: string) =>
-    `/mentor/students/${studentProfileId}`,
+  adminStudent: studentSubject,
+  mentorStudent: studentSubject,
+  // Not role-scoped duplicates: these are the reader's OWN home, and only ever
+  // sent to someone who lives there.
   studentHome: () => "/student",
   mentorHome: () => "/mentor",
+  // The ledger becomes `/sessions` in the commit that builds it. It keeps the
+  // old address until then rather than the new one, because an address that
+  // does not resolve yet is worse in a stored row than an address that moved:
+  // the row outlives the commit. No producer calls this one today.
   mentorSessions: () => "/mentor/sessions",
-  adminProgram: (programId: string) => `/admin/programs/${programId}`,
+  adminProgram: (programId: string) => `/programs/${programId}`,
 };
+
+/**
+ * What an href STORED on an old row means now.
+ *
+ * Rows are never rewritten — a notification is a record of what was said at the
+ * time, and editing its link edits history. So the translation happens on the
+ * way out, in /n/[id]: an admin address written in July resolves to the
+ * role-neutral one and the reader's own entitlement takes it from there.
+ *
+ * Anything unrecognised passes through untouched, which is the safe direction:
+ * every address these ever held still resolves.
+ */
+const MOVED_SUBJECTS: [RegExp, string][] = [
+  [/^\/(?:admin|mentor)\/students\/([^/?#]+)$/, "/students/$1"],
+  [/^\/admin\/programs\/([^/?#]+)$/, "/programs/$1"],
+];
+
+export function neutralHref(stored: string): string {
+  for (const [was, now] of MOVED_SUBJECTS) {
+    if (was.test(stored)) return stored.replace(was, now);
+  }
+  return stored;
+}
