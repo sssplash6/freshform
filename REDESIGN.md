@@ -1000,7 +1000,7 @@ against `prisma/dev.db` locally before pushing.
 
 | ID | Phase | Change | SQLite shape |
 |---|---|---|---|
-| **M1** | 1 | `User.toneIndex INTEGER` | `ALTER TABLE "User" ADD COLUMN "toneIndex" INTEGER;` then backfill sequentially by rowid `% 3` (a hash `% 3` is not expressible in SQLite). Chips recolour once — expected with the 8→3 cut. |
+| ~~**M1**~~ | — | ~~`User.toneIndex INTEGER`~~ **not needed** | `person-tone.ts` hashes the id in JS, so a stored column would only be a second source of truth for a value that is already stable and free. The 8→3 cut landed without it. |
 | **M2** | 3 | `ProgramStaff` + `User.platformAdmin`, grants seeded, `User.programId` emptied | `CREATE TABLE "ProgramStaff" (id TEXT PK, userId TEXT NOT NULL, programId TEXT NOT NULL, role TEXT NOT NULL, createdById TEXT, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FK userId→User, FK programId→Program)` + `CREATE UNIQUE INDEX "ProgramStaff_userId_programId_key"` + `ALTER TABLE "User" ADD COLUMN "platformAdmin" BOOLEAN NOT NULL DEFAULT false;` + `INSERT INTO "ProgramStaff" … SELECT u.id, p.id, 'ADMIN' … FROM "User" u CROSS JOIN "Program" p WHERE u.role = 'ADMIN';` + `UPDATE "User" SET "platformAdmin" = true WHERE email = 'tech@freshman.academy';` + `UPDATE "User" SET "programId" = NULL;`. **Additive only — no table rebuild.** |
 | **M3** | 6 | `Program.status`, `archivedAt`, `tracksPayment` | Three `ADD COLUMN`s with constant defaults (`status TEXT NOT NULL DEFAULT 'ACTIVE'`), then `UPDATE "Program" SET "tracksPayment" = 1 WHERE name = 'Master''s Program';`. No `createdAt`/`position`: SQLite forbids `CURRENT_TIMESTAMP` as an `ADD COLUMN` default, and programs order by name. |
 | **M4** | 6 | `Notification.category`, `readAt` | `ADD COLUMN "category" TEXT NOT NULL DEFAULT 'OTHER'` + `ADD COLUMN "readAt" DATETIME` + the backfill `UPDATE … SET category = CASE WHEN type = 'HOURS_GRANTED' THEN 'HOURS' WHEN type LIKE 'SESSION_%' THEN 'SESSIONS' WHEN type LIKE 'INTERVIEW_%' THEN 'MEETINGS' WHEN type LIKE 'GOAL_%' THEN 'TASKS' WHEN type = 'HOURS_DEADLINE' THEN 'DEADLINES' ELSE 'ACCOUNTS' END;` + `UPDATE "Notification" SET "readAt" = "createdAt" WHERE read = 1;` |
@@ -1233,7 +1233,9 @@ Each commit replaces its whole cluster and rewrites its call sites.
     `student-journey.tsx` and the `/mentor/sessions` inline table.
 34. `task-row.tsx` (`TaskRow`, `TaskTable`); one progress map; delete `assignments-panel.tsx`,
     `student-goals.tsx`.
-35. `allocation-row.tsx` (fixes the `2h 30m h left` double unit); delete `mentor-hours-list.tsx`.
+35. `allocation-row.tsx`; delete `mentor-hours-list.tsx`. The `2h 30m h left` double unit this
+    was written for went with the Phase 1 copy sweep — `mentor-hours-list.tsx:84` now reads one
+    unit. What is left is the consolidation: four surfaces render an allocation four ways.
 36. `ui/filter-bar.tsx` from `SearchForm` + `MentorHoursFilter` (URL → Prisma `where`) +
     `src/lib/filters.test.ts`; delete `ui/search-form.tsx`, `mentor-hours-filter.tsx`.
 37. `ui/row-action-menu.tsx` + `ui/confirm-inline.tsx`; rebuild the 4 popovers and the 8 confirms;
