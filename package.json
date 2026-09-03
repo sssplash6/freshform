@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint && node scripts/check-colors.mjs --warn && node scripts/check-copy.mjs --warn",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate:deploy": "prisma migrate deploy",
