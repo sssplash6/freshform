@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { Deadline } from "@/components/deadline";
 import { ArrowUpRightIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -14,6 +13,7 @@ import { personTone } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
 import { cn } from "@/lib/cn";
+import { DeadlineText } from "@/components/ui/status-chip";
 
 /**
  * Booking is entirely external Calendly links (spec §8) — this page lists the
@@ -25,6 +25,7 @@ import { cn } from "@/lib/cn";
  */
 export default async function StudentBookPage() {
   const user = await requireRole(ROLES.STUDENT);
+  const now = new Date();
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
@@ -135,7 +136,7 @@ export default async function StudentBookPage() {
                       )}
                       {withMentor?.deadline && (
                         <p className="mt-2 text-xs text-muted-fg">
-                          Use them by <Deadline deadline={withMentor.deadline} />
+                          Use them by <DeadlineText deadline={withMentor.deadline} now={now} />
                         </p>
                       )}
                     </>

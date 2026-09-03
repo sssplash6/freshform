@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Chip } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
 import { CreateCohortForm } from "@/components/forms/program-forms";
 import {
@@ -18,6 +17,7 @@ import { ROLES } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../../config/app-config";
 import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * How the program is set up: its name, its cohorts, who teaches in it, and the
@@ -188,9 +188,9 @@ export default async function AdminProgramSettingsPage({
                     <span className="text-xs text-muted-fg">{p.cohort.name}</span>
                   )}
                   {p.calendlyUrl ? (
-                    <Chip tone="green">Booking link set</Chip>
+                    <StatusChip severity="ok">Booking link set</StatusChip>
                   ) : (
-                    <Chip tone="gray">No booking link yet</Chip>
+                    <StatusChip severity="attention">No booking link</StatusChip>
                   )}
                 </div>
                 <RemoveAssignmentButton assignmentId={p.id} />

@@ -1,5 +1,6 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
 import { LedgerBoard } from "@/components/ledger-board";
+import type { ViewerContext } from "@/lib/status";
 import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
@@ -40,11 +41,14 @@ export function StudentLedger({
   extraStats,
   scheduled,
   mentorBase,
+  viewer,
 }: {
   sessions: LedgerSession[];
   assignments: LedgerAssignment[];
   totals: Totals;
   studentProfileId: string;
+  /** Passed straight through to the board; see LedgerBoard. */
+  viewer: ViewerContext;
   mentors?: SelectOption[];
   /** mentorId → their open tasks, for the assign-a-task form (admin only). */
   openTasksByMentor?: Record<string, OpenTask[]>;
@@ -98,6 +102,7 @@ export function StudentLedger({
           the page is opened for. The panels under it are where rows get
           changed. */}
       <LedgerBoard
+        viewer={viewer}
         sessions={sessions}
         meetings={scheduled ?? []}
         assignments={assignments}

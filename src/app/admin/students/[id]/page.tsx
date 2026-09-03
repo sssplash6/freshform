@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 
 import { ArrowLink } from "@/components/arrow-link";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
-import { Deadline } from "@/components/deadline";
-import { Chip } from "@/components/chip";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { StatCard } from "@/components/stat-card";
 import { StudentCorrections } from "@/components/forms/student-corrections";
@@ -37,6 +35,7 @@ import {
   taskOptionsForSessions,
   toProgramOptions,
 } from "@/lib/queries";
+import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
 
 /**
  * Admin detail page for one student: the full ledger (the meetings log their
@@ -83,20 +82,23 @@ export default async function AdminStudentDetailPage({
 
   // The jump back to the mentor view, offered only when that view would open —
   // it needs hours with this student, a session with them, or a program the
-  // viewer mentors in, the same three answers `/mentor/students/[id]` asks for.
+  // me mentors in, the same three answers `/mentor/students/[id]` asks for.
   // The switch in the header can't work this out from a path, so the page that
   // holds the ledger answers it here, and an admin who doesn't mentor this
   // student is never handed a link to a 404.
   // Free but for the assignment lookup: the allocations and every session are
   // already in hand.
-  const viewer = await requireRole(ROLES.ADMIN);
+  const me = await requireRole(ROLES.ADMIN);
+  // One instant for the whole page: the ledger's two columns and every row in
+  // them are judged against the same "now".
+  const viewer = { audience: "staff" as const, userId: me.id, now: new Date() };
   const mentorsThem =
-    canActAsMentor(viewer) &&
-    (hours.perMentor.some((m) => m.mentor?.id === viewer.id) ||
-      ledger.sessions.some((s) => s.mentorId === viewer.id) ||
+    canActAsMentor(me) &&
+    (hours.perMentor.some((m) => m.mentor?.id === me.id) ||
+      ledger.sessions.some((s) => s.mentorId === me.id) ||
       (await prisma.mentorAssignment.findFirst({
         where: {
-          mentorId: viewer.id,
+          mentorId: me.id,
           programId: profile.programId,
           OR: [
             { cohortId: null },
@@ -152,7 +154,9 @@ export default async function AdminStudentDetailPage({
         title={
           <span className="flex flex-wrap items-center gap-3">
             {profile.user.name ?? profile.user.email}
-            {isPending && <Chip tone="amber">Pending approval</Chip>}
+            {isPending && (
+              <StatusChip severity="attention">Pending approval</StatusChip>
+            )}
           </span>
         }
         subtitle={
@@ -196,6 +200,7 @@ export default async function AdminStudentDetailPage({
       )}
 
       <StudentLedger
+        viewer={viewer}
         sessions={ledger.sessions}
         assignments={ledger.assignments}
         totals={hours}
@@ -265,7 +270,7 @@ export default async function AdminStudentDetailPage({
                   ) : (
                     // The pool: granted before a mentor was chosen. Its ⋮
                     // corrects or removes it like any other allocation.
-                    <Chip tone="gray">Unassigned</Chip>
+                    <StatusChip severity="attention">Needs a mentor</StatusChip>
                   )}
                 </Td>
                 <Td label="Allocated" align="right" className="tabular-nums">
@@ -293,7 +298,7 @@ export default async function AdminStudentDetailPage({
                   {formatDuration(m.remaining)}
                 </Td>
                 <Td label="Use by">
-                  <Deadline deadline={m.deadline} />
+                  <DeadlineText deadline={m.deadline} now={viewer.now} />
                 </Td>
                 {isMasters && (
                   <Td label="Paid" align="right" className="tabular-nums">

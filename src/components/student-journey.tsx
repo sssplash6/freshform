@@ -1,4 +1,3 @@
-import { Chip } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
@@ -12,6 +11,7 @@ import { formatDate, formatDuration, formatMinutes } from "@/lib/format";
 import { personTone } from "@/lib/person-tone";
 import { cn } from "@/lib/cn";
 import type { LedgerSession } from "@/lib/queries";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * The meetings that already happened, as a timeline rather than the admin's
@@ -117,18 +117,18 @@ export function StudentJourney({ sessions }: { sessions: LedgerSession[] }) {
                     !s.withinPlan) && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {voided ? (
-                        <Chip tone="gray">Cancelled, hours returned</Chip>
+                        <StatusChip severity="neutral">Cancelled, time returned</StatusChip>
                       ) : (
                         <>
                           {attendanceOf(s) === ATTENDANCE.RESCHEDULED ? (
-                            <Chip tone="gray">Rescheduled, no time charged</Chip>
+                            <StatusChip severity="neutral">Rescheduled, no time charged</StatusChip>
                           ) : attendanceOf(s) === ATTENDANCE.LATE ? (
-                            <Chip tone="amber">You came late</Chip>
+                            <StatusChip severity="neutral">Started late</StatusChip>
                           ) : attendanceOf(s) === ATTENDANCE.ABSENT ? (
-                            <Chip tone="amber">Missed, hours still charged</Chip>
+                            <StatusChip severity="attention">Missed, time charged</StatusChip>
                           ) : null}
                           {!s.withinPlan && (
-                            <Chip tone="green">Extra — none of your used</Chip>
+                            <StatusChip severity="neutral">Extra, no time charged</StatusChip>
                           )}
                         </>
                       )}

@@ -1,4 +1,3 @@
-import { Chip, type ChipTone } from "@/components/chip";
 import { ExpandableText } from "@/components/expandable-text";
 import { HoursBreakdown } from "@/components/hours-breakdown";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
@@ -6,7 +5,9 @@ import { PersonChip } from "@/components/person-chip";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import {
   ASSIGNMENT_PROGRESS,
+  ASSIGNMENT_PROGRESS_GLYPH,
   ASSIGNMENT_PROGRESS_LABELS,
+  ASSIGNMENT_PROGRESS_STATUS,
   ATTENDANCE,
   ATTENDANCE_META,
   attendanceOf,
@@ -24,6 +25,8 @@ import {
 import { splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
 import { cn } from "@/lib/cn";
+import { meetingStatus, severityOrNeutral, type ViewerContext } from "@/lib/status";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * The tracking spreadsheet's whole tab on one screen: what happened on the left,
@@ -40,12 +43,6 @@ import { cn } from "@/lib/cn";
  * is still ahead of us, and what is behind. Ahead is violet and carries a date
  * you can act on; behind is quieter, in the amber the log has always used.
  */
-
-const PROGRESS_TONE: Record<string, ChipTone> = {
-  NOT_STARTED: "gray",
-  IN_PROGRESS: "violet",
-  DONE: "green",
-};
 
 /** A column heading inside the board — smaller than a panel's, same grammar. */
 function ColumnHead({
@@ -92,8 +89,22 @@ function GroupRule({ label, count }: { label: string; count: number }) {
   );
 }
 
-function UpcomingMeetingRow({ meeting }: { meeting: ScheduledMeeting }) {
-  const meta = INTERVIEW_STATUS_META[meeting.status];
+function UpcomingMeetingRow({
+  meeting,
+  viewer,
+}: {
+  meeting: ScheduledMeeting;
+  viewer: ViewerContext;
+}) {
+  const state = meetingStatus(
+    {
+      id: meeting.id,
+      status: meeting.status,
+      scheduledAt: meeting.scheduledAt,
+      sessionId: meeting.sessionId,
+    },
+    viewer
+  );
   return (
     <li className="flex gap-3 px-4 py-2.5 sm:px-5">
       <span
@@ -111,7 +122,7 @@ function UpcomingMeetingRow({ meeting }: { meeting: ScheduledMeeting }) {
             {formatUntil(meeting.scheduledAt)}
           </span>
           <PersonChip person={meeting.mentor} size="sm" />
-          {meta && <Chip tone={meta.tone}>{meta.label}</Chip>}
+          {state && <StatusChip status={state} />}
         </div>
         {meeting.note && (
           <p className="mt-0.5 text-[13px] text-ink">{meeting.note}</p>
@@ -166,15 +177,17 @@ function LoggedMeetingRow({ session }: { session: LedgerSession }) {
       {(voided || state !== ATTENDANCE.ATTENDED || !session.withinPlan) && (
         <div className="mt-1 flex flex-wrap gap-1.5">
           {voided ? (
-            <Chip tone="gray">Voided</Chip>
+            <StatusChip severity="neutral">Voided, time returned</StatusChip>
           ) : (
             <>
               {state !== ATTENDANCE.ATTENDED && (
-                <Chip tone={ATTENDANCE_META[state].tone ?? "gray"}>
+                <StatusChip severity={severityOrNeutral(ATTENDANCE_META[state].status)}>
                   {ATTENDANCE_META[state].chip}
-                </Chip>
+                </StatusChip>
               )}
-              {!session.withinPlan && <Chip tone="gray">Extra</Chip>}
+              {!session.withinPlan && (
+                <StatusChip severity="neutral">Extra, no time charged</StatusChip>
+              )}
             </>
           )}
         </div>
@@ -210,11 +223,14 @@ function TaskRow({
             href={mentorBase && `${mentorBase}/${task.mentor.id}`}
           />
         ) : (
-          <Chip tone="gray">No mentor yet</Chip>
+          <StatusChip severity="attention">Needs a mentor</StatusChip>
         )}
-        <Chip tone={PROGRESS_TONE[task.progress] ?? "gray"}>
+        <StatusChip
+          severity={severityOrNeutral(ASSIGNMENT_PROGRESS_STATUS[task.progress])}
+          glyph={ASSIGNMENT_PROGRESS_GLYPH[task.progress]}
+        >
           {ASSIGNMENT_PROGRESS_LABELS[task.progress]}
-        </Chip>
+        </StatusChip>
       </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-fg">
@@ -253,6 +269,7 @@ export function LedgerBoard({
   assignments,
   totals,
   mentorBase,
+  viewer,
 }: {
   sessions: LedgerSession[];
   meetings: ScheduledMeeting[];
@@ -266,8 +283,10 @@ export function LedgerBoard({
     extra: number;
   };
   mentorBase?: string;
+  /** One instant for the whole board, so its two columns cannot disagree. */
+  viewer: ViewerContext;
 }) {
-  const { upcoming, overdue } = splitMeetings(meetings);
+  const { upcoming, overdue } = splitMeetings(meetings, viewer.now);
   const ahead = [...upcoming, ...overdue];
   const logged = sessions;
   const activeCount = sessions.filter(
@@ -323,7 +342,7 @@ export function LedgerBoard({
               <GroupRule label="Still to come" count={ahead.length} />
               <ul className="divide-y divide-line/50">
                 {ahead.map((m) => (
-                  <UpcomingMeetingRow key={m.id} meeting={m} />
+                  <UpcomingMeetingRow key={m.id} meeting={m} viewer={viewer} />
                 ))}
               </ul>
               <GroupRule label="Already held" count={logged.length} />

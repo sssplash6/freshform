@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Chip, type ChipTone } from "@/components/chip";
 import { MeetingsLog } from "@/components/meetings-log";
 import { PersonChip } from "@/components/person-chip";
 import { StatCard, StatCardGrid } from "@/components/stat-card";
@@ -10,7 +9,9 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
+  ASSIGNMENT_PROGRESS_GLYPH,
   ASSIGNMENT_PROGRESS_LABELS,
+  ASSIGNMENT_PROGRESS_STATUS,
   ROLES,
   USER_STATUS,
 } from "@/lib/constants";
@@ -26,18 +27,15 @@ import {
   type StudentWithHours,
 } from "@/lib/queries";
 import { requireRole } from "@/lib/dal";
+import { StatusChip } from "@/components/ui/status-chip";
+import type { Severity } from "@/lib/status";
+import { severityOrNeutral } from "@/lib/status";
 
 const DAY = 24 * 60 * 60 * 1000;
 /** How far ahead a use-by date starts counting as "worth doing something about". */
 const DEADLINE_HORIZON = 14 * DAY;
 
-const PROGRESS_TONE: Record<string, ChipTone> = {
-  NOT_STARTED: "gray",
-  IN_PROGRESS: "violet",
-  DONE: "green",
-};
-
-type Flag = { label: string; tone: ChipTone };
+type Flag = { label: string; severity: Severity };
 
 /**
  * What a student's numbers say is wrong. Nothing here is a new rule — each flag
@@ -51,23 +49,23 @@ function flagsFor(
 ): Flag[] {
   const flags: Flag[] = [];
   if (student.user.status === USER_STATUS.PENDING) {
-    flags.push({ label: "Pending approval", tone: "amber" });
+    flags.push({ label: "Pending approval", severity: "attention" });
   }
   if (student.allottedMinutes === 0) {
-    flags.push({ label: "No time allocated", tone: "amber" });
+    flags.push({ label: "No time allocated", severity: "attention" });
   } else if (openTaskCount === 0) {
-    flags.push({ label: "No open task", tone: "amber" });
+    flags.push({ label: "No open task", severity: "attention" });
   }
   if (student.remainingMinutes < 0) {
     flags.push({
-      label: `Overdrawn by ${formatDuration(-student.remainingMinutes)}`,
-      tone: "red",
+      label: `Over by ${formatDuration(-student.remainingMinutes)}`,
+      severity: "problem",
     });
   }
   if (student.forfeitedMinutes > 0) {
     flags.push({
       label: `${formatDuration(student.forfeitedMinutes)} expired unused`,
-      tone: "red",
+      severity: "problem",
     });
   }
   if (
@@ -76,8 +74,8 @@ function flagsFor(
     nextDeadline.getTime() - Date.now() < DEADLINE_HORIZON
   ) {
     flags.push({
-      label: `${formatDuration(student.remainingMinutes)} due ${formatDate(nextDeadline)}`,
-      tone: "amber",
+      label: `${formatDuration(student.remainingMinutes)} expires ${formatDate(nextDeadline)}`,
+      severity: "attention",
     });
   }
   return flags;
@@ -213,9 +211,9 @@ export default async function AdminProgramOverviewPage({
                 </Link>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {flags.map((f) => (
-                    <Chip key={f.label} tone={f.tone}>
+                    <StatusChip key={f.label} severity={f.severity}>
                       {f.label}
-                    </Chip>
+                    </StatusChip>
                   ))}
                 </div>
               </li>
@@ -276,7 +274,7 @@ export default async function AdminProgramOverviewPage({
                       href={`/admin/mentors/${task.mentor.id}`}
                     />
                   ) : (
-                    <Chip tone="gray">Unassigned</Chip>
+                    <StatusChip severity="attention">Needs a mentor</StatusChip>
                   )}
                 </Td>
                 <Td
@@ -304,9 +302,12 @@ export default async function AdminProgramOverviewPage({
                   )}
                 </Td>
                 <Td label="Progress">
-                  <Chip tone={PROGRESS_TONE[task.progress] ?? "gray"}>
+                  <StatusChip
+          severity={severityOrNeutral(ASSIGNMENT_PROGRESS_STATUS[task.progress])}
+          glyph={ASSIGNMENT_PROGRESS_GLYPH[task.progress]}
+        >
                     {ASSIGNMENT_PROGRESS_LABELS[task.progress] ?? task.progress}
-                  </Chip>
+                  </StatusChip>
                 </Td>
               </Tr>
             ))}
@@ -350,9 +351,9 @@ export default async function AdminProgramOverviewPage({
                   )}
                 </div>
                 {p.calendlyUrl ? (
-                  <Chip tone="green">Booking link set</Chip>
+                  <StatusChip severity="ok">Booking link set</StatusChip>
                 ) : (
-                  <Chip tone="gray">No booking link yet</Chip>
+                  <StatusChip severity="attention">No booking link</StatusChip>
                 )}
               </li>
             ))}

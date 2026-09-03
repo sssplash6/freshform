@@ -1,4 +1,3 @@
-import { Chip, type ChipTone } from "@/components/chip";
 import { PersonChip } from "@/components/person-chip";
 import { AssignTaskForm } from "@/components/forms/assign-task-form";
 import { AssignmentRowActions } from "@/components/forms/assignment-row-actions";
@@ -7,15 +6,11 @@ import type { SelectOption } from "@/components/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { ASSIGNMENT_PROGRESS, ASSIGNMENT_PROGRESS_LABELS } from "@/lib/constants";
+import { ASSIGNMENT_PROGRESS, ASSIGNMENT_PROGRESS_GLYPH, ASSIGNMENT_PROGRESS_LABELS, ASSIGNMENT_PROGRESS_STATUS } from "@/lib/constants";
 import { formatDuration, formatMinutes } from "@/lib/format";
 import type { LedgerAssignment } from "@/lib/queries";
-
-const PROGRESS_TONE: Record<string, ChipTone> = {
-  NOT_STARTED: "gray",
-  IN_PROGRESS: "violet",
-  DONE: "green",
-};
+import { StatusChip } from "@/components/ui/status-chip";
+import { severityOrNeutral } from "@/lib/status";
 
 /**
  * The right half of the tracking spreadsheet: the tasks each mentor is doing
@@ -124,7 +119,7 @@ export function AssignmentsPanel({
                     ) : (
                       // No mentor yet: the work is planned and budgeted,
                       // waiting for the ⋮ edit to say whose it is.
-                      <Chip tone="gray">Unassigned</Chip>
+                      <StatusChip severity="attention">Needs a mentor</StatusChip>
                     )}
                   </Td>
                   {/* Hours mentors actually logged against this task. Amber once
@@ -158,9 +153,12 @@ export function AssignmentsPanel({
                   </Td>
                   <Td label="Progress">
                     <span className="flex items-center gap-1.5">
-                      <Chip tone={PROGRESS_TONE[a.progress] ?? "gray"}>
+                      <StatusChip
+          severity={severityOrNeutral(ASSIGNMENT_PROGRESS_STATUS[a.progress])}
+          glyph={ASSIGNMENT_PROGRESS_GLYPH[a.progress]}
+        >
                         {ASSIGNMENT_PROGRESS_LABELS[a.progress] ?? a.progress}
-                      </Chip>
+                      </StatusChip>
                       {a.progressManual && (
                         <span
                           title="Set by hand — logged time no longer moves this"

@@ -1,3 +1,5 @@
+import type { StatusType } from "@/lib/status";
+
 // Allowed values for the string columns in the Prisma schema.
 // SQLite has no native enums, so these are enforced in application code.
 
@@ -54,26 +56,37 @@ export type Attendance = (typeof ATTENDANCE)[keyof typeof ATTENDANCE];
 
 export const ATTENDANCE_META: Record<
   string,
-  { label: string; hint: string; chip?: string; tone?: "amber" | "gray" }
+  {
+    /** How the option reads in the picker. */
+    label: string;
+    hint: string;
+    /** How the state reads as a chip on a logged row. */
+    chip?: string;
+    /**
+     * The state this attendance IS, in `lib/status.ts`, which is where its
+     * severity comes from. A page may not choose a colour for it.
+     */
+    status?: StatusType;
+  }
 > = {
   ATTENDED: { label: "Attended", hint: "The meeting happened as planned." },
   LATE: {
     label: "Came late",
-    hint: "It happened; log the hours you actually spent.",
+    hint: "It happened; log the time you actually spent.",
     chip: "Came late",
-    tone: "amber",
+    status: "SESSION_LATE",
   },
   ABSENT: {
     label: "Absent",
-    hint: "A no-show. The hours are still charged, but tallied as missed.",
-    chip: "No-show, hours still charged",
-    tone: "amber",
+    hint: "A no-show. The time is still charged, but tallied as missed.",
+    chip: "No-show, time charged",
+    status: "SESSION_NO_SHOW",
   },
   RESCHEDULED: {
     label: "Rescheduled",
-    hint: "The meeting moved, so no hours are charged.",
+    hint: "The meeting moved, so no time is charged.",
     chip: "Rescheduled, no time charged",
-    tone: "gray",
+    status: "SESSION_RESCHEDULED",
   },
 };
 
@@ -127,17 +140,17 @@ export type TimeKind = (typeof TIME_KIND)[keyof typeof TIME_KIND];
 
 export const TIME_KIND_META: Record<
   string,
-  { label: string; hint: string; chip?: string; tone?: "amber" | "gray" }
+  { label: string; hint: string; chip?: string; status?: StatusType }
 > = {
   PLAN: {
     label: "Counts toward their time",
-    hint: "The usual case — these hours come out of what the student holds with you.",
+    hint: "The usual case — this time comes out of what the student holds with you.",
   },
   EXTRA: {
     label: "Extra, beyond their time",
     hint: "Work on top of the plan. It shows in the log and against the task, but charges nothing to their balance.",
-    chip: "Extra — no time charged",
-    tone: "gray",
+    chip: "Extra, no time charged",
+    status: "SESSION_EXTRA",
   },
 };
 
@@ -194,15 +207,23 @@ export const INTERVIEW_STATUS = {
 export type InterviewStatus =
   (typeof INTERVIEW_STATUS)[keyof typeof INTERVIEW_STATUS];
 
+/**
+ * A meeting's state, as a `lib/status.ts` type.
+ *
+ * `label` is the STAFF wording and is on its way out: it is viewer-agnostic, so
+ * a student who declined read a red chip saying "Student can't make it" about
+ * herself. `ScheduledMeetings` already reads its wording from the model per
+ * reader; the last consumers lose this field as their pages are reshaped.
+ */
 export const INTERVIEW_STATUS_META: Record<
   string,
-  { label: string; tone: "green" | "amber" | "gray" | "red" | "violet" }
+  { label: string; status: StatusType }
 > = {
-  PROPOSED: { label: "Awaiting confirmation", tone: "amber" },
-  CONFIRMED: { label: "Confirmed", tone: "green" },
-  DECLINED: { label: "Student can't make it", tone: "red" },
-  CANCELLED: { label: "Cancelled", tone: "gray" },
-  HELD: { label: "Held", tone: "gray" },
+  PROPOSED: { label: "Awaiting confirmation", status: "MEETING_AWAITING_ANSWER" },
+  CONFIRMED: { label: "Confirmed", status: "MEETING_CONFIRMED" },
+  DECLINED: { label: "Student can't make it", status: "MEETING_DECLINED" },
+  CANCELLED: { label: "Cancelled", status: "MEETING_CLOSED" },
+  HELD: { label: "Held", status: "MEETING_CLOSED" },
 };
 
 /** Still in the diary: on the calendar, not cancelled, not yet logged. */
@@ -234,6 +255,28 @@ export const ASSIGNMENT_PROGRESS_LABELS: Record<string, string> = {
   NOT_STARTED: "Not started",
   IN_PROGRESS: "In progress",
   DONE: "Done",
+};
+
+/**
+ * Progress as a status type, replacing the three separate `PROGRESS_TONE` maps
+ * that had drifted: the same in-progress task was violet on the ledger board,
+ * violet in the assignments table and violet-on-a-heading in the student's
+ * goals, while "over budget" was red in one and amber in another.
+ *
+ * Progress is deliberately not chromatic — it is a shape (○ ◐ ✓) on a neutral
+ * chip, so the two colours that remain are never spent on ordinary progress.
+ */
+export const ASSIGNMENT_PROGRESS_STATUS: Record<string, StatusType> = {
+  NOT_STARTED: "TASK_NOT_STARTED",
+  IN_PROGRESS: "TASK_IN_PROGRESS",
+  DONE: "TASK_DONE",
+};
+
+/** The shape each progress state wears, in place of a colour. */
+export const ASSIGNMENT_PROGRESS_GLYPH: Record<string, string> = {
+  NOT_STARTED: "○",
+  IN_PROGRESS: "◐",
+  DONE: "✓",
 };
 
 export const NOTIFICATION_TYPES = {

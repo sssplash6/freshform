@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/chip";
 import { ArrowLink } from "@/components/arrow-link";
-import { Deadline } from "@/components/deadline";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { MeetingsLog } from "@/components/meetings-log";
@@ -25,6 +23,7 @@ import { formatDuration } from "@/lib/format";
 import { initials } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorMeetings, recentMeetings } from "@/lib/queries";
+import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
 
 type MentorStudent = {
   profile: {
@@ -119,6 +118,7 @@ export default async function MentorHomePage({
 }) {
   const user = await requireMentor();
   await ensureDeadlineReminders();
+  const viewer = { audience: "mentor" as const, userId: user.id, now: new Date() };
   const { program = "" } = await searchParams;
 
   if (user.status === USER_STATUS.UNASSIGNED) {
@@ -462,7 +462,7 @@ export default async function MentorHomePage({
           which of those has not answered yet. */}
       <ScheduledMeetings
         meetings={myDiary}
-        view="mentor"
+        viewer={viewer}
         title="Your diary"
         emptyBody="Open a student and schedule an interview; it appears here once it's booked."
       />
@@ -509,16 +509,18 @@ export default async function MentorHomePage({
                     >
                       <span className="flex flex-wrap items-center gap-2 font-medium text-ink group-hover:text-brand">
                         {s.profile.user.name ?? "—"}
-                        {!s.approved && <Chip tone="amber">Pending approval</Chip>}
+                        {!s.approved && (
+                          <StatusChip severity="attention">Pending approval</StatusChip>
+                        )}
                         {s.pool != null && (
-                          <Chip tone="gray">
+                          <StatusChip severity="neutral">
                             {formatDuration(s.pool)} unassigned
-                          </Chip>
+                          </StatusChip>
                         )}
                         {s.extra > 0 && (
-                          <Chip tone="gray">
+                          <StatusChip severity="neutral">
                             {formatDuration(s.extra)} extra
-                          </Chip>
+                          </StatusChip>
                         )}
                       </span>
                       <span className="block text-xs text-muted-fg">
@@ -569,7 +571,7 @@ export default async function MentorHomePage({
                     {formatDuration(s.remaining)}
                   </Td>
                   <Td label="Use by">
-                    <Deadline deadline={s.deadline} />
+                    <DeadlineText deadline={s.deadline} now={viewer.now} />
                   </Td>
                   <Td align="right">
                     <ArrowLink

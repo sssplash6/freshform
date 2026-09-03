@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
 import { Avatar } from "@/components/avatar";
-import { Chip } from "@/components/chip";
 import { AvatarForm } from "@/components/forms/avatar-form";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { OwnNameForm } from "@/components/forms/own-name-form";
@@ -14,6 +13,7 @@ import { requireUser } from "@/lib/dal";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere, mentorAssignments } from "@/lib/queries";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /** "Global Admissions / Spring 25", or just the program when there's no cohort. */
 function labelOf(a: {
@@ -196,7 +196,7 @@ export default async function MentorProfilePage({
                     <ArrowUpRightIcon className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                   </a>
                 ) : (
-                  <Chip tone="gray">No calendar shared yet</Chip>
+                  <StatusChip severity="attention">No booking link yet</StatusChip>
                 )}
               </li>
             ))}

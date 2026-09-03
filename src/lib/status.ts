@@ -166,6 +166,13 @@ type Detail = {
 const dur = (d: Detail) => formatDuration(Math.abs(d.minutes ?? 0));
 const when = (d: Detail) => (d.date ? formatDate(d.date) : "soon");
 const who = (d: Detail) => d.name?.split(" ")[0] ?? "the student";
+/**
+ * A possessive needs a name to own it. Where the subject is already the page —
+ * one student's workspace — there is no name in the detail, and "Awaiting the
+ * student's answer" reads worse than simply not naming them.
+ */
+const awaitingAnswerLabel = (d: Detail) =>
+  d.name ? `Awaiting ${who(d)}'s answer` : "Awaiting an answer";
 
 type Voice = {
   kind: Kind;
@@ -357,10 +364,10 @@ const META: Record<StatusType, Meta> = {
   MEETING_AWAITING_ANSWER: {
     severity: "attention",
     voices: {
-      staff: { kind: "informational", label: (d) => `Awaiting ${who(d)}'s answer` },
+      staff: { kind: "informational", label: (d) => awaitingAnswerLabel(d) },
       mentor: {
         kind: "informational",
-        label: (d) => `Awaiting ${who(d)}'s answer`,
+        label: (d) => awaitingAnswerLabel(d),
         explanation: () => "They have not said whether they will be there.",
       },
       student: {
@@ -384,10 +391,13 @@ const META: Record<StatusType, Meta> = {
   MEETING_DECLINED: {
     severity: "problem",
     voices: {
-      staff: { kind: "informational", label: (d) => `${who(d)} can't make it` },
+      staff: {
+        kind: "informational",
+        label: (d) => (d.name ? `${who(d)} can't make it` : "Declined"),
+      },
       mentor: {
         kind: "actionable",
-        label: (d) => `${who(d)} can't make it`,
+        label: (d) => (d.name ? `${who(d)} can't make it` : "Declined"),
         explanation: () => "Move it to another time, or cancel it.",
       },
       student: { kind: "informational", label: () => "You can't make it" },
@@ -660,6 +670,16 @@ export function status(
 
 /** Severity for a type, without building a status. For sorting a mixed list. */
 export const severityOf = (type: StatusType): Severity => META[type].severity;
+
+/**
+ * Severity for a state that may be the ordinary one.
+ *
+ * The attendance and time-kind tables leave `status` unset for "attended" and
+ * "in plan", because an ordinary session has nothing to announce. A caller
+ * mapping such a table wants grey rather than a branch.
+ */
+export const severityOrNeutral = (type: StatusType | undefined): Severity =>
+  type ? severityOf(type) : "neutral";
 
 /** Every type, for the tests that hold the copy rules. */
 export const STATUS_TYPES = Object.keys(META) as StatusType[];

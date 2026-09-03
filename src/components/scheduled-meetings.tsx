@@ -1,16 +1,17 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/chip";
 import { InterviewResponse } from "@/components/forms/interview-response";
 import { InterviewRowActions } from "@/components/forms/interview-row-actions";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatusChip } from "@/components/ui/status-chip";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { INTERVIEW_STATUS, INTERVIEW_STATUS_META } from "@/lib/constants";
+import { INTERVIEW_STATUS } from "@/lib/constants";
 import { formatMeetingWhen, formatUntil, toDateInputValue, toTimeInputValue } from "@/lib/format";
 import { awaitingAnswer, splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
 import { cn } from "@/lib/cn";
+import { meetingStatus, type Audience, type ViewerContext } from "@/lib/status";
 
 const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -44,19 +45,43 @@ function DateLeaf({ date, muted }: { date: Date; muted?: boolean }) {
   );
 }
 
-/** Who is reading, and therefore what they may do about a row. */
-export type MeetingsView = "student" | "mentor" | "staff";
+/**
+ * Who is reading, and therefore both what they may do about a row and how the
+ * row is worded. It is the status model's `Audience`, named again here only so
+ * existing call sites keep reading naturally.
+ */
+export type MeetingsView = Audience;
 
 function MeetingRow({
   meeting,
-  view,
+  viewer,
   overdue,
 }: {
   meeting: ScheduledMeeting;
-  view: MeetingsView;
+  viewer: ViewerContext;
   overdue?: boolean;
 }) {
-  const meta = INTERVIEW_STATUS_META[meeting.status];
+  const view = viewer.audience;
+  // Wording comes from the model, per reader: a student who declined must read
+  // "You can't make it", not the third-person label this used to share with
+  // staff.
+  const state = meetingStatus(
+    {
+      id: meeting.id,
+      status: meeting.status,
+      scheduledAt: meeting.scheduledAt,
+      sessionId: meeting.sessionId,
+      ...(meeting.student
+        ? {
+            student: {
+              id: meeting.student.id,
+              name: meeting.student.user.name ?? meeting.student.user.email,
+            },
+          }
+        : {}),
+    },
+    viewer
+  );
   const when = formatMeetingWhen(meeting.scheduledAt, meeting.hasTime);
 
   return (
@@ -81,7 +106,7 @@ function MeetingRow({
               {meeting.student.user.name ?? meeting.student.user.email}
             </Link>
           )}
-          {meta && <Chip tone={meta.tone}>{meta.label}</Chip>}
+          {state && <StatusChip status={state} />}
         </div>
 
         <p className="mt-1 text-sm text-muted-fg">
@@ -155,14 +180,18 @@ function MeetingRow({
  */
 export function ScheduledMeetings({
   meetings,
-  view,
+  viewer,
   toolbar,
   title = "Coming up",
   emptyBody,
 }: {
   meetings: ScheduledMeeting[];
-  /** Students answer these, mentors move and cancel them, staff just watch. */
-  view: MeetingsView;
+  /**
+   * Students answer these, mentors move and cancel them, staff just watch — and
+   * `viewer.now` is the single instant the whole list is judged against, so two
+   * rows can never disagree about what "today" is.
+   */
+  viewer: ViewerContext;
   /**
    * The "Schedule an interview" control, on the mentor's side. Its own strip
    * under the header rather than a button in it: the form expands in place, and
@@ -172,7 +201,8 @@ export function ScheduledMeetings({
   title?: string;
   emptyBody?: React.ReactNode;
 }) {
-  const { upcoming, overdue } = splitMeetings(meetings);
+  const view = viewer.audience;
+  const { upcoming, overdue } = splitMeetings(meetings, viewer.now);
   const unanswered = upcoming.filter(awaitingAnswer).length;
   const confirmed = upcoming.filter(
     (m) => m.status === INTERVIEW_STATUS.CONFIRMED,
@@ -211,10 +241,10 @@ export function ScheduledMeetings({
       ) : (
         <ul className="divide-y divide-line/60">
           {upcoming.map((m) => (
-            <MeetingRow key={m.id} meeting={m} view={view} />
+            <MeetingRow key={m.id} meeting={m} viewer={viewer} />
           ))}
           {overdue.map((m) => (
-            <MeetingRow key={m.id} meeting={m} view={view} overdue />
+            <MeetingRow key={m.id} meeting={m} viewer={viewer} overdue />
           ))}
         </ul>
       )}

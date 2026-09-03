@@ -5,13 +5,13 @@ import { useActionState, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { ProgramTargetsPicker } from "@/components/forms/program-targets-picker";
-import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { updateMentor } from "@/lib/actions/mentors";
 import { USER_STATUS } from "@/lib/constants";
 import type { ProgramOption } from "@/lib/queries";
+import { StatusChip } from "@/components/ui/status-chip";
 
 export type MentorListRow = {
   id: string;
@@ -49,9 +49,11 @@ function MentorRow({
             >
               {mentor.name ?? mentor.email}
             </Link>
-            {mentor.isAdmin && <Chip tone="green">Admin · also mentor</Chip>}
+            {mentor.isAdmin && (
+              <StatusChip severity="neutral">Admin · also mentor</StatusChip>
+            )}
             {mentor.status === USER_STATUS.UNASSIGNED && (
-              <Chip tone="amber">Unassigned</Chip>
+              <StatusChip severity="attention">Not in any program</StatusChip>
             )}
           </div>
           <div className="text-xs text-muted-fg">{mentor.email}</div>
@@ -63,9 +65,9 @@ function MentorRow({
             ) : (
               mentor.assignments.map((a) => (
                 <span key={a.id} className="inline-flex items-center gap-1">
-                  <Chip tone={a.calendlyUrl ? "green" : "gray"}>
+                  <StatusChip severity={a.calendlyUrl ? "ok" : "attention"}>
                     {a.label}
-                  </Chip>
+                  </StatusChip>
                   {a.calendlyUrl ? (
                     <a
                       href={a.calendlyUrl}

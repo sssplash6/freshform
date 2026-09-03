@@ -22,6 +22,7 @@ import { studentLedger, studentMeetings } from "@/lib/queries";
 export default async function StudentHomePage() {
   const user = await requireRole(ROLES.STUDENT);
   await ensureDeadlineReminders();
+  const viewer = { audience: "student" as const, userId: user.id, now: new Date() };
 
   const profile = await prisma.studentProfile.findUnique({
     where: { userId: user.id },
@@ -155,7 +156,7 @@ export default async function StudentHomePage() {
           them: what they have to turn up to, then what they have done. */}
       <ScheduledMeetings
         meetings={meetings}
-        view="student"
+        viewer={viewer}
         emptyBody="When a mentor books an interview with you, it appears here and you can confirm you'll be there."
       />
 
@@ -163,7 +164,7 @@ export default async function StudentHomePage() {
 
       <StudentGoals assignments={ledger.assignments} />
 
-      <MentorHoursList items={hours.perMentor} />
+      <MentorHoursList items={hours.perMentor} now={viewer.now} />
     </div>
   );
 }

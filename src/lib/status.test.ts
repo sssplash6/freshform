@@ -177,6 +177,18 @@ describe("per-audience wording", () => {
     expect(forMentor?.kind).toBe("informational");
   });
 
+  it("does not invent a possessive when it has no name to own it", () => {
+    // On one student's own page the subject is the page, so the detail carries
+    // no name — "Awaiting the student's answer" reads worse than not naming.
+    expect(status("MEETING_AWAITING_ANSWER", view("staff"), {})?.label).toBe(
+      "Awaiting an answer"
+    );
+    expect(status("MEETING_DECLINED", view("mentor"), {})?.label).toBe("Declined");
+    expect(
+      status("MEETING_AWAITING_ANSWER", view("staff"), { name: "Aziza Yusupova" })?.label
+    ).toBe("Awaiting Aziza's answer");
+  });
+
   it("hides staff-only states from the people they are not about", () => {
     expect(status("FEEDBACK_LOW", view("mentor"))).toBeNull();
     expect(status("STUDENT_PLACEHOLDER_EMAIL", view("student"))).toBeNull();

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Chip } from "@/components/chip";
-import { Deadline } from "@/components/deadline";
 import { MeetingsLog } from "@/components/meetings-log";
 import {
   MentorHoursFilter,
@@ -22,6 +20,7 @@ import { formatDate, formatDuration } from "@/lib/format";
 import { initials, personBanner } from "@/lib/person-tone";
 import { prisma } from "@/lib/prisma";
 import { mentorAssignments, mentorOverview, mentorPrograms } from "@/lib/queries";
+import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
 
 /** How many meetings the log shows before it stops; the tallies stay complete. */
 const LOG_LIMIT = 30;
@@ -46,6 +45,8 @@ export default async function AdminMentorDetailPage({
   searchParams: Promise<HoursQuery>;
 }) {
   await requireRole(ROLES.ADMIN);
+  // One instant for every use-by date on the page.
+  const now = new Date();
   const { id } = await params;
   const query = await searchParams;
 
@@ -111,10 +112,10 @@ export default async function AdminMentorDetailPage({
             <span className="flex flex-wrap items-center gap-3">
               {name}
               {mentor.role === ROLES.ADMIN && (
-                <Chip tone="green">Admin · also mentor</Chip>
+                <StatusChip severity="neutral">Admin · also mentor</StatusChip>
               )}
               {mentor.status === USER_STATUS.UNASSIGNED && (
-                <Chip tone="amber">Awaiting assignment</Chip>
+                <StatusChip severity="attention">Not in any program</StatusChip>
               )}
             </span>
           }
@@ -141,12 +142,12 @@ export default async function AdminMentorDetailPage({
         {assignments.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             {assignments.map((a) => (
-              <Chip key={a.id} tone={a.calendlyUrl ? "green" : "gray"}>
+              <StatusChip key={a.id} severity={a.calendlyUrl ? "ok" : "attention"}>
                 {a.cohort
                   ? `${a.program.name} / ${a.cohort.name}`
                   : a.program.name}
                 {a.calendlyUrl ? " · booking link set" : " · no booking link"}
-              </Chip>
+              </StatusChip>
             ))}
           </div>
         )}
@@ -384,7 +385,7 @@ export default async function AdminMentorDetailPage({
                     <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand">
                       {s.student.user.name ?? s.student.user.email}
                       {s.student.user.status === USER_STATUS.PENDING && (
-                        <Chip tone="amber">Pending approval</Chip>
+                        <StatusChip severity="attention">Pending approval</StatusChip>
                       )}
                     </span>
                     <span className="block text-xs text-muted-fg">
@@ -427,7 +428,7 @@ export default async function AdminMentorDetailPage({
                   {formatDuration(s.remaining)}
                 </Td>
                 <Td label="Use by" className="whitespace-nowrap">
-                  <Deadline deadline={s.deadline} />
+                  <DeadlineText deadline={s.deadline} now={now} />
                 </Td>
               </Tr>
             ))}

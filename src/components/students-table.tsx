@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/chip";
 import { StudentFolderLink } from "@/components/student-folder-link";
 import { TelegramHandle } from "@/components/telegram-handle";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,6 +7,7 @@ import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { USER_STATUS } from "@/lib/constants";
 import { formatDuration } from "@/lib/format";
 import type { StudentWithHours } from "@/lib/queries";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * Students with derived hour totals (allotted = sum of per-mentor
@@ -61,10 +61,10 @@ export function StudentsTable({
               <div className="flex items-center gap-2 font-medium text-ink group-hover:text-brand">
                 {s.user.name ?? "—"}
                 {s.user.status === USER_STATUS.PENDING && (
-                  <Chip tone="amber">Pending approval</Chip>
+                  <StatusChip severity="attention">Pending approval</StatusChip>
                 )}
                 {s.user.status === USER_STATUS.ACTIVE && !s.telegramUsername && (
-                  <Chip tone="gray">Hasn&apos;t signed in yet</Chip>
+                  <StatusChip severity="neutral">Hasn&apos;t signed in</StatusChip>
                 )}
               </div>
               <div className="text-xs text-muted-fg">{s.user.email}</div>

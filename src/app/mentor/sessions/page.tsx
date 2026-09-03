@@ -1,4 +1,3 @@
-import { Chip } from "@/components/chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -14,6 +13,8 @@ import {
 import { requireMentor } from "@/lib/dal";
 import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { StatusChip } from "@/components/ui/status-chip";
+import { severityOrNeutral } from "@/lib/status";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -280,20 +281,20 @@ export default async function MentorSessionsPage({
                       <Td label="Status">
                         <span className="flex flex-wrap gap-1.5">
                           {voided ? (
-                            <Chip tone="gray">Voided</Chip>
-                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? (
-                            <Chip tone="green">Logged</Chip>
-                          ) : (
-                            <Chip
-                              tone={
-                                ATTENDANCE_META[attendanceOf(s)].tone ?? "gray"
-                              }
+                            <StatusChip severity="neutral">
+                              Voided, time returned
+                            </StatusChip>
+                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? null : (
+                            <StatusChip
+                              severity={severityOrNeutral(
+                                ATTENDANCE_META[attendanceOf(s)].status
+                              )}
                             >
-                              {ATTENDANCE_META[attendanceOf(s)].label}
-                            </Chip>
+                              {ATTENDANCE_META[attendanceOf(s)].chip}
+                            </StatusChip>
                           )}
                           {!voided && !s.withinPlan && (
-                            <Chip tone="gray">Extra</Chip>
+                            <StatusChip severity="neutral">Extra, no time charged</StatusChip>
                           )}
                         </span>
                       </Td>

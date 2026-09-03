@@ -1,4 +1,4 @@
-import { Deadline } from "@/components/deadline";
+import { DeadlineText } from "@/components/ui/status-chip";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
@@ -25,7 +25,14 @@ type MentorHours = {
  * plus any use-by date sit underneath. Approachable for external students
  * without turning hours into a game.
  */
-export function MentorHoursList({ items }: { items: MentorHours[] }) {
+export function MentorHoursList({
+  items,
+  now,
+}: {
+  items: MentorHours[];
+  /** The one instant every use-by date in the list is judged against. */
+  now: Date;
+}) {
   // The student's team is the people on it; pooled hours awaiting a mentor
   // show as their own row but aren't a mentor to count.
   const mentorCount = items.filter((m) => m.mentor).length;
@@ -71,12 +78,12 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                   <span
                     className={cn(
                       "text-lg font-bold tabular-nums",
-                      overdrawn ? "text-red-700" : "text-ink",
+                      overdrawn ? "text-danger-ink" : "text-ink",
                     )}
                   >
                     {formatDuration(overdrawn ? -m.remaining : m.remaining)}
                   </span>{" "}
-                  {overdrawn ? "h over" : "h left"}
+                  {overdrawn ? "over" : "left"}
                 </span>
               </div>
               <Meter
@@ -92,7 +99,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                   {formatDuration(used)} of {formatDuration(m.allocated)} used
                   {m.missed > 0 ? ` · ${formatDuration(m.missed)} missed` : ""}
                   {m.forfeited > 0 ? (
-                    <span className="text-red-700">
+                    <span className="text-danger-ink">
                       {" "}
                       · {formatDuration(m.forfeited)} expired unused
                     </span>
@@ -100,7 +107,7 @@ export function MentorHoursList({ items }: { items: MentorHours[] }) {
                     ""
                   )}
                 </span>
-                <Deadline deadline={m.deadline} />
+                <DeadlineText deadline={m.deadline} now={now} />
               </div>
             </li>
           );

@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/chip";
 import { ExpandableText } from "@/components/expandable-text";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRowActions } from "@/components/forms/session-row-actions";
@@ -17,6 +16,8 @@ import {
   SESSION_STATUS,
 } from "@/lib/constants";
 import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/lib/format";
+import { StatusChip } from "@/components/ui/status-chip";
+import { severityOrNeutral } from "@/lib/status";
 
 /**
  * Structural, not Prisma-derived: the same table serves one student's ledger
@@ -240,18 +241,24 @@ export function MeetingsLog({
                   {(voided || state !== ATTENDANCE.ATTENDED || !s.withinPlan) && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {voided ? (
-                        <Chip tone="gray">Voided, hours returned</Chip>
+                        <StatusChip severity="neutral">Voided, time returned</StatusChip>
                       ) : (
                         <>
                           {state !== ATTENDANCE.ATTENDED && (
-                            <Chip tone={ATTENDANCE_META[state].tone ?? "gray"}>
+                            <StatusChip
+                              severity={severityOrNeutral(ATTENDANCE_META[state].status)}
+                            >
                               {ATTENDANCE_META[state].chip}
-                            </Chip>
+                            </StatusChip>
                           )}
                           {!s.withinPlan && (
-                            <Chip tone="gray">
+                            <StatusChip
+                              severity={severityOrNeutral(
+                                TIME_KIND_META[timeKindOf(s)].status
+                              )}
+                            >
                               {TIME_KIND_META[timeKindOf(s)].chip}
-                            </Chip>
+                            </StatusChip>
                           )}
                         </>
                       )}

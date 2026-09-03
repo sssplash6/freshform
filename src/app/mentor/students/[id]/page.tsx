@@ -2,8 +2,6 @@ import { notFound } from "next/navigation";
 
 import { ArrowLink } from "@/components/arrow-link";
 import { AssignmentsPanel } from "@/components/assignments-panel";
-import { Chip } from "@/components/chip";
-import { Deadline } from "@/components/deadline";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
 import { HoursBreakdown } from "@/components/hours-breakdown";
@@ -32,6 +30,7 @@ import {
   studentMeetings,
   taskOptionsForSessions,
 } from "@/lib/queries";
+import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
 
 /**
  * Mentor's view of one of their students. The numbers are scoped to THIS mentor
@@ -52,6 +51,7 @@ export default async function MentorStudentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const mentor = await requireMentor();
+  const viewer = { audience: "mentor" as const, userId: mentor.id, now: new Date() };
   const { id } = await params;
 
   const profile = await prisma.studentProfile.findUnique({
@@ -152,7 +152,9 @@ export default async function MentorStudentDetailPage({
         title={
           <span className="flex flex-wrap items-center gap-3">
             {profile.user.name ?? profile.user.email}
-            {!approved && <Chip tone="amber">Pending approval</Chip>}
+            {!approved && (
+              <StatusChip severity="attention">Pending approval</StatusChip>
+            )}
           </span>
         }
         subtitle={
@@ -183,7 +185,7 @@ export default async function MentorStudentDetailPage({
               <>
                 <br />
                 Your time with them run to{" "}
-                <Deadline deadline={allocation.deadline} />
+                <DeadlineText deadline={allocation.deadline} now={viewer.now} />
               </>
             )}
           </>
@@ -234,7 +236,7 @@ export default async function MentorStudentDetailPage({
 
       <ScheduledMeetings
         meetings={meetings}
-        view="mentor"
+        viewer={viewer}
         emptyBody="Book an interview and the student is asked to confirm they'll be there."
         toolbar={
           approved ? (
