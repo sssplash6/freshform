@@ -1,182 +1,566 @@
-import Link from "next/link";
-
-import { ArrowLink } from "@/components/ui/link";
+import { AttentionList } from "@/components/attention-list";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
-import { CreateProgramForm } from "@/components/forms/program-forms";
-import { ArrowRightIcon } from "@/components/icons";
-import { MeetingsLog } from "@/components/meetings-log";
-import { ProgramIslandCard } from "@/components/program-island-card";
-import { Figure, FigureRow } from "@/components/ui/figure";
-import { Callout } from "@/components/ui/callout";
-import { PageTitle } from "@/components/ui/section";
-import { ROLES, USER_STATUS } from "@/lib/constants";
+import { Timeline, type TimelineEntry } from "@/components/timeline";
+import { Figure } from "@/components/ui/figure";
+import { ArrowLink } from "@/components/ui/link";
+import { PageTitle, Section } from "@/components/ui/section";
+import { StatusChip } from "@/components/ui/status-chip";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
+import {
+  ASSIGNMENT_PROGRESS,
+  INTERVIEW_STATUS,
+  ROLES,
+  SESSION_STATUS,
+} from "@/lib/constants";
+import { requireRole } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatDate, formatDuration } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/dal";
+import { recentMeetings, studentsWithHours } from "@/lib/queries";
 import {
-  recentMeetings,
-  studentsWithHours,
-  taskOptionsForSessions,
-} from "@/lib/queries";
-
-
+  actionableCount,
+  attentionList,
+  meetingStatus,
+  mentorStatuses,
+  sessionStatuses,
+  status,
+  studentStatuses,
+  taskStatuses,
+  type Status,
+  type StatusType,
+  type ViewerContext,
+} from "@/lib/status";
+import { formatTimeOfDay, programWallClock } from "@/lib/when";
 
 /**
- * Cross-program dashboard: one island per running program with its vitals;
- * each island expands into the program's own page with everything in it.
- * Pending self-signups are approved right here.
+ * The admin inbox: is anything in my programs waiting on me right now?
+ *
+ * The page it replaces asked that question in its heading and then answered a
+ * different one — a greeting banner, an orange "awaiting assignment" pill, an
+ * amber approvals callout, five equally loud lifetime totals and an EDITABLE
+ * log of sessions other people had already logged, all of it above the only
+ * link into a program. Reading it told you what the school had done, never what
+ * it was waiting for.
+ *
+ * So: four lists and a line of context. This page derives no wording and picks
+ * no colour — it asks `lib/status.ts` what is true about students, mentors,
+ * tasks and meetings, and renders what it is told, already in a staff voice.
  */
-export default async function AdminHomePage() {
-  await requireRole(ROLES.ADMIN);
+
+/**
+ * The states this inbox asks about: approvals, time, meetings, mentors, tasks,
+ * feedback (§6.1).
+ *
+ * The producers in `lib/status.ts` know more than that — who has never signed
+ * in, whose time sits in the unassigned pool, who has no mentor — and those are
+ * facts about ONE person, best read on their own page or in the students list
+ * where the fix is to hand. Naming the set here is what keeps this screen a
+ * question of fixed size instead of however much the producers happen to emit
+ * about however many students the school has.
+ */
+const NEEDS_YOU = new Set<StatusType>([
+  "STUDENT_PENDING_APPROVAL",
+  "STUDENT_PLACEHOLDER_EMAIL",
+  "BALANCE_OVERDRAWN",
+  "BALANCE_NONE",
+  "ALLOCATION_EXPIRING",
+  "ALLOCATION_EXPIRED",
+  "MEETING_UNLOGGED",
+  "MENTOR_UNASSIGNED",
+  "BOOKING_LINK_MISSING",
+  "TASK_OVERDUE",
+  "TASK_NEEDS_MENTOR",
+  "FEEDBACK_LOW",
+  "STAFF_UNSCOPED",
+]);
+
+/** At most twenty rows, and more than three of one state collapse to a line. */
+const ROW_CAP = 20;
+const ROLL_UP_AT = 3;
+/** Up next is a week's diary, not a ledger; Recent is a glance, not a log. */
+const UP_NEXT_CAP = 10;
+const RECENT_SHOWN = 5;
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * `lib/status.ts` addresses people at the role-neutral homes the route plan
+ * moves them to (`/students/:id`, `/programs/:id`); those pages still live
+ * under `/admin` until Phase 6. One temporary map in the one file that reads
+ * those hrefs, rather than a producer that lies about where a student lives —
+ * it comes out with the redirect table (§2.3), and until then every row here is
+ * a link that lands somewhere.
+ */
+const reroute = (href: string): string =>
+  /^\/(students|programs)\//.test(href) ? `/admin${href}` : href;
+
+/** "1 program", "3 programs" — the one place this page pluralises. */
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
+type RecentSession = Awaited<ReturnType<typeof recentMeetings>>[number];
+
+/** A status and the program it belongs to, before either is presented. */
+type Flag = { programId: string | null; status: Status };
+
+export default async function AdminInboxPage() {
+  const user = await requireRole(ROLES.ADMIN);
   await ensureDeadlineReminders();
 
-  const [programs, students, assignments, unassignedMentors, meetings] =
-    await Promise.all([
-      prisma.program.findMany({
-        include: { cohorts: true },
-        orderBy: { name: "asc" },
-      }),
-      studentsWithHours(),
-      prisma.mentorAssignment.findMany({ orderBy: { createdAt: "asc" } }),
-      prisma.user.count({
-        where: { role: ROLES.MENTOR, status: USER_STATUS.UNASSIGNED },
-      }),
-      recentMeetings({ take: 10 }),
-    ]);
+  // One instant for the whole render, so no two sections can disagree about
+  // what today is or what has expired.
+  const now = new Date();
+  const viewer: ViewerContext = { audience: "staff", userId: user.id, now };
+  // A meeting time is the program's wall clock kept in a UTC field, which runs
+  // five hours ahead of this instant. A day of slack on the bound costs one
+  // extra row to discard and saves doing calendar arithmetic twice — `Timeline`
+  // re-buckets every row against `now` anyway.
+  const horizon = new Date(now.getTime() + 8 * DAY);
 
+  const [
+    programs,
+    students,
+    pairings,
+    mentors,
+    ratings,
+    useByDates,
+    unassignedTasks,
+    taskMinutes,
+    meetings,
+    recent,
+  ] = await Promise.all([
+    prisma.program.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    studentsWithHours(),
+    prisma.mentorAssignment.findMany({
+      select: { mentorId: true, programId: true, calendlyUrl: true },
+    }),
+    // The same pool the mentors list works from: plain mentors plus dual-role
+    // admins who also mentor. A mentor missing from here is a mentor whose
+    // missing booking link nobody is told about.
+    prisma.user.findMany({
+      where: { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, status: true },
+    }),
+    prisma.mentorFeedback.groupBy({
+      by: ["mentorId"],
+      _avg: { rating: true },
+      _count: true,
+    }),
+    // The soonest use-by date a student still has AHEAD of them. What is about
+    // to expire is the question, so a date already passed is not an answer —
+    // that time is forfeited, and `studentsWithHours` has already counted it.
+    prisma.hourAllocation.groupBy({
+      by: ["studentId"],
+      where: { deadline: { gte: now } },
+      _min: { deadline: true },
+    }),
+    prisma.assignment.findMany({
+      where: { mentorId: null, progress: { not: ASSIGNMENT_PROGRESS.DONE } },
+      include: { student: { include: { user: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.session.groupBy({
+      by: ["assignmentId"],
+      where: { status: SESSION_STATUS.ACTIVE, assignment: { mentorId: null } },
+      _sum: { minutes: true },
+    }),
+    // Still in the diary: not cancelled, not held, nothing logged against it.
+    // Both a passed meeting for Needs you and the week ahead for Up next come
+    // out of this one list.
+    prisma.interview.findMany({
+      where: {
+        sessionId: null,
+        status: {
+          in: [
+            INTERVIEW_STATUS.PROPOSED,
+            INTERVIEW_STATUS.CONFIRMED,
+            INTERVIEW_STATUS.DECLINED,
+          ],
+        },
+        scheduledAt: { lte: horizon },
+      },
+      include: { mentor: true, student: { include: { user: true } } },
+      orderBy: { scheduledAt: "asc" },
+    }),
+    recentMeetings({ take: RECENT_SHOWN }),
+  ]);
 
-  const meetingTasks = await taskOptionsForSessions(meetings);
-  const overall = programTotals(students);
-  const pending = students.filter(
-    (s) => s.user.status === USER_STATUS.PENDING
+  const programById = new Map(programs.map((p) => [p.id, p]));
+  const studentById = new Map(students.map((s) => [s.id, s]));
+  const useByById = new Map(useByDates.map((d) => [d.studentId, d._min.deadline]));
+  const ratingByMentor = new Map(ratings.map((r) => [r.mentorId, r]));
+  const minutesByTask = new Map(
+    taskMinutes.map((t) => [t.assignmentId ?? "", t._sum.minutes ?? 0])
   );
 
+  /**
+   * Everything true and worth saying, tagged with the program it happened in.
+   *
+   * The tag is the page's own: `taskStatuses` and `meetingStatus` describe a
+   * thing whose program they were never handed, and section 4 needs a count per
+   * program that agrees with section 2 to the row. Attaching it here — where
+   * the student, and therefore the program, is still in hand — is what keeps
+   * the two sections from being two different derivations of one number.
+   */
+  const flags: Flag[] = [];
+  const flag = (programId: string | null, list: Status[]) => {
+    const program = programId ? programById.get(programId) : undefined;
+    for (const s of list) {
+      if (!NEEDS_YOU.has(s.type)) continue;
+      flags.push({
+        programId: programId ?? null,
+        status: {
+          ...s,
+          ...(program ? { program } : {}),
+          ...(s.href ? { href: reroute(s.href) } : {}),
+        },
+      });
+    }
+  };
+
+  for (const s of students) {
+    flag(
+      s.programId,
+      studentStatuses(
+        {
+          id: s.id,
+          name: s.user.name,
+          email: s.user.email,
+          accountStatus: s.user.status,
+          telegramUsername: s.telegramUsername,
+          allottedMinutes: s.allottedMinutes,
+          remainingMinutes: s.remainingMinutes,
+          forfeitedMinutes: s.forfeitedMinutes,
+          nextDeadline: useByById.get(s.id) ?? null,
+          program: { id: s.programId, name: s.program.name },
+        },
+        viewer
+      )
+    );
+  }
+
+  for (const m of mentors) {
+    const theirs = pairings.filter((p) => p.mentorId === m.id);
+    const rating = ratingByMentor.get(m.id);
+    // No program tag: a mentor works across several, and their setup is not one
+    // program's problem to count.
+    flag(
+      null,
+      mentorStatuses(
+        {
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          accountStatus: m.status,
+          programCount: new Set(theirs.map((p) => p.programId)).size,
+          pairingsMissingLink: theirs.filter((p) => !p.calendlyUrl).length,
+          averageRating: rating?._avg.rating ?? null,
+          ratingCount: rating?._count ?? 0,
+        },
+        viewer
+      )
+    );
+  }
+
+  for (const t of unassignedTasks) {
+    flag(
+      t.student.programId,
+      taskStatuses(
+        {
+          id: t.id,
+          purpose: t.purpose,
+          progress: t.progress,
+          mentorId: t.mentorId,
+          minuteLimit: t.minuteLimit,
+          loggedMinutes: minutesByTask.get(t.id) ?? 0,
+          student: {
+            id: t.studentId,
+            name: t.student.user.name ?? t.student.user.email,
+          },
+        },
+        viewer
+      )
+    );
+  }
+
+  // A meeting is in exactly one state, and both sections below read it: Needs
+  // you keeps the ones that have passed unlogged, Up next carries the rest as a
+  // chip. Deciding it once is also what stops the two disagreeing.
+  const meetingState = new Map(
+    meetings.map((m) => [
+      m.id,
+      meetingStatus(
+        {
+          id: m.id,
+          status: m.status,
+          scheduledAt: m.scheduledAt,
+          sessionId: m.sessionId,
+          student: {
+            id: m.studentId,
+            name: m.student.user.name ?? m.student.user.email,
+          },
+        },
+        viewer
+      ),
+    ])
+  );
+  for (const m of meetings) {
+    const state = meetingState.get(m.id);
+    if (state) flag(m.student.programId, [state]);
+  }
+
+  // Nothing in scope at all is a state, not an empty page: one line that says
+  // so, in place of the three copies of a "staff configuration" sentence this
+  // replaces.
+  if (programs.length === 0) {
+    const unscoped = status("STAFF_UNSCOPED", viewer);
+    if (unscoped) flags.push({ programId: null, status: unscoped });
+  }
+
+  const needsYou = attentionList(
+    flags.map((f) => f.status),
+    viewer,
+    { threshold: ROLL_UP_AT }
+  );
+  const shown = needsYou.slice(0, ROW_CAP);
+  const spilled = needsYou.length - shown.length;
+
+  /**
+   * Up next is chronology, whatever the row is about: a use-by date three days
+   * out matters more than a meeting next month, and both belong to the same
+   * question. Task due dates join them once `Assignment.deadline` becomes a
+   * real date (M6) — today it holds free text like "March-May", which is why
+   * `TASK_OVERDUE` is dormant rather than guessed at.
+   */
+  const upNext: TimelineEntry[] = [];
+  for (const m of meetings) {
+    upNext.push({
+      id: m.id,
+      at: m.scheduledAt,
+      hasTime: m.hasTime,
+      // Staff are neither party, and the row has one slot for a person. The
+      // student gets the chip because the row is about them and links to them;
+      // the mentor is named in the title, because who is running the meeting is
+      // the one fact an admin cannot recover from anywhere else on this page.
+      title: `Meeting with ${m.mentor.name ?? m.mentor.email}`,
+      status: meetingState.get(m.id),
+      person: m.student.user,
+      href: reroute(`/students/${m.studentId}`),
+      joinUrl: m.link,
+      note: m.note,
+    });
+  }
+  for (const { status: s } of flags) {
+    if (s.type !== "ALLOCATION_EXPIRING" || !s.subject || !s.at) continue;
+    const student = studentById.get(s.subject.id);
+    upNext.push({
+      id: `use-by-${s.subject.id}`,
+      at: s.at,
+      hasTime: false,
+      // The chip already says "4h 38m expires September 30", so the title names
+      // the kind of row rather than repeating the verb back.
+      title: "Use-by date",
+      status: s,
+      person: student?.user ?? null,
+      ...(s.href ? { href: s.href } : {}),
+    });
+  }
+
+  const overall = programTotals(students);
+  const rows = programs.map((p) => {
+    const enrolled = students.filter((s) => s.programId === p.id);
+    const totals = programTotals(enrolled);
+    return {
+      ...p,
+      students: totals.students,
+      mentors: new Set(
+        pairings.filter((a) => a.programId === p.id).map((a) => a.mentorId)
+      ).size,
+      remaining: totals.remaining,
+      attention: actionableCount(
+        flags.filter((f) => f.programId === p.id).map((f) => f.status)
+      ),
+    };
+  });
+
+  const columns: Column[] = [
+    { label: "Program" },
+    { label: "Students", align: "right" },
+    { label: "Mentors", align: "right" },
+    { label: "Remaining", align: "right" },
+    { label: "Needs you", align: "right" },
+    {},
+  ];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageTitle
-        eyebrow="Freshman Academy"
-        title="Cross-program dashboard"
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatDuration(overall.remaining)} mentoring time remaining.`}
+        title="Inbox"
+        subtitle={
+          <span className="flex flex-wrap items-baseline gap-x-1.5">
+            <span>
+              {count(programs.length, "program")} ·{" "}
+              {count(overall.students, "student")} ·
+            </span>
+            <Figure
+              size="inline"
+              value={formatDuration(overall.remaining)}
+              tone={overall.remaining < 0 ? "danger" : "hours"}
+            />
+            <span>remaining</span>
+          </span>
+        }
+        // The render time, from the server clock. Freshness is chrome, and this
+        // is the one page with the plumbing to claim it honestly.
         actions={
-          unassignedMentors > 0 && (
-            <Link
-              href="/admin/mentors"
-              className="group inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-surface px-3 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-soft"
-            >
-              {unassignedMentors} mentor{unassignedMentors === 1 ? "" : "s"}{" "}
-              awaiting assignment
-              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          )
+          <span className="text-[13px] text-muted-fg">
+            Updated {formatTimeOfDay(programWallClock(now), true)}
+          </span>
         }
       />
 
-      {pending.length > 0 && (
-        <Callout
-          tone="warn"
-          title={`Pending approvals (${pending.length})`}
-        >
-          These students signed up themselves. Approve them, then allocate
-          their time from mentors in their program via “Manage”.
-          <ul className="mt-3 divide-y divide-warn-line">
-            {pending.map((s) => (
-              <li
-                key={s.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-2"
-              >
-                <div>
-                  <div className="text-sm font-medium text-ink">
-                    {s.user.name ?? s.user.email}
-                  </div>
-                  <div className="text-xs text-muted-fg">
-                    {s.user.email} · {s.program.name}
-                    {s.cohort ? ` / ${s.cohort.name}` : ""}
-                    {s.telegramUsername ? ` · @${s.telegramUsername}` : ""} ·
-                    signed up {formatDate(s.createdAt)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ApproveStudentButtons studentProfileId={s.id} />
-                  <ArrowLink
-                    href={`/admin/students/${s.id}`}
-                    className="text-[13px]"
-                  >
-                    Manage
-                  </ArrowLink>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Callout>
-      )}
-
-      <FigureRow>
-        <Figure label="Students" value={String(students.length)} />
-        <Figure label="Time allotted" value={formatDuration(overall.allotted)} />
-        <Figure
-          label="Time completed"
-          value={formatDuration(overall.completed)}
-        />
-        {overall.missed > 0 && (
-          <Figure label="Time missed" value={formatDuration(overall.missed)} />
-        )}
-        <Figure
-          label="Time remaining"
-          value={formatDuration(overall.remaining)}
-          tone={overall.remaining < 0 ? "danger" : "ink"}
-        />
-      </FigureRow>
-
-      <MeetingsLog
-        sessions={meetings}
-        title="Latest meetings"
-        eyebrow="Logged by mentors · every program"
-        emptyBody="Nothing has been logged across the programs yet."
-        mentorBase="/admin/mentors"
-        manage={{ isAdmin: true, tasksBySession: meetingTasks }}
+      <AttentionList
+        statuses={shown}
+        renderAction={(s) =>
+          s.type === "STUDENT_PENDING_APPROVAL" && s.subject ? (
+            <ApproveStudentButtons studentProfileId={s.subject.id} />
+          ) : null
+        }
+        {...(spilled > 0
+          ? { moreHref: "/admin/students", moreLabel: `${spilled} more` }
+          : {})}
       />
 
-      <section>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-ink">
-            Programs currently running
-          </h2>
-          <CreateProgramForm />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {programs.map((p) => {
-            const ps = students.filter((s) => s.programId === p.id);
-            const pt = programTotals(ps);
-            const mentorCount = new Set(
-              assignments
-                .filter((a) => a.programId === p.id)
-                .map((a) => a.mentorId)
-            ).size;
-            return (
-              <ProgramIslandCard
-                key={p.id}
-                name={p.name}
-                href={`/admin/programs/${p.id}`}
-                cohortCount={p.cohorts.length}
-                stats={[
-                  { label: "Students", value: String(ps.length) },
-                  { label: "Mentors", value: String(mentorCount) },
-                  {
-                    label: "Remaining",
-                    value: formatDuration(pt.remaining),
-                    danger: pt.remaining < 0,
-                    brand: pt.remaining >= 0,
-                  },
-                ]}
-                caption={`${formatDuration(pt.completed)} of ${formatDuration(pt.allotted)} completed`}
-                completion={{ completed: pt.completed, allotted: pt.allotted }}
+      <Timeline
+        entries={upNext}
+        now={now}
+        buckets={["today", "week"]}
+        limit={UP_NEXT_CAP}
+      />
+
+      {/* One program is the whole scope, and a table of one row that repeats
+          the line under the title is furniture. */}
+      {programs.length > 1 && (
+        <Section title="Programs">
+          <Table columns={columns} framed={false}>
+            {rows.map((p) => (
+              <Tr key={p.id}>
+                <Td label="Program">
+                  <span className="font-medium text-ink">{p.name}</span>
+                </Td>
+                <Td label="Students" align="right" className="tabular-nums">
+                  {p.students}
+                </Td>
+                <Td label="Mentors" align="right" className="tabular-nums">
+                  {p.mentors}
+                </Td>
+                <Td label="Remaining" align="right">
+                  <Figure
+                    size="inline"
+                    value={formatDuration(p.remaining)}
+                    tone={p.remaining < 0 ? "danger" : "hours"}
+                    className="sm:text-right"
+                  />
+                </Td>
+                <Td label="Needs you" align="right">
+                  {p.attention > 0 ? (
+                    <span className="font-medium tabular-nums text-ink">
+                      {p.attention}
+                    </span>
+                  ) : (
+                    <span className="text-muted-fg">—</span>
+                  )}
+                </Td>
+                <Td align="right">
+                  <ArrowLink
+                    href={`/admin/programs/${p.id}`}
+                    className="text-[13px]"
+                  >
+                    Open
+                  </ArrowLink>
+                </Td>
+              </Tr>
+            ))}
+          </Table>
+        </Section>
+      )}
+
+      {/* Read-only, and hidden when there is nothing to read: the section is
+          five lines of reassurance that time is being logged, and an empty box
+          explaining its own absence would be more words than the section. */}
+      {recent.length > 0 && (
+        <Section title="Recent">
+          <ul className="divide-y divide-line">
+            {recent.map((session) => (
+              <RecentLine
+                key={session.id}
+                session={session}
+                program={studentById.get(session.studentId)?.program.name}
+                viewer={viewer}
               />
-            );
-          })}
-        </div>
-      </section>
+            ))}
+          </ul>
+        </Section>
+      )}
     </div>
+  );
+}
+
+/**
+ * One logged session as a sentence.
+ *
+ * `SessionRow variant="line"` is where this belongs and it arrives with the
+ * shared renderers (§5.2); until then a read-only line is four spans, and
+ * mounting the editable log this section replaces to get them back would undo
+ * the point of the section. The exception chips are not decoration: without
+ * them a voided session reads as delivered time.
+ */
+function RecentLine({
+  session,
+  program,
+  viewer,
+}: {
+  session: RecentSession;
+  program?: string;
+  viewer: ViewerContext;
+}) {
+  const exceptions = sessionStatuses(
+    {
+      attended: session.attended,
+      late: session.late,
+      status: session.status,
+      withinPlan: session.withinPlan,
+    },
+    viewer
+  );
+  const dot = (
+    <span aria-hidden="true" className="text-muted-fg">
+      ·
+    </span>
+  );
+
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-2.5 text-sm sm:px-5">
+      <span className="text-muted-fg">{formatDate(session.date)}</span>
+      {dot}
+      <span className="min-w-0 text-ink">
+        {session.mentor.name ?? session.mentor.email} logged{" "}
+        {formatMinutes(session.minutes)} with{" "}
+        {session.student.user.name ?? session.student.user.email}
+      </span>
+      {program && (
+        <>
+          {dot}
+          <span className="text-muted-fg">{program}</span>
+        </>
+      )}
+      {exceptions.map((s) => (
+        <StatusChip key={s.type} status={s} />
+      ))}
+    </li>
   );
 }
