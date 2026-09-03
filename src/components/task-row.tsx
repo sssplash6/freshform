@@ -1,0 +1,523 @@
+import Link from "next/link";
+
+import { ExpandableText } from "@/components/expandable-text";
+import { PersonChip } from "@/components/person-chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Meter } from "@/components/ui/meter";
+import { StatusChip } from "@/components/ui/status-chip";
+import { Table, Td, Tr, type Column } from "@/components/ui/table";
+import { cn } from "@/lib/cn";
+import {
+  ASSIGNMENT_PROGRESS_GLYPH,
+  ASSIGNMENT_PROGRESS_STATUS,
+} from "@/lib/constants";
+import { formatDate, formatMinutes } from "@/lib/format";
+import { taskStatuses, type Status, type ViewerContext } from "@/lib/status";
+
+/**
+ * One piece of planned work, wherever it appears.
+ *
+ * Four renderers drew this row, and the two on the student's own page drew it
+ * twice on one screen: `AssignmentsPanel`'s seven-column table and
+ * `LedgerBoard.TaskRow` rendered the same task at the same time, and disagreed
+ * about it — over budget was amber in the table and red in the board, "Done"
+ * was a green wash in one and a grey wash in the other. `StudentGoals` drew a
+ * third version as a card, and the program page a fourth as a table missing the
+ * budget bar. Three of the four kept their own progress-to-colour map.
+ *
+ * Two rules settle all of that, and neither is this file's to choose:
+ *
+ * OVER BUDGET IS DANGER, EVERYWHERE. Overspend on a task is a problem with the
+ * plan, not a nudge, and `TASK_OVER_BUDGET` is `severity: "problem"` — so the
+ * number, the chip and the meter all take red, on every page. The row asks
+ * `taskStatuses` whether it is over rather than comparing the two numbers
+ * itself, which is also why a student — who is never told about a budget — sees
+ * no red they cannot read an explanation for.
+ *
+ * DONE IS A ✓ CHIP WITH NO WASH. A tinted row is a colour with no words, it
+ * fought the row's own status chip, and it spent a background on the one state
+ * nobody needs to find. Progress stays a shape — ○ ◐ ✓ from
+ * `ASSIGNMENT_PROGRESS_GLYPH` — on a neutral chip.
+ *
+ *   table  the plan as a ledger — a student's page, a program's page
+ *   list   the plan read forward: purpose, whose it is, a budget meter
+ *   line   the settled subset, one line each, behind a "Finished · 6 ▸" fold
+ */
+
+type RowPerson = {
+  id: string;
+  name: string | null;
+  email: string;
+  avatarUpdatedAt?: Date | null;
+  /** Their page, when this reader may open it. */
+  href?: string;
+};
+
+/**
+ * Structural, not Prisma-derived: a student's tasks and a program's tasks are
+ * two queries, and the program's carries a student the student's does not.
+ */
+export type TaskEntry = {
+  id: string;
+  /** Often written as a sentence, so it is clamped like any other free text. */
+  purpose: string;
+  /** `ASSIGNMENT_PROGRESS`. */
+  progress: string;
+  /** True when an admin stated the progress, so logged hours stop moving it. */
+  progressManual?: boolean;
+  minuteLimit: number | null;
+  loggedMinutes: number;
+  /**
+   * The deadline as somebody typed it — "March–May", "before the deadline".
+   * Kept beside `dueOn` because the column is still free text: until it splits,
+   * this is the only due most tasks have, and it cannot be compared to a clock.
+   */
+  due?: string | null;
+  /** A real date, once there is one. The only thing that decides overdue. */
+  dueOn?: Date | null;
+  note: string | null;
+  /** Null is a state, not missing data: budgeted work on nobody's list yet. */
+  mentor?: RowPerson | null;
+  /** Present only on a list that spans students. */
+  student?: RowPerson | null;
+};
+
+export type TaskColumn =
+  | "task"
+  | "student"
+  | "mentor"
+  | "hours"
+  | "due"
+  | "progress"
+  /** The ⋮ menu. `TaskTable` adds it when any row has one. */
+  | "actions";
+
+const DEFAULT_COLUMNS: TaskColumn[] = [
+  "task",
+  "student",
+  "mentor",
+  "hours",
+  "due",
+  "progress",
+];
+
+/**
+ * The rendered slots, in the one order every task table uses.
+ *
+ * Six, because six is the cap a phone can stack. Two merges get it there and
+ * both remove a real redundancy rather than hiding a fact: `student` and
+ * `mentor` share the `people` slot, and logged-vs-budget share `hours` — they
+ * were two right-aligned columns the reader had to subtract in their head,
+ * which is exactly what the meter beneath them is for.
+ */
+const SLOTS = ["task", "people", "hours", "due", "progress", "actions"] as const;
+type Slot = (typeof SLOTS)[number];
+
+function slotsFor(columns: TaskColumn[]): Slot[] {
+  return SLOTS.filter((slot) =>
+    slot === "people"
+      ? columns.includes("student") || columns.includes("mentor")
+      : columns.includes(slot),
+  );
+}
+
+/** The people slot's heading, reused as the stacked row's label on a phone. */
+function peopleLabel(columns: TaskColumn[]): string {
+  const student = columns.includes("student");
+  const mentor = columns.includes("mentor");
+  return student && mentor ? "Student · Mentor" : student ? "Student" : "Mentor";
+}
+
+const SLOT_LABEL: Record<Exclude<Slot, "people" | "actions">, string> = {
+  task: "Task",
+  hours: "Logged · Budget",
+  due: "Due",
+  progress: "Progress",
+};
+
+/** The header, from the same function the cells use, so the two cannot drift. */
+function headerFor(columns: TaskColumn[]): Column[] {
+  return slotsFor(columns).map((slot) => {
+    if (slot === "people") return { label: peopleLabel(columns) };
+    if (slot === "actions") return { label: "", align: "right" as const };
+    return { label: SLOT_LABEL[slot] };
+  });
+}
+
+/** The three progress states, read off the one map rather than a fourth copy. */
+const PROGRESS_TYPES = new Set(Object.values(ASSIGNMENT_PROGRESS_STATUS));
+
+const nameOf = (person: RowPerson) => person.name ?? person.email;
+
+/** A value the row does not have. Never a blank cell — a blank reads as a bug. */
+function Dash() {
+  return <span className="text-muted-fg">—</span>;
+}
+
+export function TaskRow({
+  task,
+  viewer,
+  variant = "table",
+  columns = DEFAULT_COLUMNS,
+  actions,
+  index,
+}: {
+  task: TaskEntry;
+  /** Whose words the chips are in — a student reads "Mentor to be confirmed". */
+  viewer: ViewerContext;
+  variant?: "table" | "list" | "line";
+  /** `table` only. Ignored by the two list shapes, which show every fact. */
+  columns?: TaskColumn[];
+  /** Edit · Remove · a progress control — already resolved for this reader. */
+  actions?: React.ReactNode;
+  /** Position in the list, for the entrance stagger and nothing else. */
+  index?: number;
+}) {
+  const {
+    id,
+    purpose,
+    progress,
+    progressManual,
+    minuteLimit,
+    loggedMinutes,
+    due,
+    dueOn,
+    note,
+    mentor,
+    student,
+  } = task;
+
+  const statuses = taskStatuses(
+    {
+      id,
+      purpose,
+      progress,
+      mentorId: mentor?.id ?? null,
+      minuteLimit,
+      loggedMinutes,
+      dueOn: dueOn ?? null,
+      ...(student ? { student: { id: student.id, name: nameOf(student) } } : {}),
+    },
+    viewer,
+  );
+
+  // Each state renders beside the thing it is about, rather than all of them
+  // in one pile at the end of the row: "Needs a mentor" where the mentor would
+  // be, "over budget" against the hours it overspent, overdue in the due
+  // column. That is the difference between a row that reads and a row with a
+  // chip drawer bolted on.
+  const of = (type: Status["type"]) => statuses.find((s) => s.type === type);
+  const progressStatus = statuses.find((s) => PROGRESS_TYPES.has(s.type));
+  const needsMentor = of("TASK_NEEDS_MENTOR");
+  const overdue = of("TASK_OVERDUE");
+  const overBudget = of("TASK_OVER_BUDGET");
+
+  const anchor = `task-${id}`;
+  const stagger =
+    index == null ? undefined : { animationDelay: `${Math.min(index, 14) * 24}ms` };
+
+  const progressChip = progressStatus && (
+    <span className="inline-flex items-center gap-1.5">
+      <StatusChip status={progressStatus} glyph={ASSIGNMENT_PROGRESS_GLYPH[progress]} />
+      {/* Why the hours stopped moving this row. A word, not an icon: it is the
+          answer to "I logged three sessions and it still says Not started". */}
+      {progressManual && (
+        <span
+          title="Set by hand — logged time no longer moves this"
+          className="text-[11px] text-muted-fg"
+        >
+          pinned
+        </span>
+      )}
+    </span>
+  );
+
+  // Always clamped, and deliberately not a link: a task has no page of its own,
+  // and an anchor wrapping an ExpandableText would put its "Show more" button
+  // inside a link. The row's destinations are its people.
+  const title = (
+    <ExpandableText text={purpose} lines={2} className="font-medium text-ink" />
+  );
+
+  const people = (
+    <>
+      {student && columns.includes("student") && (
+        <span className="block min-w-0">
+          {student.href ? (
+            <Link href={student.href} className="text-ink hover:text-brand">
+              {nameOf(student)}
+            </Link>
+          ) : (
+            <span className="text-ink">{nameOf(student)}</span>
+          )}
+        </span>
+      )}
+      {mentor ? (
+        <PersonChip
+          person={mentor}
+          size="sm"
+          href={mentor.href}
+          className={student && columns.includes("student") ? "mt-1" : undefined}
+        />
+      ) : (
+        needsMentor && <StatusChip status={needsMentor} />
+      )}
+    </>
+  );
+
+  // "45 min of 2h", one value instead of two columns and a subtraction. No
+  // budget is stated rather than dashed: a task with no ceiling is a decision
+  // somebody made, and an em dash reads as data nobody has entered.
+  const hours = (
+    <span className="tabular-nums">
+      <span
+        className={cn(
+          "font-semibold",
+          overBudget ? "text-danger-ink" : loggedMinutes > 0 ? "text-ink" : "text-muted-fg",
+        )}
+      >
+        {formatMinutes(loggedMinutes)}
+      </span>
+      <span className="text-muted-fg">
+        {minuteLimit == null ? " · no budget" : ` of ${formatMinutes(minuteLimit)}`}
+      </span>
+    </span>
+  );
+
+  const meter =
+    minuteLimit != null && minuteLimit > 0 ? (
+      <Meter
+        pct={(loggedMinutes / minuteLimit) * 100}
+        tone={overBudget ? "danger" : "accent"}
+        size="sm"
+        ariaLabel={`${formatMinutes(loggedMinutes)} of ${formatMinutes(minuteLimit)} logged`}
+        ariaValueNow={loggedMinutes}
+        ariaValueMax={minuteLimit}
+      />
+    ) : null;
+
+  // An overdue task's own label already carries the date ("Due Aug 10, not
+  // done"), so the chip replaces the date rather than sitting beside a second
+  // copy of it. Otherwise the due is plain text: a chip among dates reads as a
+  // different kind of value.
+  const dueText = due?.trim() ? due : dueOn ? formatDate(dueOn) : null;
+  const dueCell = overdue ? (
+    <StatusChip status={overdue} />
+  ) : dueText ? (
+    <span className="text-ink">{dueText}</span>
+  ) : (
+    <Dash />
+  );
+
+  if (variant === "line") {
+    return (
+      <li
+        id={anchor}
+        className={cn(
+          "flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5",
+          index != null && "deal-in",
+        )}
+        style={stagger}
+      >
+        {progressChip}
+        <span className="min-w-0 flex-1 truncate text-sm text-ink">{purpose}</span>
+        {mentor && <PersonChip person={mentor} size="sm" href={mentor.href} />}
+        <span className="text-xs tabular-nums text-muted-fg">
+          {formatMinutes(loggedMinutes)}
+        </span>
+        {actions && <span className="shrink-0">{actions}</span>}
+      </li>
+    );
+  }
+
+  if (variant === "list") {
+    return (
+      <li
+        id={anchor}
+        className={cn("px-4 py-3 sm:px-5", index != null && "deal-in")}
+        style={stagger}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+          <div className="min-w-0 flex-1 text-[15px] leading-snug">{title}</div>
+          {actions && <span className="shrink-0">{actions}</span>}
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {mentor ? (
+            <PersonChip person={mentor} size="sm" href={mentor.href} />
+          ) : (
+            needsMentor && <StatusChip status={needsMentor} />
+          )}
+          {progressChip}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          {hours}
+          {overBudget && <StatusChip status={overBudget} />}
+          {overdue ? (
+            <StatusChip status={overdue} />
+          ) : (
+            dueText && <span className="text-muted-fg">Due {dueText}</span>
+          )}
+        </div>
+
+        {/* The budget as a bar, so a plan running past its hours is visible
+            without reading two numbers and subtracting them. */}
+        {meter && <div className="mt-1.5">{meter}</div>}
+
+        {note && (
+          <div className="mt-1.5">
+            <ExpandableText text={note} lines={2} className="text-xs text-muted-fg" />
+          </div>
+        )}
+      </li>
+    );
+  }
+
+  // A standalone row may carry a menu without its caller having listed the
+  // column; inside a table the column is listed for every row as soon as one
+  // row has a menu, so the header can never fall out of step with the cells.
+  const slots = slotsFor(
+    actions && !columns.includes("actions") ? [...columns, "actions"] : columns,
+  );
+
+  return (
+    <Tr id={anchor} className={cn(index != null && "deal-in")} style={stagger}>
+      {slots.map((slot) => {
+        switch (slot) {
+          case "task":
+            return (
+              <Td key={slot} label="Task" className="sm:max-w-xs">
+                {title}
+                {/* What somebody said about this task that its state cannot
+                    carry — a missed week, an open question. Clamped: it was
+                    unbounded here, and one paragraph made the row forty lines. */}
+                {note && (
+                  <div className="mt-0.5">
+                    <ExpandableText text={note} lines={2} className="text-xs text-muted-fg" />
+                  </div>
+                )}
+              </Td>
+            );
+          case "people":
+            return (
+              <Td key={slot} label={peopleLabel(columns)}>
+                {people}
+              </Td>
+            );
+          case "hours":
+            return (
+              <Td key={slot} label="Logged · Budget" className="sm:w-44">
+                {hours}
+                {overBudget && (
+                  <div className="mt-1">
+                    <StatusChip status={overBudget} />
+                  </div>
+                )}
+                {meter && <div className="mt-1.5 max-w-32">{meter}</div>}
+              </Td>
+            );
+          case "due":
+            return (
+              <Td key={slot} label="Due" className="sm:max-w-40">
+                {dueCell}
+              </Td>
+            );
+          case "progress":
+            return (
+              <Td key={slot} label="Progress">
+                {progressChip}
+              </Td>
+            );
+          case "actions":
+            return (
+              <Td key={slot} align="right" className="align-top">
+                {actions}
+              </Td>
+            );
+        }
+      })}
+    </Tr>
+  );
+}
+
+/**
+ * The plan as a table.
+ *
+ * Like `SessionsTable`, it renders the table and nothing around it.
+ * `AssignmentsPanel` owned a `Section`, an "Allocate time" form and a footer
+ * sentence adding up three totals it recomputed from the rows it was handed —
+ * so a page showing eight of a student's twelve tasks stated a budget that was
+ * true of neither. Totals belong to the query that can see all of them, the
+ * form belongs to the page, and the fold over finished work belongs to a
+ * `Disclosure` around a second table.
+ */
+export function TaskTable({
+  tasks,
+  viewer,
+  columns = DEFAULT_COLUMNS,
+  renderActions,
+  framed = true,
+  empty,
+  className,
+}: {
+  tasks: TaskEntry[];
+  viewer: ViewerContext;
+  columns?: TaskColumn[];
+  /**
+   * A row's own menu. A function because the answer is per row, and returning
+   * nothing for every row drops the column instead of leaving an empty one.
+   */
+  renderActions?: (task: TaskEntry) => React.ReactNode;
+  framed?: boolean;
+  /** Pass an `EmptyState variant="no-results"` when a filter did the emptying. */
+  empty?: React.ReactNode;
+  className?: string;
+}) {
+  if (tasks.length === 0) {
+    return (
+      empty ?? (
+        <EmptyState framed={framed} title="No tasks">
+          Tasks arrive with the time an admin allocates for them.
+        </EmptyState>
+      )
+    );
+  }
+
+  const rowActions = tasks.map((t) => renderActions?.(t));
+  const withActions = rowActions.some(Boolean);
+
+  // A column earns its place only when the rows differ in it. One mentor's own
+  // task list would otherwise repeat their name down the page, and a column of
+  // em dashes is a column carrying nothing — which is how a table reaches seven
+  // columns while answering six questions.
+  const hasStudent = columns.includes("student") && tasks.some((t) => t.student);
+  const spansMentors = new Set(tasks.map((t) => t.mentor?.id ?? "")).size > 1;
+  const hasDue = tasks.some((t) => t.due?.trim() || t.dueOn);
+  const resolved: TaskColumn[] = columns.filter((c) => {
+    if (c === "student") return hasStudent;
+    // Kept when anyone is missing one, whatever else the rows share: "Needs a
+    // mentor" is the actionable state on this table and must not be the thing
+    // a tidy-up hides. Never both dropped — a row with no person is unreadable.
+    if (c === "mentor") return spansMentors || tasks.some((t) => !t.mentor) || !hasStudent;
+    if (c === "due") return hasDue;
+    return c !== "actions";
+  });
+  if (withActions) resolved.push("actions");
+
+  return (
+    <Table framed={framed} columns={headerFor(resolved)} className={className}>
+      {tasks.map((task, i) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          viewer={viewer}
+          variant="table"
+          columns={resolved}
+          actions={rowActions[i]}
+          index={i}
+        />
+      ))}
+    </Table>
+  );
+}
