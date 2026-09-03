@@ -31,6 +31,46 @@ export function formatDuration(n: number): string {
   return minutes === 0 ? `${sign}${hours}h` : `${sign}${hours}h ${minutes}m`;
 }
 
+/**
+ * A total to get your bearings by: 7,807 → "130+ hours".
+ *
+ * The owner's words: "very много цифр and I got a bit lost in them" — a page
+ * of four-part durations is a page nobody reads. So a figure a reader ORIENTS
+ * by is rounded and takes a "+", while a figure that IS the record — one
+ * allocation, one logged session, a balance a mentor is about to spend
+ * against, anything beside money — stays exact through `formatDuration`.
+ * `PRODUCT.md` promises these numbers are trusted; that promise lives on the
+ * exact side of the line, and this side exists so the exact side is legible
+ * when you get to it.
+ *
+ * It always rounds DOWN, because that is what the "+" claims. Rounding 130h 07m
+ * up to "135+ hours" would say the program has time it does not have, and a
+ * figure that overstates is worse than a figure that is long.
+ *
+ * Under an hour there is nothing to round — "45 min" is already the shortest
+ * true thing — and under ten hours the hour is precise enough on its own, so
+ * the five-hour step only starts where the digits actually stop meaning
+ * anything.
+ */
+export function formatRough(n: number): string {
+  const total = Math.round(n);
+  const sign = total < 0 ? "-" : "";
+  const abs = Math.abs(total);
+
+  if (abs < 60) return `${sign}${abs} min`;
+
+  const hours = abs / 60;
+  if (abs < 600) {
+    const whole = Math.floor(hours);
+    // "3 hours" when it is exactly three; "3+ hours" when there is more.
+    return `${sign}${whole}${abs % 60 === 0 ? "" : "+"} ${whole === 1 && abs % 60 === 0 ? "hour" : "hours"}`;
+  }
+
+  const step = Math.floor(hours / 5) * 5;
+  const exact = step * 60 === abs;
+  return `${sign}${step.toLocaleString("en-US")}${exact ? "" : "+"} hours`;
+}
+
 /** Money in US dollars: 1200 → "$1,200", 1200.5 → "$1,200.50". */
 export function formatMoney(n: number): string {
   return n.toLocaleString("en-US", {

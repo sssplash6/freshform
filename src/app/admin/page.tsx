@@ -14,7 +14,7 @@ import {
 } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatDate, formatDuration, formatMinutes } from "@/lib/format";
+import { formatDate, formatMinutes, formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { recentMeetings, studentsWithHours } from "@/lib/queries";
@@ -408,7 +408,7 @@ export default async function AdminInboxPage() {
             </span>
             <Figure
               size="inline"
-              value={formatDuration(overall.remaining)}
+                            value={formatRough(overall.remaining)}
               tone={overall.remaining < 0 ? "danger" : "hours"}
             />
             <span>remaining</span>
@@ -461,7 +461,7 @@ export default async function AdminInboxPage() {
                 <Td label="Remaining" align="right">
                   <Figure
                     size="inline"
-                    value={formatDuration(p.remaining)}
+                                        value={formatRough(p.remaining)}
                     tone={p.remaining < 0 ? "danger" : "hours"}
                     className="sm:text-right"
                   />

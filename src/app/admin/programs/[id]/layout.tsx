@@ -4,7 +4,7 @@ import { TabLinks } from "@/components/ui/segmented";
 import { PageTitle } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { formatDuration } from "@/lib/format";
+import { formatRough } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
 
@@ -48,7 +48,7 @@ export default async function ProgramLayout({
         backLabel="Dashboard"
         eyebrow="Program"
         title={program.name}
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} remaining.`}
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatRough(remaining)} remaining.`}
       />
 
       <TabLinks

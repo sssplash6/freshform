@@ -20,7 +20,7 @@ import {
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatDate, formatDuration, toDateInputValue, toTimeInputValue } from "@/lib/format";
+import { formatDate, formatDuration, formatRough, toDateInputValue, toTimeInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorCaseload, mentorMeetings } from "@/lib/queries";
 import {
@@ -296,7 +296,7 @@ export default async function MentorHomePage({
             <Figure
               size="inline"
               tone="hours"
-              value={formatDuration(left)}
+                            value={formatRough(left)}
               suffix={`left across ${spendable.length} ${
                 spendable.length === 1 ? "student" : "students"
               }`}
