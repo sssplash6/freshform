@@ -8,6 +8,7 @@ import { Select, type SelectOption } from "@/components/select";
 import { Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { setMentorAllocation } from "@/lib/actions/students";
+import { toDateInputValue } from "@/lib/format";
 
 const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
@@ -39,7 +40,7 @@ export function AssignTaskForm({
 }) {
   const [state, action] = useActionState(setMentorAllocation, null);
   const [mentorId, setMentorId] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue(new Date());
 
   return (
     <form action={action}>

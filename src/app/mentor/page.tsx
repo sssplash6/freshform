@@ -88,7 +88,7 @@ function ProgramToggleIsland({
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
-            Hrs done
+            Delivered
           </dt>
           <dd className="text-xl font-bold tabular-nums text-accent-ink">
             {formatDuration(completed)}
@@ -96,7 +96,7 @@ function ProgramToggleIsland({
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-wide text-muted-fg">
-            Hrs left
+            Remaining
           </dt>
           <dd
             className={`text-xl font-bold tabular-nums ${

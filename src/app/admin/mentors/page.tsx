@@ -13,6 +13,7 @@ import { requireRole } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { programOptions, toProgramOptions } from "@/lib/queries";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatDate } from "@/lib/format";
 
 /** How many unregistered sign-ins to name before the list is just a count. */
 const UNASSIGNED_SHOWN = 10;
@@ -114,7 +115,7 @@ export default async function AdminMentorsPage({
                   {m.name ?? m.email}
                 </Link>{" "}
                 <span className="text-muted-fg">({m.email})</span> · signed up{" "}
-                {m.createdAt.toISOString().slice(0, 10)}
+                {formatDate(m.createdAt)}
               </li>
             ))}
           </ul>

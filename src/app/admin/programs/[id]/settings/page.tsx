@@ -82,7 +82,7 @@ export default async function AdminProgramSettingsPage({
     students.length > 0
       ? `${program.name} still has ${students.length} student${students.length === 1 ? "" : "s"}. Remove or move them before the program can go.`
       : program._count.staff > 0
-        ? "A staff member is scoped to this program. Re-scope them in config/app-config.ts and re-seed first."
+        ? "A staff account is still scoped to this program. Move them first."
         : undefined;
 
   return (

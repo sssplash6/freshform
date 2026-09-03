@@ -5,6 +5,7 @@ import { requireMentor } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExpandableText } from "@/components/expandable-text";
+import { formatDate } from "@/lib/format";
 
 /**
  * A mentor's own ratings. Anonymous by policy: no student names or
@@ -67,7 +68,7 @@ export default async function MentorFeedbackPage({
                 <div className="flex items-center justify-between">
                   <Rating value={f.rating} />
                   <span className="text-xs text-muted-fg">
-                    {f.createdAt.toISOString().slice(0, 10)}
+                    {formatDate(f.createdAt)}
                   </span>
                 </div>
                 {f.comment && (

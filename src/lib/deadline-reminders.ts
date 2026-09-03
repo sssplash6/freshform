@@ -91,7 +91,7 @@ export async function ensureDeadlineReminders() {
         type: NOTIFICATION_TYPES.HOURS_DEADLINE,
         href: notificationHref.studentHome(),
         message: passed
-          ? `Your ${date} deadline for time${withMentor} has passed — ${formatDuration(remaining)} unused minutes have expired and can no longer be used. Talk to your program contact if you need them reinstated.`
+          ? `Your ${date} deadline for time${withMentor} has passed — ${formatDuration(remaining)} of unused time has expired and can no longer be booked.`
           : `Reminder: use your ${formatDuration(remaining)} remaining${withMentor} by ${date}, or they expire.`,
       });
       if (a.mentorId) {

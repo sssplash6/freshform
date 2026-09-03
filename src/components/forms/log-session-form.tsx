@@ -8,6 +8,7 @@ import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { TimeKindPicker } from "@/components/forms/time-kind-picker";
 import { Select } from "@/components/select";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { toDateInputValue } from "@/lib/format";
 
 const inputClass =
   "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
@@ -39,7 +40,7 @@ export function LogSessionForm({
   const [studentId, setStudentId] = useState(
     students.length === 1 ? students[0].profileId : "",
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue(new Date());
 
   const student = students.find((s) => s.profileId === studentId);
   const goals = student?.goals ?? [];

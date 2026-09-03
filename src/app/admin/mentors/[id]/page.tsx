@@ -117,7 +117,7 @@ export default async function AdminMentorDetailPage({
             </span>
           }
           // Deliberately just who they are and since when. The student count and
-          // the still to deliver are read off the stat strip below, and a
+          // the remaining time is read off the figures below, and a
           // banner that repeats them makes the same number look like two facts.
           subtitle={
             <>
@@ -323,7 +323,7 @@ export default async function AdminMentorDetailPage({
                 <span className="font-semibold tabular-nums text-ink">
                   {formatDuration(totals.allocated)}
                 </span>{" "}
-                allocated time still to deliver
+                allocated time remaining
                 {totals.forfeited > 0 && (
                   <>
                     {" · "}
@@ -346,7 +346,7 @@ export default async function AdminMentorDetailPage({
         caption={logCaption}
         emptyBody={
           win.active === "all"
-            ? "This mentor has logged nothing yet."
+            ? "This mentor has logged no sessions."
             : "No sessions logged inside this window — widen the period above."
         }
       />

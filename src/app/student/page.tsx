@@ -89,7 +89,7 @@ export default async function StudentHomePage() {
               <p className="mt-2 max-w-md text-[15px] text-muted-fg">
                 {hours.remaining > 0
                   ? `You have ${formatDuration(hours.remaining)} of mentoring time left${tasksLeft > 0 ? `, and ${tasksLeft} ${tasksLeft === 1 ? "task" : "tasks"} still in the works` : ""}.`
-                  : "Your mentoring time is used up. Ask your program contact about more."}
+                  : "Your mentoring time is used up. Your program can grant more."}
               </p>
 
               <Link
@@ -136,15 +136,15 @@ export default async function StudentHomePage() {
       {hours.remaining < 0 && (
         <Callout tone="danger" title="You're over your allotment">
           You&apos;ve used {formatDuration(-hours.remaining)} more than you
-          were given. Talk to your program contact about topping up.
+              were given. Your program can grant more time.
         </Callout>
       )}
 
       {hours.forfeited > 0 && (
         <Callout tone="danger" title="Some time expired">
-          {formatDuration(hours.forfeited)} of your time passed their deadline
-          unused and can no longer be used. Talk to your program contact if you
-          need them reinstated.
+          {formatDuration(hours.forfeited)} of your time passed its deadline
+              unused and can no longer be used. Ask your program whether it can
+              be reinstated.
         </Callout>
       )}
 

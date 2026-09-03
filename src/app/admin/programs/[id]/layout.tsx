@@ -48,7 +48,7 @@ export default async function ProgramLayout({
         backLabel="Dashboard"
         eyebrow="Program"
         title={program.name}
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} still to deliver.`}
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} · ${mentorCount} mentor${mentorCount === 1 ? "" : "s"} · ${formatDuration(remaining)} remaining.`}
       />
 
       <ProgramTabs

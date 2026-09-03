@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExpandableText } from "@/components/expandable-text";
+import { formatDate } from "@/lib/format";
 
 export default async function StudentFeedbackPage() {
   const user = await requireRole(ROLES.STUDENT);
@@ -19,8 +20,8 @@ export default async function StudentFeedbackPage() {
   if (!profile) {
     return (
       <p className="rounded-lg border border-danger-line bg-danger-soft p-6 text-sm text-danger-ink">
-        Your account isn&apos;t linked to a program. Ask your program contact
-        to fix your registration.
+        Your account isn&apos;t linked to a program yet, so there is nobody
+            to rate.
       </p>
     );
   }
@@ -98,7 +99,7 @@ export default async function StudentFeedbackPage() {
                   </div>
                 )}
                 <p className="mt-1 text-xs text-muted-fg">
-                  {f.createdAt.toISOString().slice(0, 10)}
+                  {formatDate(f.createdAt)}
                 </p>
               </li>
             ))}
@@ -117,7 +118,7 @@ export default async function StudentFeedbackPage() {
                   <p className="mt-1 text-muted-fg">{f.comment}</p>
                 )}
                 <p className="mt-1 text-xs text-muted-fg">
-                  {f.createdAt.toISOString().slice(0, 10)}
+                  {formatDate(f.createdAt)}
                 </p>
               </li>
             ))}

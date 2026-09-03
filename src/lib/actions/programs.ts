@@ -150,7 +150,7 @@ export async function deleteProgram(
   if (program._count.staff > 0) {
     return {
       ok: false,
-      error: `${program.name} is some staff member's scope. Re-scope them in config/app-config.ts and re-seed first.`,
+      error: `${program.name} is some staff member's scope. Move them to another program first.`,
     };
   }
 

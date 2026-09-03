@@ -73,8 +73,7 @@ export default async function StudentBookPage() {
 
       {cards.length === 0 ? (
         <EmptyState title="No mentors yet">
-          Nobody is assigned to your program yet. Your program contact
-              arranges it.
+          Nobody is assigned to your program yet. Your program arranges it.
         </EmptyState>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">

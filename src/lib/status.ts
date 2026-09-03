@@ -259,7 +259,7 @@ const META: Record<StatusType, Meta> = {
       student: {
         kind: "informational",
         label: (d) => `Over by ${dur(d)}`,
-        explanation: () => "Your program contact can add more time.",
+        explanation: () => "Your program can grant more time.",
       },
     },
     many: (n) => `${n} students are overdrawn`,

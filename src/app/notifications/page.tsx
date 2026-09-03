@@ -70,7 +70,7 @@ export default async function NotificationsPage({
       />
 
       <Section
-          eyebrow="Newest first"
+          eyebrow=""
           title={unread > 0 ? "New for you" : "Recent activity"}
           action={
             unread > 0 ? (
@@ -84,7 +84,7 @@ export default async function NotificationsPage({
       >
 
         {notifications.length === 0 ? (
-          <EmptyState framed={false} title="Nothing yet">
+          <EmptyState framed={false} title="Nothing has happened yet">
             {blurb} Changes to time, sessions and deadlines arrive here.
           </EmptyState>
         ) : (
@@ -122,7 +122,7 @@ export default async function NotificationsPage({
               Every Monday, a summary of the hours{" "}
               {user.role === ROLES.STUDENT
                 ? "you used last week and the time you still have to book, with their deadlines."
-                : "delivered last week and the still to deliver, with the deadlines they fall under."}
+                : "delivered last week and the remaining, with the deadlines they fall under."}
             </span>
           </label>
           <Button type="submit" variant="secondary" size="sm">

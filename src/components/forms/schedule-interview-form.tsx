@@ -6,6 +6,7 @@ import { scheduleInterview } from "@/lib/actions/interviews";
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { toDateInputValue } from "@/lib/format";
 
 const inputClass =
   "mt-0.5 w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
@@ -28,7 +29,7 @@ export function ScheduleInterviewForm({
 }) {
   const [state, action] = useActionState(scheduleInterview, null);
   const [open, setOpen] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue(new Date());
 
   // Collapse once a meeting is actually booked, so the filled-in fields can't
   // be submitted a second time by a mentor who thinks the first didn't take.

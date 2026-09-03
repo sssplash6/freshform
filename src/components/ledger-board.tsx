@@ -330,7 +330,7 @@ export function LedgerBoard({
             title="Meetings"
             caption={
               activeCount === 0 && ahead.length === 0
-                ? "Nothing yet"
+                ? "Nothing planned"
                 : `${formatDuration(totals.completed)} delivered`
             }
           />

@@ -32,12 +32,24 @@ const BANNED = [
   { re: /still to deliver/i, why: "vocabulary drift — one word per quantity" },
   { re: /Talk to your|program contact/i, why: "name the person or link them — see programContact()" },
   { re: /config\/app-config\.ts/, why: "never put a source path in user-facing copy" },
-  { re: /\.toISOString\(\)\.slice/, why: "machine date in the UI — use formatDate" },
+  {
+    re: /\.toISOString\(\)\.slice/,
+    why: "machine date in the UI — use formatDate",
+    // An <input type="date"> value is required to be ISO by the HTML spec, so
+    // the one module that owns that conversion is allowed to make it.
+    allow: ["src/lib/format.ts"],
+  },
   { re: /Nothing (yet|here)\b/i, why: "generic empty state — say what is empty" },
 ];
 
-/** Copy rules apply to user-facing strings, not to the guards or the docs. */
-const ALLOWLIST = new Set(["src/lib/program-contact.ts"]);
+/**
+ * Exemptions are PER RULE, not per file.
+ *
+ * A file-wide allowlist looked equivalent and was not: exempting `format.ts`
+ * from the ISO-date rule also exempted it from every other rule, so that one
+ * file could quietly carry any banned phrase. Found by reintroducing one
+ * deliberately and watching the guard pass.
+ */
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -72,11 +84,10 @@ for (const path of walk(SRC)) {
   const lines = withoutComments(readFileSync(path, "utf8")).split("\n");
   lines.forEach((line, i) => {
     const where = `${rel}:${i + 1}`;
-    if (!ALLOWLIST.has(rel)) {
-      for (const { re, why } of BANNED) {
-        const m = line.match(re);
-        if (m) phrase.push({ where, found: m[0].trim(), why });
-      }
+    for (const { re, why, allow } of BANNED) {
+      if (allow?.includes(rel)) continue;
+      const m = line.match(re);
+      if (m) phrase.push({ where, found: m[0].trim(), why });
     }
     // Only look inside a className/class string, where `truncate` is a utility.
     for (const m of line.matchAll(/class(?:Name)?=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/g)) {

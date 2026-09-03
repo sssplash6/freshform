@@ -68,7 +68,7 @@ export default async function AdminHomePage() {
       <PageTitle
         eyebrow="Freshman Academy"
         title="Cross-program dashboard"
-        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatDuration(overall.remaining)} mentoring time still to deliver.`}
+        subtitle={`${students.length} student${students.length === 1 ? "" : "s"} across ${programs.length} program${programs.length === 1 ? "" : "s"}, ${formatDuration(overall.remaining)} mentoring time remaining.`}
         actions={
           unassignedMentors > 0 && (
             <Link
@@ -174,7 +174,7 @@ export default async function AdminHomePage() {
                   { label: "Students", value: String(ps.length) },
                   { label: "Mentors", value: String(mentorCount) },
                   {
-                    label: "Hrs left",
+                    label: "Remaining",
                     value: formatDuration(pt.remaining),
                     danger: pt.remaining < 0,
                     brand: pt.remaining >= 0,

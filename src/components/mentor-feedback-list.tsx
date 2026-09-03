@@ -4,6 +4,7 @@ import { Rating } from "@/components/rating";
 import type { MentorFeedback, StudentProfile, User } from "@/generated/prisma/client";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExpandableText } from "@/components/expandable-text";
+import { formatDate } from "@/lib/format";
 
 type FeedbackRow = MentorFeedback & {
   student: StudentProfile & { user: User };
@@ -83,7 +84,7 @@ export function MentorFeedbackList({
                   <Rating value={f.rating} />
                   <span className="text-xs text-muted-fg">
                     by {f.student.user.name ?? f.student.user.email} ·{" "}
-                    {f.createdAt.toISOString().slice(0, 10)}
+                    {formatDate(f.createdAt)}
                   </span>
                 </div>
                 {f.comment && (

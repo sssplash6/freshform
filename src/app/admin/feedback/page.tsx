@@ -8,6 +8,7 @@ import { mentorFeedbackGroups } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExpandableText } from "@/components/expandable-text";
+import { formatDate } from "@/lib/format";
 
 /** Mentors per page of the grouped list, and site comments per page. */
 const MENTORS_PER_PAGE = 10;
@@ -91,7 +92,7 @@ export default async function AdminFeedbackPage({
                   <Rating value={f.rating} />
                   <span className="text-xs text-muted-fg">
                     by {f.student.user.name ?? f.student.user.email} ·{" "}
-                    {f.createdAt.toISOString().slice(0, 10)}
+                    {formatDate(f.createdAt)}
                   </span>
                 </div>
                 {f.comment && (

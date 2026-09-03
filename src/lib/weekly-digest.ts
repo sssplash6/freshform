@@ -224,7 +224,7 @@ function studentDigest(mine: Pairing[], now: Date): Mail | null {
     sections.push({
       heading: "Expired unused",
       lines: [
-        "This time passed its deadline and can no longer be booked. Talk to your program contact if you think that's wrong.",
+        "This time passed its deadline and can no longer be booked.",
       ],
       rows: justExpired.map((p) => ({
         label: p.mentorLabel,
@@ -322,7 +322,7 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
 
   if (live.length > 0) {
     sections.push({
-      heading: "Still to deliver",
+      heading: "Remaining",
       lines: [
         `${formatDuration(owed)} across ${live.length} ${live.length === 1 ? "student" : "students"}, soonest deadline first.`,
       ],
@@ -357,7 +357,7 @@ function mentorDigest(mine: Pairing[], now: Date): Mail | null {
     expiringSoon.length > 0
       ? `${expiringSoon.length} ${expiringSoon.length === 1 ? "student's time expire" : "students' time expires"} within two weeks`
       : owed > 0
-        ? `${formatDuration(owed)} still to deliver`
+        ? `${formatDuration(owed)} remaining`
         : "Your week in minutes";
 
   const { html, text } = renderEmail({
