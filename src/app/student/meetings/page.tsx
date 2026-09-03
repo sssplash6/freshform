@@ -126,14 +126,7 @@ export default async function StudentMeetingsPage() {
                   mentor: s.mentor,
                   task: s.assignment,
                 }}
-                actions={
-                  <ArrowLink
-                    href={`/student/feedback?mentor=${s.mentorId}`}
-                    className="text-[13px]"
-                  >
-                    Rate
-                  </ArrowLink>
-                }
+                
               />
             ))}
           </ul>

@@ -20,6 +20,7 @@ import {
   ASSIGNMENT_PROGRESS,
   INTERVIEW_STATUS,
   ROLES,
+  USER_STATUS,
   interviewIsOpen,
 } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
@@ -394,7 +395,14 @@ export default async function StudentHomePage() {
             : profile.program.name
         }
         title={`Hi, ${user.name.split(" ")[0]}`}
-        subtitle={<ArrowLink href="/student/book">Book a session</ArrowLink>}
+        subtitle={
+          // Not offered to a student awaiting approval: /student/book turns
+          // any non-ACTIVE student straight back to this page, so the link was
+          // a round trip with no message. Their blocked row says why.
+          user.status === USER_STATUS.ACTIVE ? (
+            <ArrowLink href="/student/book">Book a session</ArrowLink>
+          ) : undefined
+        }
         leading={
           // 96px, scaled from the component's own 132: a ring that size beside
           // the h1 on a 390px screen leaves the greeting three words wide, and
