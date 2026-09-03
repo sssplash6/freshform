@@ -366,6 +366,7 @@ rewrites its call sites — never as a standalone tidy-up.**
 | `ui/link.tsx` | `<ArrowLink href label />` · `<ExternalLink icon label href />` | `arrow-link.tsx`, `telegram-handle.tsx`, `student-folder-link.tsx`, meeting/booking anchors, `→` text glyphs |
 | `ui/segmented.tsx` | `<SegmentedRadio name options legend hint />` · `<TabLinks items count? />` (longest-match active) | `attendance-picker.tsx`, `time-kind-picker.tsx`, `program-tabs.tsx`, the `ProfileSwitch` segment, `MentorHoursFilter` pills, progress buttons — 6 implementations |
 | `ui/popover.tsx` | `<Popover trigger origin>` on `useAnchoredPosition`; owns portal, outside-click, Escape | 3 mechanisms: `<details>` menus ×3, per-file portals |
+| `ui/disclosure.tsx` | `<Disclosure label count? param? hint? defaultOpen?>` on native `<details>/<summary>`; one rotating chevron, count in the summary, optional URL param | 6 idioms: `<details>` ×2 hand-styled, `booking-link-form.tsx:73` "Show ▾/Hide ▴", `program-forms.tsx` "New program" **and** "+ Add a cohort" (same file, two shapes), `mentor-list.tsx:86` inline Edit |
 | `ui/row-action-menu.tsx` | `<RowActionMenu trigger="dots\|pencil" label>` | 4 clone popovers (`allocation`/`assignment`/`interview`/`session-row-actions`, effect copied at L70-86 ≡ L85-101 ≡ L59-75 ≡ L78-94) |
 | `ui/confirm-inline.tsx` | `<ConfirmInline label question confirmLabel action disabledReason? />` | 8 two-step confirms (`DangerButton`, `program-settings-forms.tsx:106-152`, promoted) |
 | `ui/filter-bar.tsx` | `<FilterBar q selects presets dateRange summary reset />` — URL-preserving, output feeds a Prisma `where` | `ui/search-form.tsx`, `mentor-hours-filter.tsx` (322 lines), 3 filter cards |
@@ -439,7 +440,63 @@ Six recurring causes, none ever fixed system-wide. All six are closed; two are e
 6. **7–9 column tables stacking to 9 labelled lines on a phone** — **every table is capped at 6
    columns**, a row stacks below `sm` (existing `Td label`), and no table scrolls sideways.
 
-### 5.4 Palette and tokens
+### 5.4 Disclosure — what may be collapsed, and what may not
+
+Fifteen page specs above say `▸`. This is what `▸` is, and — more importantly — when a thing has
+earned one.
+
+Collapsing is the easiest way to make a page *look* calm while leaving its mess in place, so it
+needs a rule rather than a habit. Six idioms exist in the code today for want of one: two
+hand-styled `<details>`, `booking-link-form.tsx:73`'s `Show ▾` / `Hide ▴` text glyphs,
+`program-forms.tsx`'s "New program" toggle **and** its "+ Add a cohort" link (one file, two
+shapes), and `mentor-list.tsx:86`'s inline Edit. Left alone that becomes the fourth cluster of the
+kind this plan exists to remove.
+
+**The decision, in order. Stop at the first yes.**
+
+| Ask | Then |
+|---|---|
+| Is it what the page is *for*? | **Show it.** Never collapse the primary thing. `/sessions/new` does not hide its fields. |
+| Does it belong to a different question? | **Move it to its own address.** Not a disclosure — an address. This is how `/students`, `/sessions` and `/settings` came to exist. |
+| Is it free text past its clamp? | **`ExpandableText`.** Notes, comments, task purposes. Never `Disclosure`. |
+| Is it a menu of actions on one row? | **`RowActionMenu`.** ⋮ or pencil, a popover, not an expanding row. |
+| Is it an occasional action *on this page's subject*? | **`Disclosure`.** "Add students ▸", "Register a mentor ▸", "Allocate time ▸", "New program ▸", "Add a cohort ▸", "Edit ▸". |
+| Is it the finished, historical or settled subset of a list on the page? | **`Disclosure` with a count.** "Finished · 6 ▸", "History · 18 ▸", "Past sessions · 42 ▸". |
+| Is it a fact you would only read when something is wrong? | **`Disclosure`.** The student page's "Details" (sign-in email, enrollment, folder, danger zone). |
+| Anything else | It is noise. **Delete it.** |
+
+**Rules for the primitive.**
+
+1. **Native `<details>`/`<summary>`.** Keyboard and screen-reader behaviour arrives free, it works
+   before hydration, and browsers now expand a closed `<details>` to reveal a find-in-page hit —
+   which a `useState` version silently breaks. This is the one place the app prefers a native
+   control without argument.
+2. **A count whenever it hides countable rows**, in the summary, before it is opened:
+   `Finished · 6 ▸`. Collapsing may hide the rows; it may never hide the magnitude. A count of zero
+   renders no disclosure at all.
+3. **The label names what is inside**, as a noun or an imperative — never "More", "Details" alone,
+   or "Show". `Show ▾` is retired.
+4. **One glyph**, a single chevron rotated by CSS on `[open]`, at 150 ms and zeroed under
+   `prefers-reduced-motion`. Two text glyphs (`▾`/`▴`) are two states to keep in sync and neither
+   is announced.
+5. **Height is never animated.** Reflowing a table under the reader's cursor is worse than an
+   instant open.
+6. **No disclosure inside a disclosure.** Two levels of hidden is a page that needs splitting.
+7. **`param` ties open state to a URL search param** (`?add=1`) for the ones worth linking to — the
+   add-students and register-mentor forms, so "open this and add someone" is one link. Without
+   `param` the state is local and forgotten on navigation, which is correct for everything else.
+8. **A collapsed form still owns its fields.** `<details>` does not disable what it hides, so a
+   `Disclosure` wraps a whole `<form>` and never half of one — otherwise a closed section keeps
+   submitting.
+9. **One per section, at most.** A section with two disclosures is two sections.
+
+**What this retires:** `booking-link-form.tsx`'s toggle (the links move to `/settings` in Phase 7
+and stop being a disclosure at all), both `program-forms.tsx` shapes, `mentor-list.tsx`'s inline
+Edit (becomes `Edit ▸` on `/mentors/[id]`), and the two hand-styled `<details>` in `app-shell.tsx`
+(become `Popover`, which is a menu, not a disclosure — §5.2).
+
+
+### 5.5 Palette and tokens
 
 The complaint in numbers: 12 chromatic hue families where the rule allows about 5; 24 identity
 tokens (8 hues × 3); amber carrying five meanings and violet four on one screen; **106 raw Tailwind
@@ -494,7 +551,7 @@ circle, striped square, ring.
 `(text|bg|border|ring|stroke|fill|divide|outline|from|to|via)-(red|amber|green|emerald|yellow|blue|violet|purple|indigo|sky|cyan|teal|lime|orange|rose|pink|fuchsia|slate|gray|zinc|neutral|stone)-[0-9]`
 under `src/`, with one allowlisted file for the Google logo (`login/page.tsx`).
 
-### 5.5 Copy rules
+### 5.6 Copy rules
 
 1. **One noun each:** mentor · student · **session** (logged) · **meeting** (scheduled) · task ·
    program · cohort · booking link · time. Banned: *interview, diary, goal, assignment, allotment,
@@ -530,7 +587,7 @@ under `src/`, with one allowlisted file for the Google logo (`login/page.tsx`).
     `Talk to your`, `program contact` outside `programContact()`, `.toISOString().slice` — plus the
     `truncate`-without-`min-w-0` pattern.
 
-### 5.6 Save, freshness and recovery
+### 5.7 Save, freshness and recovery
 
 `SaveState` is the one indicator: `idle | editing | unsaved | saving | saved{at} | failed{retry}`,
 rendered `✓ Saved 12:04` in ink. Every `FactList` row, `SettingsRow`, booking link and inline editor
@@ -1033,7 +1090,8 @@ question in three sections. Everything after that is structure.
 7. `ui/status-chip.tsx`; migrate every `Chip` call site (green → `ok`/`neutral`, amber → `warn`,
    red → `danger`, violet → `neutral`); delete `chip.tsx` and `deadline.tsx`.
 8. `ui/callout.tsx` → `info | warn | danger`, always with a glyph; the one-per-page ceiling.
-9. `ui/section.tsx` (`PageTitle`, `Section`, `Eyebrow`); delete `ui/panel.tsx`, `ui/page-header.tsx`,
+9. `ui/section.tsx` (`PageTitle`, `Section`, `Eyebrow`) **and `ui/disclosure.tsx`** (§5.4: native
+   `<details>`, count in the summary, one rotating chevron); delete `ui/panel.tsx`, `ui/page-header.tsx`,
    `ui/card.tsx`; remove the `tone` prop from 18 call sites and every wash and monogram.
 10. `ui/figure.tsx`; replace all 57 `StatCard` instances; delete `stat-card.tsx`. One `lead` per page.
 11. `hours-breakdown.tsx` three fills + shaped legend swatches; `hours-ring.tsx` reads
@@ -1171,7 +1229,7 @@ booking link and watches the inbox row disappear.
 
 ### Phase 8 — Copy, docs, cleanup, verification (6 commits)
 
-54. Copy sweep against §5.5 — every grammar bug in the audit list ("Your mentoring time are all
+54. Copy sweep against §5.6 — every grammar bug in the audit list ("Your mentoring time are all
     used up", "before your time appear", "Your time with them run to", "Extra — none of your used",
     "45 min unused minutes", the comma splice on `admin/page.tsx:79`), `formatDate` everywhere, one
     product name, `programContact()` wired.
