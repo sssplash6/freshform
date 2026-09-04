@@ -37,11 +37,11 @@ import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
  * mentor picking up an essay needs to know what the last three meetings covered
  * and who else is working on what. Read-only on the plan, which only admins set.
  *
- * Only reachable for students the mentor has an allocation or a session with,
- * or any student in a program they work in: a mentor there may log for them
- * whether or not an admin has granted hours yet (their "Whose hours?" tick
- * decides whether those hours charge), and logging against live unassigned time
- * makes those hours theirs.
+ * Only reachable for students the mentor has an allocation, a session or a
+ * TASK with, or any student in a program they work in: a mentor there may log
+ * for them whether or not an admin has granted hours yet (their "Whose hours?"
+ * tick decides whether those hours charge), and logging against live unassigned
+ * time makes those hours theirs.
  */
 export default async function MentorStudentDetailPage({
   params,
@@ -102,9 +102,21 @@ export default async function MentorStudentDetailPage({
       ? poolRow
       : null;
 
-  // Not this mentor's student — no hours together, no history together, and no
-  // program in common that would let them log any.
-  if (!allocation && mySessions.length === 0 && !scope) notFound();
+  // A task of theirs here is entitlement too, and the last one checked because
+  // it is the rarest: an admin can move a task to a mentor who holds no hours
+  // for this student and was never in their program, and the caseload row that
+  // move creates must not lead to a 404 for the person whose work it is.
+  const myTask =
+    !allocation && mySessions.length === 0 && !scope
+      ? await prisma.assignment.findFirst({
+          where: { studentId: profile.id, mentorId: mentor.id },
+          select: { id: true },
+        })
+      : null;
+
+  // Not this mentor's student — no hours together, no history together, no work
+  // of theirs, and no program in common that would let them log any.
+  if (!allocation && mySessions.length === 0 && !scope && !myTask) notFound();
 
   const allocated = allocation?.minutes ?? 0;
   const myActive = mySessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);

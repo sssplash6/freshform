@@ -620,7 +620,7 @@ export function toProgramOptions(
  * `/mentor` page component, which is why `/sessions/new` could not exist: the
  * only place that knew which students a mentor may log for was a page body.
  *
- * A mentor REACHES a student four ways, and each is here for a reason:
+ * A mentor REACHES a student five ways, and each is here for a reason:
  *
  *   allocation   an admin granted this mentor time with them. This alone is
  *                authorization, and it outlives a program assignment that later
@@ -629,13 +629,20 @@ export function toProgramOptions(
  *                works in. Logging is what decides whose time it was.
  *   ever met     a logged session, even with no allocation — a grant may be
  *                removed after the fact, and the meeting still happened.
+ *   task         an admin put this student's work on this mentor's list. Hours
+ *                and tasks are separate rows and a task can be MOVED between
+ *                mentors on its own (lib/actions/assignments.ts) while the
+ *                hours stay banked with whoever they were granted to — so this
+ *                is a mentor's student by the only measure that matters to
+ *                them, the work, and the missing hours are a row that SAYS so
+ *                ("No time with you") rather than an absence.
  *   in program   everyone else in a program (and cohort) this mentor is
  *                assigned to. Not their student, and in no total: reachable
  *                only so a meeting that happened before any grant existed can
  *                still be recorded.
  *
  * Today `/mentor` shows a mentor with no allocations zero students while the
- * log picker offers eleven. The first three groups are `students`, the fourth
+ * log picker offers eleven. The first four groups are `students`, the fifth
  * is `loggable`, and both come back so a caller can decide which it needs.
  */
 export type CaseloadStudent = {
@@ -661,7 +668,7 @@ export type CaseloadStudent = {
   /** Unassigned hours this student holds; only when the mentor has no grant. */
   pool?: number;
   /** How this mentor reaches them, for a list that sorts by closeness. */
-  reach: "allocation" | "pool" | "met";
+  reach: "allocation" | "pool" | "met" | "task";
 };
 
 export type MentorCaseload = {
@@ -820,6 +827,42 @@ export async function mentorCaseload(mentorId: string): Promise<MentorCaseload> 
       expired: false,
       approved: p.user.status === USER_STATUS.ACTIVE,
       reach: "met",
+    });
+  }
+
+  // Work an admin put on this mentor's list, for a student no group above
+  // reached. A task is normally born beside the hours for it, so this is
+  // usually empty — but a task moved to another mentor carries no hours with
+  // it, and after a pass of reassignments a mentor owned a dozen students'
+  // work while their own page listed ten people and their headline figure
+  // counted only the hours they had been granted long ago. The students the
+  // work belongs to were nowhere on it.
+  const taskOnlyIds = [
+    ...new Set(
+      myGoals.filter((g) => g.mentorId === mentorId).map((g) => g.studentId)
+    ),
+  ].filter((id) => !listed.has(id));
+  const tasked = taskOnlyIds.length
+    ? await prisma.studentProfile.findMany({
+        where: { id: { in: taskOnlyIds } },
+        include: { user: true, program: true, cohort: true },
+      })
+    : [];
+  for (const p of tasked) {
+    listed.add(p.id);
+    students.push({
+      profile: p,
+      // Nothing granted and nothing spent: the row's own emptiness is the
+      // news, and `studentStatuses` turns it into "No time with you".
+      allocated: 0,
+      completed: 0,
+      missed: 0,
+      extra: 0,
+      remaining: 0,
+      deadline: null,
+      expired: false,
+      approved: p.user.status === USER_STATUS.ACTIVE,
+      reach: "task",
     });
   }
 

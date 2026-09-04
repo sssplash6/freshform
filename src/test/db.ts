@@ -112,3 +112,23 @@ export async function session(opts: {
     },
   });
 }
+
+export async function assignment(opts: {
+  studentId: string;
+  mentorId?: string | null;
+  purpose?: string;
+  minuteLimit?: number | null;
+  position?: number;
+}) {
+  const createdBy = await admin("Assigner");
+  return prisma.assignment.create({
+    data: {
+      studentId: opts.studentId,
+      mentorId: opts.mentorId ?? null,
+      purpose: opts.purpose ?? "Essay writing",
+      minuteLimit: opts.minuteLimit ?? null,
+      position: opts.position ?? 0,
+      createdById: createdBy.id,
+    },
+  });
+}
