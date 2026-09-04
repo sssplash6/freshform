@@ -109,15 +109,56 @@ export async function updateAssignment(
   // Empty = no mentor (yet): a task can be planned before anyone owns it,
   // and this same edit is how an unassigned task finally gets its mentor.
   const mentorId = String(formData.get("mentorId") ?? "").trim() || null;
+  let newMentorName: string | null = null;
   if (mentorId) {
     const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
     if (!mentor || !canActAsMentor(mentor)) {
       return { ok: false, error: "Pick a mentor." };
     }
+    newMentorName = mentor.name ?? mentor.email;
   }
 
   const fields = parseFields(formData);
   if ("error" in fields) return { ok: false, error: fields.error };
+
+  /**
+   * What this save actually CHANGES — which is the whole notice, not a
+   * decoration on it.
+   *
+   * The edit form posts every field back whether or not it was touched, so a
+   * save that only fixed a note — or that touched nothing at all, because the
+   * form was opened and saved — still told the mentor "was updated — now 6h,
+   * due November 27". An admin doing a pass over a caseload therefore filled
+   * every mentor's feed with a dozen near-identical sentences restating hours
+   * nobody had moved, which is how a feed teaches people to stop reading it.
+   */
+  const handedOver = mentorId !== existing.mentorId;
+  const news: string[] = [];
+  if (fields.purpose !== existing.purpose) {
+    news.push(`renamed from "${existing.purpose}"`);
+  }
+  if (fields.minuteLimit !== existing.minuteLimit) {
+    news.push(
+      fields.minuteLimit == null
+        ? "no hour budget for now"
+        : `now ${formatDuration(fields.minuteLimit)}`
+    );
+  }
+  if (fields.deadline !== existing.deadline) {
+    news.push(fields.deadline ? `due ${fields.deadline}` : "no deadline now");
+  }
+  if (fields.progress !== existing.progress) {
+    news.push(
+      `marked ${ASSIGNMENT_PROGRESS_LABELS[fields.progress].toLowerCase()}`
+    );
+  }
+  if (fields.note !== existing.note) {
+    news.push(fields.note ? "a new note on it" : "the note taken off");
+  }
+  // Nothing to write, and nobody to tell about it.
+  if (!handedOver && news.length === 0) {
+    return { ok: true, message: "Nothing changed." };
+  }
 
   const student = await prisma.studentProfile.findUnique({
     where: { id: existing.studentId },
@@ -126,6 +167,18 @@ export async function updateAssignment(
   const studentName = student
     ? (student.user.name ?? student.user.email)
     : "a student";
+
+  // Whose it WAS, for the hand-off copy below.
+  const previousMentor =
+    handedOver && existing.mentorId
+      ? await prisma.user.findUnique({
+          where: { id: existing.mentorId },
+          select: { name: true, email: true },
+        })
+      : null;
+  const previousMentorName = previousMentor
+    ? (previousMentor.name ?? previousMentor.email)
+    : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.assignment.update({
@@ -137,19 +190,43 @@ export async function updateAssignment(
     // derived progress is recomputed unless an admin has pinned it.
     await syncGoalProgress(tx, id);
 
-    // Both mentors hear about a hand-off; notify() drops the actor, so an
-    // admin reassigning to themselves isn't told about their own change. An
-    // unassigned end of the hand-off is simply nobody to tell.
-    await notify(tx, {
-      to: [mentorId, existing.mentorId].filter((x): x is string => Boolean(x)),
-      type: NOTIFICATION_TYPES.GOAL_CHANGED,
-      actorId: actor.id,
-      href: notificationHref.mentorStudent(existing.studentId),
-      message:
-        mentorId === existing.mentorId
-          ? `Your task "${fields.purpose}" for ${studentName} was updated${fields.minuteLimit != null ? ` — now ${formatDuration(fields.minuteLimit)}` : ""}${fields.deadline ? `, due ${fields.deadline}` : ""}.`
-          : `"${fields.purpose}" for ${studentName} was reassigned.`,
-    });
+    if (handedOver) {
+      // The two ends of a hand-off are opposite news, and the one sentence sent
+      // to both — "was reassigned" — was the wrong half of the story for
+      // whichever mentor read it: neither could tell whether the task had just
+      // become theirs or just left their list, and a task getting its FIRST
+      // mentor announced itself as a reassignment. notify() drops the actor, so
+      // an admin moving work to themselves isn't told about their own change,
+      // and an unassigned end of a hand-off is simply nobody to tell.
+      const state = [
+        fields.minuteLimit != null ? formatDuration(fields.minuteLimit) : null,
+        fields.deadline ? `due ${fields.deadline}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      await notify(tx, {
+        to: mentorId ? [mentorId] : [],
+        type: NOTIFICATION_TYPES.GOAL_CHANGED,
+        actorId: actor.id,
+        href: notificationHref.mentorStudent(existing.studentId),
+        message: `"${fields.purpose}" for ${studentName} is yours now${state ? ` — ${state}` : ""}.${previousMentorName ? ` It was ${previousMentorName}'s.` : ""}`,
+      });
+      await notify(tx, {
+        to: existing.mentorId ? [existing.mentorId] : [],
+        type: NOTIFICATION_TYPES.GOAL_CHANGED,
+        actorId: actor.id,
+        href: notificationHref.mentorStudent(existing.studentId),
+        message: `"${fields.purpose}" for ${studentName} is no longer yours — ${newMentorName ? `it's ${newMentorName}'s now` : "it has no mentor until an admin assigns one"}.`,
+      });
+    } else {
+      await notify(tx, {
+        to: existing.mentorId ? [existing.mentorId] : [],
+        type: NOTIFICATION_TYPES.GOAL_CHANGED,
+        actorId: actor.id,
+        href: notificationHref.mentorStudent(existing.studentId),
+        message: `Your task "${fields.purpose}" for ${studentName}: ${news.join(", ")}.`,
+      });
+    }
   });
 
   revalidatePath("/", "layout");
