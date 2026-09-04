@@ -35,7 +35,7 @@ import { bucketOf, daysAway } from "@/lib/when";
 
 /** How far ahead a use-by date is worth putting in a mentor's diary. */
 const DEADLINE_HORIZON_DAYS = 7;
-/** Students shown before the table defers to the full list. */
+/** Students shown before the table offers to unfold the rest. */
 const CASELOAD_ROWS = 8;
 /** Attention rows shown before the section says how many it is holding back. */
 const NEEDS_YOU_ROWS = 10;
@@ -66,14 +66,18 @@ const STUDENT_COLUMNS: Column[] = [
 export default async function MentorHomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ program?: string }>;
+  searchParams: Promise<{ program?: string; students?: string }>;
 }) {
   const user = await requireMentor();
   await ensureDeadlineReminders();
   // One instant for the whole page, so two sections cannot disagree about what
   // "today" is — and so nothing reads the clock during a render.
   const viewer: ViewerContext = { audience: "mentor", userId: user.id, now: new Date() };
-  const { program = "" } = await searchParams;
+  const { program = "", students: studentRows } = await searchParams;
+  // "Show me the rest of them", in the URL, so it survives a reload and can be
+  // linked. The whole caseload on the page it is already on beats a second
+  // address for the same nine rows.
+  const showAllStudents = studentRows === "all";
 
   const caseload = await mentorCaseload(user.id);
   const { students, assignments } = caseload;
@@ -272,15 +276,27 @@ export default async function MentorHomePage({
   const spendable = inView.filter((s) => s.remaining > 0);
   const left = spendable.reduce((sum, s) => sum + s.remaining, 0);
 
-  const caseloadRows = [...inView]
-    .sort((a, b) => {
-      // Holding time with you first: that is who the next session is for.
-      if ((b.remaining > 0 ? 1 : 0) !== (a.remaining > 0 ? 1 : 0)) {
-        return (b.remaining > 0 ? 1 : 0) - (a.remaining > 0 ? 1 : 0);
-      }
-      return b.remaining - a.remaining;
-    })
-    .slice(0, CASELOAD_ROWS);
+  const sortedCaseload = [...inView].sort((a, b) => {
+    // Holding time with you first: that is who the next session is for.
+    if ((b.remaining > 0 ? 1 : 0) !== (a.remaining > 0 ? 1 : 0)) {
+      return (b.remaining > 0 ? 1 : 0) - (a.remaining > 0 ? 1 : 0);
+    }
+    return b.remaining - a.remaining;
+  });
+  const caseloadRows = showAllStudents
+    ? sortedCaseload
+    : sortedCaseload.slice(0, CASELOAD_ROWS);
+
+  // This page's own address, with both of its states kept: a mentor who
+  // narrowed to one program must not be thrown back to all of them for asking
+  // to see more rows, and switching program must not silently re-fold them.
+  const homeHref = (opts: { program?: string; all?: boolean }) => {
+    const q = new URLSearchParams();
+    if (opts.program) q.set("program", opts.program);
+    if (opts.all) q.set("students", "all");
+    const query = q.toString();
+    return query ? `/mentor?${query}` : "/mentor";
+  };
 
   return (
     <div className="space-y-6">
@@ -341,19 +357,37 @@ export default async function MentorHomePage({
                 label="Program"
                 className="text-xs"
                 items={[
-                  { href: "/mentor", label: "All" },
+                  { href: homeHref({ all: showAllStudents }), label: "All" },
                   ...[...programs.entries()].map(([id, name]) => ({
-                    href: `/mentor?program=${id}`,
+                    href: homeHref({ program: id, all: showAllStudents }),
                     label: name,
                   })),
                 ]}
               />
             )}
-            {inView.length > CASELOAD_ROWS && (
-              <ArrowLink href="/mentor/sessions" className="text-xs">
-                All {inView.length}
-              </ArrowLink>
-            )}
+            {/* Unfolds the rest of the caseload HERE. It used to point at
+                /mentor/sessions, which is a log of hours delivered: a mentor
+                asking to see all twelve of their students was handed a filtered
+                table of their own sessions and no student list at all. The
+                product's one students list arrives at /students in phase 4
+                (REDESIGN.md §6.8, "Mine" on by default in the mentor lens) and
+                this link moves there with it. */}
+            {inView.length > CASELOAD_ROWS &&
+              (showAllStudents ? (
+                <Link
+                  href={homeHref({ program: selected })}
+                  className="text-xs font-medium text-brand transition-colors hover:underline"
+                >
+                  First {CASELOAD_ROWS}
+                </Link>
+              ) : (
+                <ArrowLink
+                  href={homeHref({ program: selected, all: true })}
+                  className="text-xs"
+                >
+                  All {inView.length}
+                </ArrowLink>
+              ))}
           </div>
         }
       >
