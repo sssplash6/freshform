@@ -269,20 +269,27 @@ export async function logSession(
     : await prisma.hourAllocation.findFirst({
         where: { studentId: profile.id, mentorId: null },
       });
-  // Two things authorize a log, and either alone is enough:
+  // Three things authorize a log, and any one alone is enough:
   //
   //  - an allocation of the mentor's own, which IS authorization: an admin
   //    granted it, and it outlives a program assignment that later moves, so a
   //    mentor can always correct the hours they already delivered;
   //  - actually working in the student's program (and cohort, where the
   //    assignment is cohort-scoped), which is what a mentor has on the day they
-  //    meet a student nobody has granted them hours for yet.
+  //    meet a student nobody has granted them hours for yet;
+  //  - a TASK of theirs for this student. An admin putting this student's work
+  //    on this mentor's list is the same statement an allocation makes, and a
+  //    task can be moved to a mentor who holds no hours here and was never in
+  //    the program (lib/actions/assignments.ts) — without this clause the work
+  //    was theirs, the student was on their page, and the log the task exists
+  //    to produce was refused.
   //
   // The second is what stops "no hours allocated" from meaning "the meeting
   // cannot be recorded" — a mentor shouldn't have to wait on an admin to log
-  // work they have already done. It is also the whole reason the check can't be
-  // dropped: without it any mentor anywhere could log against any student, and
-  // carve their unassigned hours to themselves.
+  // work they have already done. Something here is also the whole reason the
+  // check can't be dropped: without it any mentor anywhere could log against
+  // any student, and carve their unassigned hours to themselves. Every one of
+  // the three takes an admin's act to exist, so none can be self-granted.
   const scope = allocation
     ? null
     : await prisma.mentorAssignment.findFirst({
@@ -295,7 +302,14 @@ export async function logSession(
           ],
         },
       });
-  if (!allocation && !scope) {
+  const ownTask =
+    allocation || scope
+      ? null
+      : await prisma.assignment.findFirst({
+          where: { studentId: profile.id, mentorId: mentor.id },
+          select: { id: true },
+        });
+  if (!allocation && !scope && !ownTask) {
     return bad(
       "You aren't assigned to that student's program, so you can't log hours for them.",
       "studentProfileId"
