@@ -318,6 +318,15 @@ export const NOTIFICATION_CATEGORY = {
   ACCOUNTS: "ACCOUNTS",
 } as const;
 
+/**
+ * The weekly digest, as a preference key.
+ *
+ * Not a NOTIFICATION_CATEGORY: it is a subscription to one email rather than a
+ * kind of notice, and it predates the categories by a year. It shares the
+ * preference table because "what do you want to hear about" is one question.
+ */
+export const WEEKLY_SUMMARY_PREF = "WEEKLY_SUMMARY";
+
 export type NotificationCategory =
   (typeof NOTIFICATION_CATEGORY)[keyof typeof NOTIFICATION_CATEGORY];
 

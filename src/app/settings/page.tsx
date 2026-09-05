@@ -1,10 +1,18 @@
 import { AvatarForm } from "@/components/forms/avatar-form";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { OwnNameForm } from "@/components/forms/own-name-form";
-import { OwnTelegramForm, WeeklyDigestForm } from "@/components/forms/settings-forms";
+import {
+  NotificationMatrix,
+  OwnTelegramForm,
+  WeeklyDigestForm,
+} from "@/components/forms/settings-forms";
 import { PageTitle, Section } from "@/components/ui/section";
 import { SettingsRow } from "@/components/ui/settings-row";
-import { canActAsMentor } from "@/lib/constants";
+import {
+  NOTIFICATION_CATEGORY_LABELS,
+  canActAsMentor,
+  type NotificationCategory,
+} from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 
@@ -27,7 +35,7 @@ export default async function SettingsPage() {
   const user = await requireUser();
   const isMentor = canActAsMentor(user);
 
-  const [profile, assignments] = await Promise.all([
+  const [profile, assignments, prefs] = await Promise.all([
     prisma.studentProfile.findUnique({
       where: { userId: user.id },
       select: { telegramUsername: true },
@@ -39,7 +47,9 @@ export default async function SettingsPage() {
           orderBy: { createdAt: "asc" },
         })
       : Promise.resolve([]),
+    prisma.notificationPreference.findMany({ where: { userId: user.id } }),
   ]);
+  const prefOf = new Map(prefs.map((p) => [p.category, p]));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -98,11 +108,28 @@ export default async function SettingsPage() {
         </Section>
       )}
 
-      <Section eyebrow="What arrives by email" title="Email">
+      <Section
+        eyebrow="What reaches you, and where"
+        title="Notifications"
+        caption="Everything arrives in the app unless you say otherwise. Email is off unless you ask for it."
+      >
         <div className="px-4 py-2 sm:px-5">
           <WeeklyDigestForm
             defaultOn={user.weeklyDigest}
             student={Boolean(profile)}
+          />
+        </div>
+        <div className="border-t border-line px-4 py-2 sm:px-5">
+          <NotificationMatrix
+            categories={(
+              Object.keys(NOTIFICATION_CATEGORY_LABELS) as NotificationCategory[]
+            ).map((key) => ({
+              key,
+              label: NOTIFICATION_CATEGORY_LABELS[key],
+              // No row is the default, and the default is in-app only.
+              inApp: prefOf.get(key)?.inApp ?? true,
+              email: prefOf.get(key)?.email ?? false,
+            }))}
           />
         </div>
       </Section>

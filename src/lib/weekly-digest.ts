@@ -4,10 +4,12 @@ import { prisma } from "@/lib/prisma";
 import {
   canActAsMentor,
   NOTIFICATION_TYPES,
+  WEEKLY_SUMMARY_PREF,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
 import { notify } from "@/lib/notify";
+
 import { formatDate, formatDuration } from "@/lib/format";
 import { renderEmail, type Section } from "@/lib/email/layout";
 import { appUrl, emailConfigured, sendAll, type Mail } from "@/lib/email/send";
@@ -422,10 +424,24 @@ export async function sendWeeklyDigest({
 } = {}): Promise<DigestResult> {
   const pairings = await loadPairings(now);
 
+  // The preference row is the answer; the column is the fallback for anybody
+  // who has never opened /settings and therefore has no row. They agree today
+  // — the migration seeded one from the other — and the column goes one
+  // release after the last emailed unsubscribe link has aged out.
   const recipients = await prisma.user.findMany({
     where: {
-      weeklyDigest: true,
       status: USER_STATUS.ACTIVE,
+      OR: [
+        {
+          notificationPrefs: {
+            some: { category: WEEKLY_SUMMARY_PREF, email: true },
+          },
+        },
+        {
+          weeklyDigest: true,
+          notificationPrefs: { none: { category: WEEKLY_SUMMARY_PREF } },
+        },
+      ],
       ...(only ? { email: only.toLowerCase() } : {}),
     },
     select: {
