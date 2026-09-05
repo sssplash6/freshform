@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { PersonChip } from "@/components/person-chip";
+import { PersonBadge } from "@/components/person-chip";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExternalLink } from "@/components/ui/link";
@@ -183,7 +184,7 @@ export default async function StudentBookPage() {
           // Two up. A mentor's card is a name, a balance, a bar and a link —
           // it never fills a row, and one per line turned five mentors into a
           // page of scrolling with the right half empty the whole way down.
-          <ul className="grid gap-px bg-line sm:grid-cols-2">
+          <ul className="grid border-t border-line sm:grid-cols-2">
             {open.map((row) => (
               <MentorRow
                 key={row.mentor.id}
@@ -201,7 +202,7 @@ export default async function StudentBookPage() {
             count={folded.length}
             className="border-t border-line px-4 sm:px-5"
           >
-            <ul className="-mx-4 grid gap-px border-t border-line bg-line sm:-mx-5 sm:grid-cols-2">
+            <ul className="-mx-4 grid border-t border-line sm:-mx-5 sm:grid-cols-2">
               {folded.map((row) => (
                 <MentorRow
                   key={row.mentor.id}
@@ -252,14 +253,28 @@ function MentorRow({
         : null;
 
   return (
-    <li className="bg-surface px-4 py-3 sm:px-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
-        <PersonChip person={mentor} size="sm" href={`/mentors/${mentor.id}`} />
-        {hours ? (
-          <AllocationBalance entry={hours} />
-        ) : (
-          noTime && <StatusChip status={noTime} />
-        )}
+    <li className="border-b border-line bg-surface px-4 py-3.5 sm:px-5 sm:[&:nth-child(odd)]:border-r">
+      {/* Name and balance hold one line: the name truncates, the figure never
+          does. As tinted pills the long names wrapped and pushed the balance
+          onto a second row, so two cards side by side disagreed about where
+          their own numbers live. A face and a name is enough identity here —
+          this is the reader's own list of five people, not a table where one
+          has to be told from another at a glance. */}
+      <div className="flex items-center justify-between gap-x-3">
+        <Link
+          href={`/mentors/${mentor.id}`}
+          className="flex min-w-0 items-center gap-2 text-[15px] font-medium text-ink hover:text-brand"
+        >
+          <PersonBadge person={mentor} />
+          <span className="min-w-0 truncate">{name}</span>
+        </Link>
+        <span className="shrink-0">
+          {hours ? (
+            <AllocationBalance entry={hours} />
+          ) : (
+            noTime && <StatusChip status={noTime} />
+          )}
+        </span>
       </div>
 
       {hours && (

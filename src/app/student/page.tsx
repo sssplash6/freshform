@@ -59,7 +59,7 @@ function TaskRow({ task, statuses }: { task: LedgerAssignment; statuses: Status[
   const over = budget > 0 && task.loggedMinutes > budget;
 
   return (
-    <li className="bg-surface px-4 py-3.5 sm:px-5">
+    <li className="border-b border-line bg-surface px-4 py-3.5 sm:px-5 sm:[&:nth-child(odd)]:border-r">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         {/* A purpose is occasionally written as a paragraph rather than a name,
             and one such row must not cost every other row its scanability. */}
@@ -487,7 +487,7 @@ export default async function StudentHomePage() {
               // never fills a phone-width row, so one per line spent the whole
               // right-hand side on nothing and pushed the finished fold below
               // the fold of the screen.
-              <ul className="grid gap-px bg-line sm:grid-cols-2">
+              <ul className="grid sm:grid-cols-2">
                 {live.map(({ task, statuses }) => (
                   <TaskRow key={task.id} task={task} statuses={statuses} />
                 ))}
