@@ -3,8 +3,8 @@ import { Rating } from "@/components/rating";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Pagination, parsePage } from "@/components/ui/pagination";
-import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { adminScope, scopeProgramFilter } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import { mentorFeedbackGroups } from "@/lib/feedback";
 import {
   DATE_PRESETS,
@@ -42,16 +42,16 @@ export default async function AdminFeedbackPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(ROLES.ADMIN);
+  const user = await requireAdminAccess();
+  const programIds = scopeProgramFilter(await adminScope(user));
   const params = await searchParams;
   const page = parsePage(readParam(params, "page"));
   const sitePage = parsePage(readParam(params, "site"));
   const now = new Date();
 
-  // An admin sees every program; the scope is passed empty rather than left
-  // out, because this is where a per-program grant lands (REDESIGN.md phase 3)
-  // and reach must never be something the URL can argue about.
-  const where = feedbackWhere(params, {}, now);
+  // The reader's grants decide which students' ratings are theirs to read;
+  // reach is never something the URL can argue about.
+  const where = feedbackWhere(params, { programIds }, now);
   const dateRange = readDateWindow(params, now);
   const filtered = activeFilterCount(params) > 0;
 
@@ -84,7 +84,10 @@ export default async function AdminFeedbackPage({
         orderBy: { name: "asc" },
         select: { id: true, name: true, email: true },
       }),
-      prisma.program.findMany({ orderBy: { name: "asc" } }),
+      prisma.program.findMany({
+        where: programIds ? { id: { in: [...programIds] } } : {},
+        orderBy: { name: "asc" },
+      }),
     ]);
 
   const mentorAvg = mentorStats._avg.rating;

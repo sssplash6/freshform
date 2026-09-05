@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { requireAdminAccess } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
 // Never prerender them at build time — on Render the SQLite disk only exists
@@ -12,7 +12,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireRole(ROLES.ADMIN);
+  const user = await requireAdminAccess();
   return (
     <AppShell user={user} mode={ROLES.ADMIN}>
       {children}

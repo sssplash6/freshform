@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../../config/app-config";
-import { requireRole } from "@/lib/dal";
+import { requireProgramScope } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { StatusChip } from "@/components/ui/status-chip";
 
@@ -33,8 +33,8 @@ export default async function AdminProgramSettingsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole(ROLES.ADMIN);
   const { id } = await params;
+  await requireProgramScope(id);
   const program = await prisma.program.findUnique({
     where: { id },
     include: {

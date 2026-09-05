@@ -234,16 +234,23 @@ export type MentorMeeting = Awaited<ReturnType<typeof mentorMeetings>>[number];
 export async function recentMeetings({
   mentorId,
   programId,
+  programIds,
   take = 8,
 }: {
   mentorId?: string;
   programId?: string;
+  /** A reader's whole scope. `undefined` is every program, not none. */
+  programIds?: readonly string[];
   take?: number;
 } = {}) {
     return prisma.session.findMany({
     where: {
       ...(mentorId ? { mentorId } : {}),
-      ...(programId ? { student: { programId } } : {}),
+      ...(programId
+        ? { student: { programId } }
+        : programIds
+          ? { student: { programId: { in: [...programIds] } } }
+          : {}),
     },
         include: {
       mentor: true,
@@ -587,8 +594,9 @@ export function assignmentsForStudentWhere(profile: {
  * All programs with their cohorts, for enrollment/assignment selects. Only
  * programs with cohorts (Global Admissions) require picking one.
  */
-export async function programOptions() {
+export async function programOptions(programIds?: readonly string[]) {
   return prisma.program.findMany({
+    where: programIds ? { id: { in: [...programIds] } } : {},
     include: { cohorts: { orderBy: { name: "asc" } } },
     orderBy: { name: "asc" },
   });

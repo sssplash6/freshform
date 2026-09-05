@@ -13,7 +13,6 @@ import {
   ASSIGNMENT_PROGRESS_GLYPH,
   ASSIGNMENT_PROGRESS_LABELS,
   ASSIGNMENT_PROGRESS_STATUS,
-  ROLES,
   USER_STATUS,
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
@@ -28,7 +27,7 @@ import {
   type ProgramTask,
   type StudentWithHours,
 } from "@/lib/queries";
-import { requireRole } from "@/lib/dal";
+import { requireProgramScope } from "@/lib/dal";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { Severity } from "@/lib/status";
 import { severityOrNeutral } from "@/lib/status";
@@ -95,8 +94,8 @@ export default async function AdminProgramOverviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole(ROLES.ADMIN);
   const { id } = await params;
+  await requireProgramScope(id);
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();
 

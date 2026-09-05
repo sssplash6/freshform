@@ -21,7 +21,8 @@ import {
   ROLES,
   USER_STATUS,
 } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { canManageStudent, mentorReaches } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMinutes, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
@@ -46,6 +47,7 @@ export default async function AdminStudentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const me = await requireAdminAccess();
   const { id } = await params;
   const profile = await prisma.studentProfile.findUnique({
     where: { id },
@@ -61,6 +63,9 @@ export default async function AdminStudentDetailPage({
     },
   });
   if (!profile) notFound();
+  // Out of this admin's programs reads exactly like a student who does not
+  // exist. Asked before the ledger is fetched, not after it is rendered.
+  if (!(await canManageStudent(me, profile))) notFound();
 
   const isPending = profile.user.status === USER_STATUS.PENDING;
   const [allMentors, hours, programs, ledger, meetings] = await Promise.all([
@@ -78,32 +83,14 @@ export default async function AdminStudentDetailPage({
   const tasksBySession = await taskOptionsForSessions(ledger.sessions);
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
 
-  // The jump back to the mentor view, offered only when that view would open —
-  // it needs hours with this student, a session with them, or a program the
-  // me mentors in, the same three answers `/mentor/students/[id]` asks for.
-  // The switch in the header can't work this out from a path, so the page that
-  // holds the ledger answers it here, and an admin who doesn't mentor this
-  // student is never handed a link to a 404.
-  // Free but for the assignment lookup: the allocations and every session are
-  // already in hand.
-  const me = await requireRole(ROLES.ADMIN);
   // One instant for the whole page: the ledger's two columns and every row in
   // them are judged against the same "now".
   const viewer = { audience: "staff" as const, userId: me.id, now: new Date() };
-  const mentorsThem =
-    canActAsMentor(me) &&
-    (hours.perMentor.some((m) => m.mentor?.id === me.id) ||
-      ledger.sessions.some((s) => s.mentorId === me.id) ||
-      (await prisma.mentorAssignment.findFirst({
-        where: {
-          mentorId: me.id,
-          programId: profile.programId,
-          OR: [
-            { cohortId: null },
-            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
-          ],
-        },
-      })) !== null);
+  // The jump back to the mentor view, offered only when that view would open.
+  // The switch in the header cannot work that out from a path, so the page
+  // holding the ledger answers it — with the same rule `/mentor/students/[id]`
+  // gates on, so an admin who mentors this student is never handed a 404.
+  const mentorsThem = canActAsMentor(me) && (await mentorReaches(me, profile));
   const mentorOptions = allMentors.map((m) => ({
     value: m.id,
     label: m.name ?? m.email,

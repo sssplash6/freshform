@@ -11,7 +11,8 @@ import { PageTitle } from "@/components/ui/section";
 import { Section } from "@/components/ui/section";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { ROLES, USER_STATUS } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { canManageMentor } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import {
   DATE_PRESETS,
   readDateWindow,
@@ -45,7 +46,7 @@ export default async function AdminMentorDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(ROLES.ADMIN);
+  const me = await requireAdminAccess();
   // One instant for every use-by date and every window bound on the page.
   const now = new Date();
   const { id } = await params;
@@ -57,6 +58,9 @@ export default async function AdminMentorDetailPage({
   if (!mentor || (mentor.role !== ROLES.MENTOR && !mentor.isMentor)) {
     notFound();
   }
+  // A mentor is reachable through the programs they work in. One this admin
+  // does not administer is not theirs to read, and reads as absent.
+  if (!(await canManageMentor(me, mentor.id))) notFound();
 
   const programs = await mentorPrograms(mentor.id);
   // Checked against this mentor's own programs, not taken from the URL: a

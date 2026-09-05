@@ -9,7 +9,8 @@ import {
   parsePage,
 } from "@/components/ui/pagination";
 import { ROLES, USER_STATUS } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { adminScope, scopeProgramFilter } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import {
   MENTOR_PRESETS,
   activeFilterCount,
@@ -31,14 +32,15 @@ export default async function AdminMentorsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(ROLES.ADMIN);
+  const user = await requireAdminAccess();
+  const programIds = scopeProgramFilter(await adminScope(user));
   const params = await searchParams;
   const page = parsePage(readParam(params, "page"));
 
   // Plain mentors plus dual-role admins who also mentor. `mentorsWhere` states
   // that rule once and adds the program, the two chips and the search on top.
   const isMentor = { OR: [{ role: ROLES.MENTOR }, { isMentor: true }] };
-  const where = mentorsWhere(params, {});
+  const where = mentorsWhere(params, { programIds });
 
   const [mentors, total, unassigned, unassignedCount, programs] =
     await Promise.all([
@@ -59,7 +61,7 @@ export default async function AdminMentorsPage({
       prisma.user.count({
         where: { AND: [isMentor, { status: USER_STATUS.UNASSIGNED }] },
       }),
-      programOptions(),
+      programOptions(programIds),
     ]);
 
   // Only the pairings of the mentors actually on this page.

@@ -2,8 +2,8 @@ import { StudentsTable } from "@/components/students-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
-import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { adminScope, scopeProgramFilter } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import {
   STUDENT_PRESETS,
   activeFilterCount,
@@ -30,7 +30,8 @@ export default async function AdminStudentsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(ROLES.ADMIN);
+  const user = await requireAdminAccess();
+  const programIds = scopeProgramFilter(await adminScope(user));
   const params = await searchParams;
   const page = parsePage(readParam(params, "page"));
   // One instant for the whole page: the "expiring" and "expired" chips and the
@@ -38,18 +39,26 @@ export default async function AdminStudentsPage({
   // student can be in the filtered list and unexpired in the row.
   const now = new Date();
 
-  // An admin sees every program, so the scope adds nothing — but it is passed
-  // rather than omitted, because this is the line a per-program grant lands on
-  // (REDESIGN.md phase 3) and the params must never be what decides reach.
-  const where = studentsWhere(params, {}, now);
+  // The reader's grants, ANDed in before anything the URL says — so a program
+  // id pasted from outside them narrows to nothing rather than widening the
+  // read. `undefined` is a platform admin: every program.
+  const where = studentsWhere(params, { programIds }, now);
 
   const [programs, students, total, anyCohorts] = await Promise.all([
-    prisma.program.findMany({ orderBy: { name: "asc" } }),
+    prisma.program.findMany({
+      where: programIds ? { id: { in: [...programIds] } } : {},
+      orderBy: { name: "asc" },
+    }),
     studentsWithHours(where, { skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }, now),
     prisma.studentProfile.count({ where }),
     // Whether the cohort column is worth its width at all, asked of the whole
     // table rather than of whichever students landed on this page.
-    prisma.studentProfile.count({ where: { cohortId: { not: null } } }),
+    prisma.studentProfile.count({
+      where: {
+        cohortId: { not: null },
+        ...(programIds ? { programId: { in: [...programIds] } } : {}),
+      },
+    }),
   ]);
 
   return (

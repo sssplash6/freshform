@@ -12,7 +12,8 @@ import {
   ROLES,
   SESSION_STATUS,
 } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { adminScope, scopeProgramFilter } from "@/lib/authz";
+import { requireAdminAccess } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatMinutes, formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
@@ -104,8 +105,17 @@ type RecentSession = Awaited<ReturnType<typeof recentMeetings>>[number];
 type Flag = { programId: string | null; status: Status };
 
 export default async function AdminInboxPage() {
-  const user = await requireRole(ROLES.ADMIN);
+  const user = await requireAdminAccess();
   await ensureDeadlineReminders();
+
+  // Everything on this page is counted per program and then summed, so the
+  // reader's grants are applied ONCE here and every read below carries them.
+  // `undefined` is a platform admin and means no filter at all — not "every id
+  // I happen to have fetched", which would go stale the moment a program is
+  // created.
+  const programIds = scopeProgramFilter(await adminScope(user));
+  const inScope = programIds ? { in: [...programIds] } : undefined;
+  const ofMine = inScope ? { student: { programId: inScope } } : {};
 
   // One instant for the whole render, so no two sections can disagree about
   // what today is or what has expired.
@@ -130,11 +140,13 @@ export default async function AdminInboxPage() {
     recent,
   ] = await Promise.all([
     prisma.program.findMany({
+      where: inScope ? { id: inScope } : {},
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    studentsWithHours(),
+    studentsWithHours(inScope ? { programId: inScope } : {}),
     prisma.mentorAssignment.findMany({
+      where: inScope ? { programId: inScope } : {},
       select: { mentorId: true, programId: true, calendlyUrl: true },
     }),
     // The same pool the mentors list works from: plain mentors plus dual-role
@@ -147,6 +159,7 @@ export default async function AdminInboxPage() {
     }),
     prisma.mentorFeedback.groupBy({
       by: ["mentorId"],
+      where: ofMine,
       _avg: { rating: true },
       _count: true,
     }),
@@ -155,17 +168,24 @@ export default async function AdminInboxPage() {
     // that time is forfeited, and `studentsWithHours` has already counted it.
     prisma.hourAllocation.groupBy({
       by: ["studentId"],
-      where: { deadline: { gte: now } },
+      where: { deadline: { gte: now }, ...ofMine },
       _min: { deadline: true },
     }),
     prisma.assignment.findMany({
-      where: { mentorId: null, progress: { not: ASSIGNMENT_PROGRESS.DONE } },
+      where: {
+        mentorId: null,
+        progress: { not: ASSIGNMENT_PROGRESS.DONE },
+        ...ofMine,
+      },
       include: { student: { include: { user: true } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.session.groupBy({
       by: ["assignmentId"],
-      where: { status: SESSION_STATUS.ACTIVE, assignment: { mentorId: null } },
+      where: {
+        status: SESSION_STATUS.ACTIVE,
+        assignment: { mentorId: null, ...ofMine },
+      },
       _sum: { minutes: true },
     }),
     // Still in the diary: not cancelled, not held, nothing logged against it.
@@ -182,11 +202,12 @@ export default async function AdminInboxPage() {
           ],
         },
         scheduledAt: { lte: horizon },
+        ...ofMine,
       },
       include: { mentor: true, student: { include: { user: true } } },
       orderBy: { scheduledAt: "asc" },
     }),
-    recentMeetings({ take: RECENT_SHOWN }),
+    recentMeetings({ take: RECENT_SHOWN, programIds }),
   ]);
 
   const programById = new Map(programs.map((p) => [p.id, p]));

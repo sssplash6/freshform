@@ -206,6 +206,19 @@ export function assertPlatformAdmin(actor: User | null): Denied | null {
 }
 
 /**
+ * The scope as a filter argument, where `undefined` means every program.
+ *
+ * That convention is `FilterScope.programIds`', and matching it is the whole
+ * point: a list page's reach becomes one expression it passes down, and the
+ * `where` builders already AND it in ahead of anything the URL says.
+ */
+export function scopeProgramFilter(
+  scope: AdminScope
+): readonly string[] | undefined {
+  return scope === "ALL" ? undefined : [...scope];
+}
+
+/**
  * Every program in scope, as ids, for a query that needs a list.
  *
  * "ALL" has to become real ids somewhere, and this is the only place it does —

@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 
 import { TabLinks } from "@/components/ui/segmented";
 import { PageTitle } from "@/components/ui/section";
-import { ROLES } from "@/lib/constants";
-import { requireRole } from "@/lib/dal";
+import { requireProgramScope } from "@/lib/dal";
 import { formatRough } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { studentsWithHours } from "@/lib/queries";
@@ -24,8 +23,8 @@ export default async function ProgramLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  await requireRole(ROLES.ADMIN);
   const { id } = await params;
+  await requireProgramScope(id);
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();
 
