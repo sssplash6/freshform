@@ -12,6 +12,7 @@ import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
 import { ROLES, type Role } from "@/lib/constants";
+import { canSwitchProfile, profileOf } from "@/lib/profile";
 import type { User } from "@/generated/prisma/client";
 
 async function signOutAction() {
@@ -124,7 +125,13 @@ export async function AppShell({
   children: React.ReactNode;
 }) {
   const activeRole = (mode ?? (user.role as Role)) as Role;
-  const isDual = user.role === ROLES.ADMIN && user.isMentor;
+  const isDual = canSwitchProfile(user);
+  // The lens is the cookie's answer, not this tree's. They agree in practice —
+  // switching out of one home moves you to the other — and where they don't,
+  // the switch should say which lens you are in rather than which URL you are
+  // at. What the lens DECIDES (the nav below, and the default filters) comes
+  // with the sidebar in the next commit.
+  const profile = isDual ? await profileOf(user) : null;
   const unreadCount = await prisma.notification.count({
     where: { userId: user.id, read: false },
   });
@@ -149,13 +156,17 @@ export async function AppShell({
     <div className="flex min-h-full flex-1 flex-col">
       {/* Once, for the whole shell: both switches below are in the DOM at the
           same time, so the key would otherwise be handled twice. */}
-      {isDual && <ProfileShortcut active={activeRole} />}
+      {isDual && <ProfileShortcut />}
       <header className="border-b border-line bg-surface">
         {/* Desktop */}
         <div className="mx-auto hidden min-h-16 max-w-5xl items-center gap-6 px-4 md:flex">
           <div className="flex items-center gap-2.5">
             {brand}
-            {isDual ? <ProfileSwitch active={activeRole} /> : <RoleBadge role={activeRole} />}
+            {profile ? (
+              <ProfileSwitch active={profile} />
+            ) : (
+              <RoleBadge role={activeRole} />
+            )}
           </div>
 
           <nav className="flex flex-1 items-center gap-7">
@@ -185,7 +196,7 @@ export async function AppShell({
                 <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
               </summary>
               <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
-                {isDual && <ProfileSwitchMenu active={activeRole} />}
+                {profile && <ProfileSwitchMenu active={profile} />}
                 <nav aria-label="Primary navigation" className="mt-1 grid gap-1">
                   <NavLinks items={navItems} variant="menu" />
                 </nav>

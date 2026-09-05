@@ -1,10 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { canActAsMentor } from "@/lib/constants";
+import {
+  canSwitchProfile,
+  homeFor,
+  isProfile,
+  PROFILE_COOKIE,
+  PROFILE_MAX_AGE,
+} from "@/lib/profile";
 import {
   AVATAR_MAX_BYTES,
   AVATAR_MIME_TYPES,
@@ -20,6 +29,48 @@ import { type ActionState } from "@/lib/actions/shared";
  * a mentor". Admins edit mentors through updateMentor in actions/mentors.ts,
  * which is a different job with a different audit story.
  */
+
+/**
+ * Switch lens — admin or mentor. Not a change to the person's profile record
+ * below, but to which half of the app they are looking through; see
+ * `src/lib/profile.ts` for what that does and does not decide.
+ *
+ * A server action rather than a link, because the lens is a cookie and the
+ * switch has to leave you where you are: this writes and revalidates, and the
+ * page you were on repaints in the other lens with the same URL. Nothing here
+ * grants anything — a lens is emphasis, and every gate in the app ignores it.
+ *
+ * Silent on refusal. The only ways to reach it are a control shown to people
+ * who can switch and a keyboard chord, so a rejection is not a person making a
+ * mistake worth telling them about.
+ */
+export async function setProfile(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || !canSwitchProfile(user)) return;
+
+  const next = formData.get("profile");
+  if (!isProfile(next)) return;
+
+  (await cookies()).set(PROFILE_COOKIE, next, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: PROFILE_MAX_AGE,
+  });
+  // The whole layout: the lens decides the sidebar as well as the page.
+  revalidatePath("/", "layout");
+
+  // Staying put is the goal, and it is true for every page that is about a
+  // student, a mentor or a program. It is not yet true for the two pages that
+  // ARE a lens — /admin and /mentor are still separate trees — so switching
+  // while standing in the one you just left goes to its counterpart. When the
+  // routes stop being role-scoped there is nothing left for this to catch.
+  const from = String(formData.get("path") ?? "");
+  const left = next === "admin" ? "/mentor" : "/admin";
+  if (from === left || from.startsWith(`${left}/`)) {
+    redirect(homeFor(user, next));
+  }
+}
 
 /**
  * Rename yourself. This is the same field mentors first fill in at signup

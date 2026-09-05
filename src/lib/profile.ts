@@ -1,0 +1,87 @@
+import "server-only";
+
+import { cache } from "react";
+import { cookies } from "next/headers";
+
+import { canActAsMentor, ROLE_HOME, ROLES, type Role } from "@/lib/constants";
+import type { User } from "@/generated/prisma/client";
+
+/**
+ * The lens: which half of the app a dual-role person is looking through.
+ *
+ * Nine of the ten admins also mentor students, so almost everybody on staff is
+ * two people at once — one who allocates time and one who delivers it. The
+ * switch between them used to be a pair of LINKS into two route trees, which
+ * meant switching cost you your place: it needed a map of which page in one
+ * tree corresponded to which page in the other, and where the map had no entry
+ * you were dropped on a home screen mid-task.
+ *
+ * A cookie instead. It changes four things and no others:
+ *
+ *   1. which home `/` resolves to
+ *   2. the items in the sidebar
+ *   3. the default filter on the lists ("just mine" vs "all in my programs")
+ *   4. which action on an entity page is the PRIMARY one
+ *
+ * What it never changes: what you may do. Authority is `authz.ts`, which reads
+ * grants and reach and never reads this cookie — a server action ignores the
+ * lens entirely. So a lens can never grant anything, and switching can never
+ * take a control away. That is what lets the switch keep you where you are:
+ * the page repaints, the URL does not move, and nothing you were mid-way
+ * through disappears.
+ */
+export type Profile = "admin" | "mentor";
+
+export const PROFILE_COOKIE = "profile";
+
+/** A year: the lens is a preference, not a session. */
+export const PROFILE_MAX_AGE = 60 * 60 * 24 * 365;
+
+/** Is this a lens at all? Everything reading the cookie is reading a string. */
+export function isProfile(value: unknown): value is Profile {
+  return value === "admin" || value === "mentor";
+}
+
+/**
+ * Can this person be in both? Only a dual-role admin — a plain mentor has one
+ * lens and a plain admin has one, and a switch offering a view its owner
+ * cannot open is worse than no switch.
+ */
+export function canSwitchProfile(user: User): boolean {
+  return user.role === ROLES.ADMIN && !!user.isMentor;
+}
+
+/** The lens as it was last set, before anybody's role is considered. */
+export const storedProfile = cache(async (): Promise<Profile | null> => {
+  const value = (await cookies()).get(PROFILE_COOKIE)?.value;
+  return isProfile(value) ? value : null;
+});
+
+/**
+ * The lens this user is actually in.
+ *
+ * The cookie only decides for somebody who has a choice. Everyone else has
+ * exactly one honest answer, and a stale cookie left behind by a role change —
+ * an admin who stopped mentoring, a mentor made an admin — must not be able to
+ * put them in a lens their pages do not fit.
+ */
+export const profileOf = cache(async (user: User): Promise<Profile> => {
+  if (!canSwitchProfile(user)) {
+    return canActAsMentor(user) ? "mentor" : "admin";
+  }
+  return (await storedProfile()) ?? "admin";
+});
+
+/**
+ * Where this person's home is: the lens first, their role second.
+ *
+ * Called by every gate that turns somebody away, so it has to answer for a
+ * user in any state — including an admin whose grants were all removed, who is
+ * sent to /admin to be told so rather than into a redirect loop (`requireStaff`
+ * in dal.ts).
+ */
+export function homeFor(user: User, profile?: Profile | null): string {
+  if (user.role === ROLES.STUDENT) return "/student";
+  if (profile === "mentor" && canActAsMentor(user)) return "/mentor";
+  return ROLE_HOME[user.role as Role] ?? "/login";
+}

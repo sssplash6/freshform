@@ -6,7 +6,8 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { adminScope, scopeCovers, scopeIsEmpty } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { canActAsMentor, ROLE_HOME, ROLES, type Role } from "@/lib/constants";
+import { canActAsMentor, ROLES, type Role } from "@/lib/constants";
+import { homeFor, profileOf } from "@/lib/profile";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -43,9 +44,7 @@ export async function requireUser(): Promise<User> {
  */
 export async function requireRole(...roles: Role[]): Promise<User> {
   const user = await requireUser();
-  if (!roles.includes(user.role as Role)) {
-    redirect(ROLE_HOME[user.role as Role] ?? "/login");
-  }
+  if (!roles.includes(user.role as Role)) redirect(await ownHome(user));
   return user;
 }
 
@@ -62,9 +61,12 @@ export async function requireRole(...roles: Role[]): Promise<User> {
  */
 export async function requireAdminAccess(): Promise<User> {
   const user = await requireUser();
-  if (scopeIsEmpty(await adminScope(user))) redirect(homeFor(user));
+  if (scopeIsEmpty(await adminScope(user))) redirect(await ownHome(user));
   return user;
 }
+
+/** The roles that read the staff inbox. What they SEE there is their grants. */
+const STAFF_ROLES: Role[] = [ROLES.ADMIN, ROLES.DEPT_LEADER, ROLES.SALES];
 
 /**
  * Gate the staff INBOX: signed in, and staff — whether or not anybody has
@@ -80,9 +82,11 @@ export async function requireAdminAccess(): Promise<User> {
  */
 export async function requireStaff(): Promise<User> {
   const user = await requireUser();
-  if (user.role === ROLES.ADMIN) return user;
+  // Every role whose home IS this page. Turning one of them away would send
+  // them here again — the loop this function exists to break.
+  if (STAFF_ROLES.includes(user.role as Role)) return user;
   if (!scopeIsEmpty(await adminScope(user))) return user;
-  redirect(homeFor(user));
+  redirect(await ownHome(user));
 }
 
 /**
@@ -106,7 +110,7 @@ export async function requireProgramScope(programId: string): Promise<User> {
  */
 export async function requireMentorAccess(): Promise<User> {
   const user = await requireUser();
-  if (!canActAsMentor(user)) redirect(homeFor(user));
+  if (!canActAsMentor(user)) redirect(await ownHome(user));
   return user;
 }
 
@@ -122,7 +126,11 @@ export async function requireMentor(): Promise<User> {
   return user;
 }
 
-/** Where this user's home is (used by the root page and error recovery). */
-export function homeFor(user: User): string {
-  return ROLE_HOME[user.role as Role] ?? "/login";
+/**
+ * Where to send somebody a gate turned away: their own home, in the lens they
+ * are actually using. A dual-role admin reading through the mentor lens is
+ * sent to /mentor, not to the admin inbox they were not looking at.
+ */
+async function ownHome(user: User): Promise<string> {
+  return homeFor(user, await profileOf(user));
 }

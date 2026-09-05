@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 
 import { Callout } from "@/components/ui/callout";
 import { signIn } from "@/lib/auth";
-import { getCurrentUser, homeFor } from "@/lib/dal";
+import { getCurrentUser } from "@/lib/dal";
+import { homeFor, profileOf } from "@/lib/profile";
 
 const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied:
@@ -21,7 +22,7 @@ export default async function LoginPage({
   // cookie no longer decrypts must be able to reach this form and sign in
   // again, which overwrites the bad cookie.
   const user = await getCurrentUser();
-  if (user) redirect(homeFor(user));
+  if (user) redirect(homeFor(user, await profileOf(user)));
 
   const { error } = await searchParams;
   const errorMessage = error

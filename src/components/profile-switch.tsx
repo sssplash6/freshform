@@ -1,21 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 
 import { CheckIcon } from "@/components/icons";
-import { ROLES, type Role } from "@/lib/constants";
+import { setProfile } from "@/lib/actions/profile";
+import type { Profile } from "@/lib/profile";
 
 const ITEMS = [
-  { role: ROLES.ADMIN, home: "/admin", label: "Admin" },
-  { role: ROLES.MENTOR, home: "/mentor", label: "Mentor" },
-] as const;
-
-/** The profile that isn't the one you're in. There are only ever two. */
-function other(active: Role): (typeof ITEMS)[number] {
-  return ITEMS.find((it) => it.role !== active) ?? ITEMS[0];
-}
+  { value: "admin", label: "Admin" },
+  { value: "mentor", label: "Mentor" },
+] as const satisfies readonly { value: Profile; label: string }[];
 
 /**
  * Alt+M, and ⌥M on a Mac — "M for mode". Chosen because it is free in every
@@ -43,46 +38,19 @@ function subscribeToNothing(): () => void {
 }
 
 /**
- * Where the other profile's version of THIS page lives, or null when there is
- * none and the role's home is the honest answer. Switching profile shouldn't
- * cost you your place: an admin who is also a mentor, standing on a student,
- * is nearly always switching in order to keep looking at that same student.
- *
- * Only pages that exist under both roles map, and the student page maps only
- * toward admin, because that is the direction that always opens — an admin may
- * open any student, where a student's MENTOR page depends on the viewer's
- * hours, sessions and programs. That answer isn't knowable from a path, so the
- * admin student page offers the jump back itself, where it is.
- */
-function counterpart(pathname: string, to: Role): string | null {
-  const student = pathname.match(/^\/mentor\/students\/([^/]+)$/);
-  if (to === ROLES.ADMIN && student) return `/admin/students/${student[1]}`;
-  if (to === ROLES.ADMIN && pathname === "/mentor/feedback") {
-    return "/admin/feedback";
-  }
-  if (to === ROLES.MENTOR && pathname === "/admin/feedback") {
-    return "/mentor/feedback";
-  }
-  return null;
-}
-
-/**
  * The keyboard half of the switch: Alt+M / ⌥M anywhere in the app. Renders
  * nothing, and the shell mounts exactly one of it — both switches are in the
  * DOM at once (one hidden by a breakpoint), so hanging the listener off either
  * would fire it twice.
  *
- * It prefers the counterpart link the PAGE marked, when there is one, because
- * that is the only thing that knows whether a student's mentor view opens for
- * this viewer. Failing that it falls back to the path mapping, then to the
- * other profile's home — so the key always goes somewhere real.
+ * It presses the switch rather than navigating. That is the whole change: the
+ * lens is a cookie, so there is one thing to do and no map of which page in one
+ * role's tree corresponds to which page in the other's. The map used to decide
+ * where ⌥M landed, and where it had no entry — most pages — the answer was a
+ * home screen, which is the wrong answer to "show me this in the other lens".
  */
-export function ProfileShortcut({ active }: { active: Role }) {
-  const pathname = usePathname();
-  const router = useRouter();
-
+export function ProfileShortcut() {
   useEffect(() => {
-    const target = other(active);
     function onKeyDown(e: KeyboardEvent) {
       // Alt alone: ⌥⌘M and ⌥⇧M belong to other things, here and in the OS.
       if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
@@ -101,55 +69,65 @@ export function ProfileShortcut({ active }: { active: Role }) {
       ) {
         return;
       }
-      const marked = document
-        .querySelector("[data-profile-counterpart] a[href]")
-        ?.getAttribute("href");
-      const href =
-        (marked?.startsWith(target.home) ? marked : null) ??
-        counterpart(pathname, target.role) ??
-        target.home;
+      // The one button in the switch is the profile you are NOT in; the one
+      // you are in is a label, not a control.
+      const other = document.querySelector<HTMLButtonElement>(
+        "[data-profile-switch] button[type=submit]"
+      );
+      if (!other) return;
       e.preventDefault();
-      router.push(href);
+      other.click();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [active, pathname, router]);
+  }, []);
 
   return null;
 }
 
-/** Two segments, the active one filled. Dual-role admins only. */
-export function ProfileSwitch({ active }: { active: Role }) {
+/**
+ * Two segments, the active one filled. Dual-role admins only.
+ *
+ * A form, not a pair of links: switching writes a cookie and revalidates, so
+ * the page you are on repaints in the other lens at the same URL. `path` rides
+ * along because the two homes are still separate trees — see `setProfile`.
+ */
+export function ProfileSwitch({ active }: { active: Profile }) {
   const pathname = usePathname();
   const shortcut = useShortcutLabel();
   return (
-    <div
+    <form
+      action={setProfile}
+      data-profile-switch
       role="group"
       aria-label="Switch profile"
       aria-keyshortcuts="Alt+M"
       className="flex items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
     >
+      <input type="hidden" name="path" value={pathname} />
       {ITEMS.map((it) =>
-        it.role === active ? (
+        it.value === active ? (
           <span
-            key={it.role}
+            key={it.value}
             aria-current="true"
-            className="rounded-md bg-accent px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
+            className="rounded-md bg-brand-soft px-2.5 py-1.5 text-xs font-semibold text-brand"
           >
             {it.label}
           </span>
         ) : (
-          <Link
-            key={it.role}
-            href={counterpart(pathname, it.role) ?? it.home}
+          <button
+            key={it.value}
+            type="submit"
+            name="profile"
+            value={it.value}
             title={`Switch profile (${shortcut})`}
-            className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg transition-colors hover:text-ink"
+            className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-fg transition-colors hover:text-ink"
           >
             {it.label}
-          </Link>
+          </button>
         )
       )}
-    </div>
+    </form>
   );
 }
 
@@ -159,16 +137,19 @@ export function ProfileSwitch({ active }: { active: Role }) {
  * the switch is the one of the four that can live inside the menu without being
  * any harder to find.
  */
-export function ProfileSwitchMenu({ active }: { active: Role }) {
+export function ProfileSwitchMenu({ active }: { active: Profile }) {
   const pathname = usePathname();
   const shortcut = useShortcutLabel();
   return (
-    <div
+    <form
+      action={setProfile}
+      data-profile-switch
       className="border-b border-line pb-1"
       role="group"
       aria-label="Switch profile"
       aria-keyshortcuts="Alt+M"
     >
+      <input type="hidden" name="path" value={pathname} />
       <p className="flex items-baseline justify-between gap-2 px-3 pb-0.5 pt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-fg">
         Profile
         <span className="font-semibold normal-case tracking-normal">
@@ -176,9 +157,9 @@ export function ProfileSwitchMenu({ active }: { active: Role }) {
         </span>
       </p>
       {ITEMS.map((it) =>
-        it.role === active ? (
+        it.value === active ? (
           <span
-            key={it.role}
+            key={it.value}
             aria-current="true"
             className="flex min-h-11 items-center justify-between rounded-lg bg-brand-soft px-3 text-sm font-medium text-brand"
           >
@@ -186,15 +167,17 @@ export function ProfileSwitchMenu({ active }: { active: Role }) {
             <CheckIcon className="h-4 w-4" />
           </span>
         ) : (
-          <Link
-            key={it.role}
-            href={counterpart(pathname, it.role) ?? it.home}
-            className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+          <button
+            key={it.value}
+            type="submit"
+            name="profile"
+            value={it.value}
+            className="flex min-h-11 w-full cursor-pointer items-center rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
           >
             {it.label}
-          </Link>
+          </button>
         )
       )}
-    </div>
+    </form>
   );
 }
