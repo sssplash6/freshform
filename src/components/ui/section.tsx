@@ -76,13 +76,20 @@ export function PageTitle({
         </Link>
       )}
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-        {leading && <div className="shrink-0">{leading}</div>}
-        <div className="min-w-0 flex-1">
-          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-          <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
-            {title}
-          </h1>
-          {subtitle && <div className="mt-1.5 text-[15px] text-muted-fg">{subtitle}</div>}
+        {/* The picture and the words it belongs to are ONE group, centred on
+            each other. They used to be siblings of the whole row, which is
+            end-aligned so the actions sit on the baseline — so a 64px avatar
+            lined its bottom edge up with the subtitle and read as sitting
+            below the name it labels. */}
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          {leading && <div className="shrink-0">{leading}</div>}
+          <div className="min-w-0 flex-1">
+            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+            <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-ink sm:text-[32px]">
+              {title}
+            </h1>
+            {subtitle && <div className="mt-1.5 text-[15px] text-muted-fg">{subtitle}</div>}
+          </div>
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
