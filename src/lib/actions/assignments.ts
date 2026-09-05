@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { assertProgramScope } from "@/lib/authz";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,7 +11,6 @@ import {
   ASSIGNMENT_PROGRESS_LABELS,
   canActAsMentor,
   NOTIFICATION_TYPES,
-  ROLES,
 } from "@/lib/constants";
 import { formatDuration } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
@@ -29,6 +29,12 @@ import { parseMinutesField, type ActionState } from "@/lib/actions/shared";
  * the hours for it are one act, so there is one form for both and the task's
  * budget is the hours it was given. What lives here is everything that happens
  * to a task afterwards: editing it, stating its progress, removing it.
+ *
+ * Every write here is gated on the program of the STUDENT the task belongs to.
+ * A task has no program of its own, and the student's is the one an admin
+ * either holds a grant for or does not. A task outside that grant answers "no
+ * longer exists" — the same sentence a deleted one gets, so the refusal can't
+ * be used to confirm the task is there.
  */
 
 const PROGRESS_VALUES: string[] = Object.values(ASSIGNMENT_PROGRESS);
@@ -98,13 +104,19 @@ export async function updateAssignment(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change tasks." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const id = String(formData.get("assignmentId") ?? "");
-  const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "That task no longer exists." };
+  const existing = await prisma.assignment.findUnique({
+    where: { id },
+    include: { student: { select: { programId: true } } },
+  });
+  if (
+    !existing ||
+    (await assertProgramScope(actor, existing.student.programId))
+  ) {
+    return { ok: false, error: "That task no longer exists." };
+  }
 
   // Empty = no mentor (yet): a task can be planned before anyone owns it,
   // and this same edit is how an unassigned task finally gets its mentor.
@@ -242,9 +254,7 @@ export async function setAssignmentProgress(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change tasks." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const id = String(formData.get("assignmentId") ?? "");
   const progress = String(formData.get("progress") ?? "");
@@ -253,8 +263,16 @@ export async function setAssignmentProgress(
     return { ok: false, error: "Pick a progress state." };
   }
 
-  const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "That task no longer exists." };
+  const existing = await prisma.assignment.findUnique({
+    where: { id },
+    include: { student: { select: { programId: true } } },
+  });
+  if (
+    !existing ||
+    (await assertProgramScope(actor, existing.student.programId))
+  ) {
+    return { ok: false, error: "That task no longer exists." };
+  }
 
   if (progress === ASSIGNMENT_PROGRESS_AUTO) {
     if (!existing.progressManual) {
@@ -314,13 +332,19 @@ export async function deleteAssignment(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can remove tasks." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const id = String(formData.get("assignmentId") ?? "");
-  const existing = await prisma.assignment.findUnique({ where: { id } });
-  if (!existing) return { ok: false, error: "That task no longer exists." };
+  const existing = await prisma.assignment.findUnique({
+    where: { id },
+    include: { student: { select: { programId: true } } },
+  });
+  if (
+    !existing ||
+    (await assertProgramScope(actor, existing.student.programId))
+  ) {
+    return { ok: false, error: "That task no longer exists." };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.assignment.delete({ where: { id } });

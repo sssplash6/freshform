@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  adminScope,
+  assertPlatformAdmin,
+  assertProgramScope,
+  scopeCovers,
+} from "@/lib/authz";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { notify, notificationHref } from "@/lib/notify";
@@ -95,9 +101,7 @@ export async function createMentor(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can register mentors." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const email = normalizeEmail(formData.get("email"));
   if (!EMAIL_RE.test(email)) {
@@ -109,6 +113,13 @@ export async function createMentor(
   const targets = await resolveAssignmentTargets(formData.getAll("targets"));
   if (!targets || targets.length === 0) {
     return { ok: false, error: "Pick at least one program or cohort." };
+  }
+  // Every target, not the first: registering a mentor writes all of them in
+  // one go, so a single program outside the scope would place them where this
+  // admin cannot follow.
+  for (const target of targets) {
+    const denied = await assertProgramScope(actor, target.programId);
+    if (denied) return denied;
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -156,15 +167,17 @@ export async function createMentor(
  * pairings that survive the edit are kept; the mentor sets those themselves
  * (spec §8). Unchecking every target parks the mentor as UNASSIGNED again;
  * a first assignment activates them.
+ *
+ * "The full set" is the full set this admin can SEE — the pairings whose
+ * program they hold. The two identity fields are stricter still; the comment
+ * on them says why.
  */
 export async function updateMentor(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can edit mentors." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const mentorId = String(formData.get("mentorId") ?? "");
   const mentor = await prisma.user.findUnique({
@@ -183,6 +196,27 @@ export async function updateMentor(
   if (!EMAIL_RE.test(email)) {
     return { ok: false, error: "Enter a valid email address." };
   }
+
+  /**
+   * Who a mentor IS is platform-only; where they work is not.
+   *
+   * Admins are peers now — one set per program instead of one set over
+   * everything — and a mentor is very often a dual-role admin. Whoever can
+   * change this email address can point another admin's sign-in at a mailbox
+   * they own and then be them, so the edit belongs to the people who can
+   * already grant themselves anything. It is the two fields and not the whole
+   * action, because assignments are exactly what a program's admin is here to
+   * edit, and taking those away would leave them nothing to save.
+   *
+   * The form posts both fields back untouched on every save, so the question
+   * is whether they MOVED, not whether they were submitted.
+   */
+  const detailsChanged = name !== mentor.name || email !== mentor.email;
+  if (detailsChanged) {
+    const denied = assertPlatformAdmin(actor);
+    if (denied) return denied;
+  }
+
   const emailTaken = await prisma.user.findUnique({ where: { email } });
   if (emailTaken && emailTaken.id !== mentorId) {
     return { ok: false, error: `${email} already has an account.` };
@@ -198,13 +232,24 @@ export async function updateMentor(
         (a) => a.programId === t.programId && a.cohortId === t.cohortId
       )
   );
+  for (const target of toCreate) {
+    const denied = await assertProgramScope(actor, target.programId);
+    if (denied) return denied;
+  }
+  // Unticked only counts where a box was. The picker is built from this
+  // admin's own programs, so a pairing in a program they don't hold draws no
+  // row and no chip — and yet "Clear" drops it from the submission with the
+  // rest. Reading that absence as "remove it" is how one program's admin would
+  // quietly pull a mentor out of a program they cannot even see.
+  const scope = await adminScope(actor);
   const toDelete = mentor.mentorAssignments.filter(
-    (a) => !wanted.has(`${a.programId}:${a.cohortId ?? ""}`)
+    (a) =>
+      !wanted.has(`${a.programId}:${a.cohortId ?? ""}`) &&
+      scopeCovers(scope, a.programId)
   );
   const remaining =
     mentor.mentorAssignments.length - toDelete.length + toCreate.length;
 
-  const detailsChanged = name !== mentor.name || email !== mentor.email;
   if (!detailsChanged && toCreate.length === 0 && toDelete.length === 0) {
     return { ok: true, message: "No changes to save." };
   }
@@ -311,11 +356,14 @@ export async function assignMentorToProgram(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can assign mentors." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
+  // Asked of the id before anything is looked up, so a program somebody does
+  // not administer reads exactly like a program that isn't there.
   const programId = String(formData.get("programId") ?? "");
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
   const program = await prisma.program.findUnique({
     where: { id: programId },
     include: { cohorts: true },
@@ -386,15 +434,17 @@ export async function removeAssignment(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can remove assignments." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const id = String(formData.get("assignmentId") ?? "");
   const assignment = await prisma.mentorAssignment.findUnique({
     where: { id },
   });
-  if (!assignment) return { ok: false, error: "Assignment not found." };
+  // One sentence for both: a pairing in a program this admin doesn't hold is
+  // gone as far as they are concerned, and a refusal would say it is there.
+  if (!assignment || (await assertProgramScope(actor, assignment.programId))) {
+    return { ok: false, error: "Assignment not found." };
+  }
 
   await prisma.mentorAssignment.delete({ where: { id } });
 
