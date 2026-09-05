@@ -15,11 +15,23 @@ persistent disk.
 
 | Role | Home | Can do |
 |---|---|---|
-| Admin | `/admin` | Everything: create students anywhere, set hour allotments (audited), assign mentors + booking links, cross-program dashboard, all feedback |
-| Dept Leader | `/leader` | Create students in their program, program dashboard, program mentor feedback |
-| Sales | `/sales` | Create students in their program, program dashboard |
-| Mentor | `/mentor` | See assigned students, log/edit/void their own sessions, schedule/move/cancel interviews, see their (anonymous) ratings |
-| Student | `/student` | Hours breakdown + meeting history, confirm or decline scheduled interviews, book via mentors' Calendly links, leave mentor/website feedback |
+| Platform admin | `/admin` | Every program, present and future. The only people who can grant access, create a program, or change somebody's name or sign-in email |
+| Program admin | `/admin` | The programs they hold a `ProgramStaff` grant for: students, mentors, time, tasks and feedback inside those and nowhere else |
+| Mentor | `/mentor` | Their caseload, log/correct/void their own sessions, schedule and move their own meetings, their own (anonymous) ratings |
+| Student | `/student` | Their time and history, answer a meeting invitation, book through their mentors' links, rate a mentor |
+
+Access is a **row, not a role**. `role = ADMIN` grants nothing on its own: a
+person sees the programs they hold a grant for, and grants are made in one
+place — `/settings/platform`. The old `DEPT_LEADER` and `SALES` roles survive
+as grant *levels* (Leader reads a program and its feedback, Sales reads its
+students) but nothing creates them today, and their `/leader` and `/sales`
+route trees are gone: they were the same three lists with a different prefix,
+and they existed only because scope used to be one column on `User`.
+
+Almost everyone on staff is two people at once — nine of the ten admins also
+mentor — so the **lens** (`Admin | Mentor`, ⌥M) decides emphasis: which home
+`/` resolves to, the sidebar, the default filter, which button is primary. It
+never decides authority. An entity page renders the union of your rights.
 
 **Sign-in rules:** everyone uses Google OAuth. Staff come from the seeded
 preset list; students can sign in only if staff created them first

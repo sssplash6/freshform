@@ -1,3 +1,14 @@
+> **Superseded by `REDESIGN.md`, 5 September 2026.**
+>
+> This was the brief that started the UX work. `REDESIGN.md` is what came out
+> of it — the binding specification, 59 commits, all of them landed — and where
+> the two disagree, `REDESIGN.md` governs. The roles listed below no longer
+> exist as this file describes them: access is a per-program grant, not a role,
+> and the `/leader` and `/sales` trees are gone.
+>
+> Kept because it records what was asked for, in the words it was asked in.
+> Do not implement from this file.
+
 # Claude Code Prompt: Freshform UX Upgrade
 
 You are working in `/Users/workingmyassof/freshform`, a Next.js 16 + React 19 + Prisma 7 + SQLite + Auth.js application for Freshman Academy. It tracks mentoring hours, mentor sessions, scheduled interviews, assignments, feedback, programs, cohorts, and notifications.

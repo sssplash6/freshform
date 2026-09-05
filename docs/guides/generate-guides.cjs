@@ -11,11 +11,16 @@ const PDFDocument = require("pdfkit");
 const OUT = process.argv[2] || ".";
 fs.mkdirSync(OUT, { recursive: true });
 
-const BRAND = "#ed7a2d";
-const INK = "#1f2937";
-const MUTED = "#6b7280";
-const LINE = "#e5e7eb";
-const TIPBG = "#fff4e8";
+// One palette, two consumers that cannot read the stylesheet: an email client
+// and this PDF generator. Both used to hand-copy their own hexes, and these
+// had drifted to a different ink (#1f2937) and line (#e5e7eb) than the app's
+// — and to an ORANGE brand, from before the brand was blue. See src/lib/brand.ts.
+const { BRAND: PALETTE } = require("../../src/lib/brand.ts");
+const BRAND = PALETTE.brand;
+const INK = PALETTE.ink;
+const MUTED = PALETTE.muted;
+const LINE = PALETTE.line;
+const TIPBG = PALETTE.brandSoft;
 
 const MARGIN = 60;
 
