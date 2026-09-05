@@ -40,7 +40,6 @@ type Move = { from: string; to: string; why: string };
  * The list is kept here, unlisted, so the commit that moves each route can see
  * what it owes. Waiting on the commit that builds the destination:
  *
- *   /admin/students          → /students                    (the list)
  *   /admin/students/:id      → /students/:id                (the workspace; seed goes)
  *   /mentor/students/:id     → /students/:id                (same commit)
  *   /admin/mentors           → /mentors                     (the list)
@@ -64,6 +63,11 @@ type Move = { from: string; to: string; why: string };
  * deletion is a listed commit, not a someday.
  */
 const MOVED: Move[] = [
+  {
+    from: "/admin/students",
+    to: "/students",
+    why: "The roster, at one address: an admin's list of everybody and a mentor's list of their own were one query written twice.",
+  },
   // The two scoped roles had their own copies of three lists. What made them
   // separate trees was that scope lived in `User.programId` — one program, set
   // by a seed — so a leader could not be given a second one and an admin could

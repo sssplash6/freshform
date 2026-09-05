@@ -63,6 +63,10 @@ export async function studentsWithHours(
       by: ["studentId", "mentorId", "attended", "withinPlan"],
       where: { status: SESSION_STATUS.ACTIVE, studentId: { in: ids } },
       _sum: { minutes: true },
+      // The last time anybody met them. On the list this is the column that
+      // answers "who has gone quiet", which no total can: a student can hold
+      // plenty of time and not have been seen for six weeks.
+      _max: { date: true },
     }),
   ]);
 
@@ -70,11 +74,17 @@ export async function studentsWithHours(
   // subset. usedByPair drives per-allocation forfeiture on expired deadlines.
   // Out-of-plan hours are counted apart: they were delivered, but they draw
   // nothing down, so folding them in here would understate every balance.
+  const lastSessionById = new Map<string, Date>();
   const usedById = new Map<string, number>();
   const missedById = new Map<string, number>();
   const extraById = new Map<string, number>();
   const usedByPair = new Map<string, number>();
   for (const s of sessionSums) {
+    const at = s._max.date;
+    if (at) {
+      const seen = lastSessionById.get(s.studentId);
+      if (!seen || at > seen) lastSessionById.set(s.studentId, at);
+    }
     const hrs = s._sum.minutes ?? 0;
     if (!s.withinPlan) {
       extraById.set(s.studentId, (extraById.get(s.studentId) ?? 0) + hrs);
@@ -136,6 +146,7 @@ export async function studentsWithHours(
             amountPaid: paidById.get(profile.id) ?? 0,
       remainingMinutes: allotted - used - forfeited,
       nextDeadline: nextDeadlineById.get(profile.id) ?? null,
+      lastSessionAt: lastSessionById.get(profile.id) ?? null,
     };
   });
 }

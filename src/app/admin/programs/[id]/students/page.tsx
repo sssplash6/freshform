@@ -20,7 +20,7 @@ export default async function AdminProgramStudentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireProgramScope(id);
+  const me = await requireProgramScope(id);
   const program = await prisma.program.findUnique({
     where: { id },
     include: { cohorts: { orderBy: { name: "asc" } } },
@@ -44,9 +44,8 @@ export default async function AdminProgramStudentsPage({
       >
         <StudentsTable
           students={students}
+          viewer={{ audience: "staff", userId: me.id, now: new Date() }}
           showProgram={false}
-          showCohort={program.cohorts.length > 0}
-          manageBase="/admin/students"
           framed={false}
         />
         <div className="border-t border-line px-4 py-4 sm:px-5">
