@@ -4,20 +4,20 @@ import { PersonChip } from "@/components/person-chip";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExternalLink } from "@/components/ui/link";
-import { Meter } from "@/components/ui/meter";
+import {
+  AllocationBalance,
+  AllocationMeter,
+} from "@/components/allocation-row";
 import { PageTitle, Section } from "@/components/ui/section";
-import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
-import { cn } from "@/lib/cn";
+import { StatusChip } from "@/components/ui/status-chip";
 import { ROLES, USER_STATUS, canActAsMentor } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { formatDuration } from "@/lib/format";
+
 import { allocationSummary, type AllocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { assignmentsForStudentWhere } from "@/lib/queries";
 import {
-  EXPIRY_WINDOW_DAYS,
   rollUp,
-  severityOf,
   status,
   type Status,
   type ViewerContext,
@@ -232,34 +232,13 @@ function MentorRow({
 }) {
   const { mentor, hours, bookingUrl, bookable } = row;
   const name = mentor.name ?? mentor.email;
-  const overdrawn = (hours?.remaining ?? 0) < 0;
-  // Not `allocated - remaining`: `allocationSummary` writes an expired
-  // allocation's remaining down to zero, so an untouched grant that ran out of
-  // time read as fully used and filled the bar to 100%. Forfeited minutes are
-  // gone, but they were never spent with this mentor, and a bar that says
-  // otherwise tells a student they had their sessions.
-  const used = hours ? hours.completed + hours.missed : 0;
-  // The bar is what is GONE, spent or forfeited — an expiry empties it too, and
-  // the figures underneath separate the two.
-  const gone = used + (hours?.forfeited ?? 0);
 
   // A pairing with a calendar but no grant behind it yet: bookable, and honest
   // about the fact that nothing has been allocated.
   const noTime = hours ? null : status("BALANCE_NONE", viewer);
 
-  // A month, because that is the window a student can act inside — the same
-  // number `studentStatuses` warns on, so this row and their home page cannot
-  // disagree about which dates are close.
-  const daysToUseBy = hours?.deadline
-    ? (hours.deadline.getTime() - viewer.now.getTime()) / 86_400_000
-    : null;
-  const expiringSoon =
-    daysToUseBy !== null &&
-    daysToUseBy >= 0 &&
-    daysToUseBy <= EXPIRY_WINDOW_DAYS.student;
-
   // One chip, for the one thing standing between this row and a booking.
-  // Overdrawn is deliberately absent: the figure beside the name already says
+  // Overdrawn is deliberately absent: the balance beside the name already says
   // "over", in red, and saying it twice on one row is the habit this page was
   // rebuilt to drop.
   const blocked =
@@ -274,54 +253,19 @@ function MentorRow({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <PersonChip person={mentor} size="sm" href={`/mentors/${mentor.id}`} />
         {hours ? (
-          <span className="text-sm text-muted-fg">
-            <span
-              className={cn(
-                "text-lg font-bold tabular-nums",
-                overdrawn ? "text-danger-ink" : "text-ink"
-              )}
-            >
-              {formatDuration(Math.abs(hours.remaining))}
-            </span>{" "}
-            {overdrawn ? "over" : "left"}
-          </span>
+          <AllocationBalance entry={hours} />
         ) : (
           noTime && <StatusChip status={noTime} />
         )}
       </div>
 
-      {hours && hours.allocated > 0 && (
-        <>
-          <Meter
-            className="mt-2.5"
-            pct={
-              overdrawn ? 100 : Math.round((gone / hours.allocated) * 100)
-            }
-            tone={overdrawn ? "danger" : "accent"}
-            ariaValueNow={used}
-            ariaValueMax={hours.allocated}
-            ariaLabel={`Time used with ${name}`}
-          />
-          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs text-muted-fg">
-            <span className="tabular-nums">
-              {formatDuration(used)} of {formatDuration(hours.allocated)} used
-              {hours.missed > 0 ? ` · ${formatDuration(hours.missed)} missed` : ""}
-            </span>
-            {/* A chip only while the date can still be acted on. Once it has
-                passed, `DeadlineText` is already red and the chip beside the
-                email says how much went with it — two red chips on one row is
-                the same alarm twice. */}
-            {expiringSoon ? (
-              <StatusChip severity={severityOf("ALLOCATION_EXPIRING")}>
-                Use by <DeadlineText deadline={hours.deadline} now={viewer.now} />
-              </StatusChip>
-            ) : (
-              <span>
-                Use by <DeadlineText deadline={hours.deadline} now={viewer.now} />
-              </span>
-            )}
-          </div>
-        </>
+      {hours && (
+        <AllocationMeter
+          entry={hours}
+          viewer={viewer}
+          label={`Time used with ${name}`}
+          className="mt-2.5"
+        />
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">

@@ -4,17 +4,19 @@ import { notFound } from "next/navigation";
 
 import { ArrowLink, ExternalLink } from "@/components/ui/link";
 import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
+import {
+  AllocationsTable,
+  toAllocationEntries,
+} from "@/components/allocation-row";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { Figure } from "@/components/ui/figure";
 import { StudentCorrections } from "@/components/forms/student-corrections";
 import { StudentFolderForm } from "@/components/forms/student-folder-form";
 import { StudentLedger } from "@/components/student-ledger";
-import { PersonChip } from "@/components/person-chip";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageTitle } from "@/components/ui/section";
 import { Section } from "@/components/ui/section";
-import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
   canActAsMentor,
@@ -34,7 +36,7 @@ import {
   taskOptionsForSessions,
   toProgramOptions,
 } from "@/lib/queries";
-import { DeadlineText, StatusChip } from "@/components/ui/status-chip";
+import { StatusChip } from "@/components/ui/status-chip";
 
 /**
  * Admin detail page for one student: the full ledger (the meetings log their
@@ -223,96 +225,35 @@ Folder
                 mentor named.
           </EmptyState>
         ) : (
-          <Table
+          <AllocationsTable
+            entries={toAllocationEntries(hours.perMentor, {
+              mentorBase: "/admin/mentors",
+            })}
+            viewer={viewer}
             framed={false}
-            columns={[
-              { label: "Mentor" },
-              { label: "Allocated", align: "right" },
-              { label: "Completed", align: "right" },
-              { label: "Missed", align: "right" },
-              { label: "Remaining", align: "right" },
-              { label: "Use by" },
-              ...(isMasters
-                ? [{ label: "Paid", align: "right" } as Column]
-                : []),
-              { label: "", align: "right" },
-            ]}
-          >
-            {hours.perMentor.map((m, i) => (
-              <Tr
-                key={m.mentor?.id ?? "unassigned"}
-                className="deal-in"
-                style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
-              >
-                <Td>
-                  {m.mentor ? (
-                    <PersonChip
-                      person={m.mentor}
-                      size="sm"
-                      href={`/admin/mentors/${m.mentor.id}`}
-                    />
-                  ) : (
-                    // The pool: granted before a mentor was chosen. Its ⋮
-                    // corrects or removes it like any other allocation.
-                    <StatusChip severity="attention">Needs a mentor</StatusChip>
-                  )}
-                </Td>
-                <Td label="Allocated" align="right" className="tabular-nums">
-                  {formatDuration(m.allocated)}
-                </Td>
-                <Td label="Completed" align="right" className="tabular-nums">
-                  {formatDuration(m.completed)}
-                </Td>
-                <Td
-                  label="Missed"
-                  align="right"
-                  className={`tabular-nums ${
-                    m.missed > 0 ? "text-warn-ink" : "text-muted-fg"
-                  }`}
-                >
-                  {m.missed > 0 ? formatDuration(m.missed) : "—"}
-                </Td>
-                <Td
-                  label="Remaining"
-                  align="right"
-                  className={`font-medium tabular-nums ${
-                    m.remaining < 0 ? "text-danger-ink" : "text-ink"
-                  }`}
-                >
-                  {formatDuration(m.remaining)}
-                </Td>
-                <Td label="Use by">
-                  <DeadlineText deadline={m.deadline} now={viewer.now} />
-                </Td>
-                {isMasters && (
-                  <Td label="Paid" align="right" className="tabular-nums">
-                    {m.amountPaid != null ? formatMoney(m.amountPaid) : "—"}
-                  </Td>
-                )}
-                <Td align="right">
-                  <AllocationRowActions
-                    studentProfileId={profile.id}
-                    mentorId={m.mentor?.id ?? ""}
-                    mentorLabel={
-                      m.mentor
-                        ? (m.mentor.name ?? m.mentor.email)
-                        : "the unassigned time"
-                    }
-                    currentMinutes={m.allocated}
-                    currentDeadline={
-                      // Null on a derived row — hours logged by a mentor who
-                      // holds no allocation — so the admin picks a use-by date
-                      // as they would for any fresh grant.
-                      m.deadline ? toDateInputValue(m.deadline) : null
-                    }
-                    openTasks={openTasksByMentor[m.mentor?.id ?? ""] ?? []}
-                    showAmountPaid={isMasters}
-                    currentAmountPaid={m.amountPaid}
-                  />
-                </Td>
-              </Tr>
-            ))}
-          </Table>
+            showAmountPaid={isMasters}
+            renderActions={(entry) => (
+              <AllocationRowActions
+                studentProfileId={profile.id}
+                mentorId={entry.mentor?.id ?? ""}
+                mentorLabel={
+                  entry.mentor
+                    ? (entry.mentor.name ?? entry.mentor.email)
+                    : "the unassigned time"
+                }
+                currentMinutes={entry.allocated}
+                currentDeadline={
+                  // Null on a derived row — hours logged by a mentor who holds
+                  // no allocation — so the admin picks a use-by date as they
+                  // would for any fresh grant.
+                  entry.deadline ? toDateInputValue(entry.deadline) : null
+                }
+                openTasks={openTasksByMentor[entry.mentor?.id ?? ""] ?? []}
+                showAmountPaid={isMasters}
+                currentAmountPaid={entry.amountPaid ?? null}
+              />
+            )}
+          />
         )}
       </Section>
 
