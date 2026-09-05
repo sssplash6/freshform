@@ -41,7 +41,10 @@ function NotificationBell({ count }: { count: number }) {
     <Link
       href="/notifications"
       aria-label={`Notifications (${count} unread)`}
-      className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+      /* shrink-0 is load-bearing, and was measured: as a flex item beside the
+         wordmark and the account button, the 44px box shrank to 27px wide at
+         390px — the target this commit widened, quietly given back. */
+      className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
     >
       <svg
         aria-hidden="true"
@@ -74,9 +77,10 @@ function NotificationBell({ count }: { count: number }) {
  * left focus on an unmounted node — see the note at the top of `ui/popover.tsx`,
  * which was written about these two menus.
  *
- * §4.1 also puts Platform and Help in here. Neither is a route yet, and a menu
- * item that 404s is worse than one that is missing, so the menu carries what
- * exists today. Settings does exist now and is here.
+ * §4.1 puts Settings, Platform and Help in here. Help is not a route yet, and
+ * a menu item that 404s is worse than one that is missing. Platform shows only
+ * for the people it opens for — the page itself 404s for everyone else, which
+ * is the right answer twice.
  */
 function AccountMenu({
   user,
@@ -145,6 +149,15 @@ function AccountMenu({
       >
         Settings
       </Link>
+
+      {user.platformAdmin && (
+        <Link
+          href="/settings/platform"
+          className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+        >
+          Platform
+        </Link>
+      )}
 
       {mentorProfile && (
         <Link
