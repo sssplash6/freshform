@@ -41,7 +41,10 @@ export function buttonClasses(
   className?: string,
 ): string {
   return cn(
-    "inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+    // rounded-xl, not rounded-lg: at 44px tall an 8px corner reads as a
+    // rectangle with the corners knocked off. 12px softens it without becoming
+    // a pill — a pill reads as a status, and these are the things you press.
+    "inline-flex items-center justify-center whitespace-nowrap rounded-xl font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
     VARIANTS[variant],
     SIZES[size],
     className,

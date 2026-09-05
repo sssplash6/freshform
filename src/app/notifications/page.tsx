@@ -95,6 +95,7 @@ export default async function NotificationsPage({
     }),
   ]);
   const countOf = new Map(byCategory.map((c) => [c.category, c._count]));
+  const present = CATEGORY_ORDER.filter((c) => countOf.has(c));
   const blurb = BLURB[user.role] ?? "Everything that changed for you.";
 
   return (
@@ -110,11 +111,17 @@ export default async function NotificationsPage({
         params={params}
         // No "All" chip: a chip that is on clears itself when clicked, and the
         // bar's own Reset is the way back from any of them. Categories a reader
-        // has nothing in are dropped rather than offered empty.
-        presets={CATEGORY_ORDER.filter((c) => countOf.has(c)).map((c) => ({
-          label: NOTIFICATION_CATEGORY_LABELS[c],
-          params: { category: c },
-        }))}
+        // has nothing in are dropped rather than offered empty — and if that
+        // leaves ONE, the whole row goes: a filter that can only select
+        // everything is a button whose job nobody can guess.
+        presets={
+          present.length > 1
+            ? present.map((c) => ({
+                label: NOTIFICATION_CATEGORY_LABELS[c],
+                params: { category: c },
+              }))
+            : []
+        }
       />
 
       <Section

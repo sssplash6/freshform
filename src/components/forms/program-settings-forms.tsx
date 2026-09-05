@@ -78,16 +78,15 @@ export function AssignMentorForm({
 
   return (
     <form action={action}>
-      <h3 className="text-sm font-semibold text-ink">Assign a mentor</h3>
-      <p className="mt-1 text-xs text-muted-fg">
-        They can then be given a student&apos;s hours, and set their own booking
-        link from their mentor page.
-      </p>
       <input type="hidden" name="programId" value={programId} />
-      <div className="mt-3 flex flex-wrap items-end gap-3">
+      {/* The heading and the controls share a line. They were stacked with a
+          caption between them, which spent three rows and a band of white space
+          on one select and one button — and the caption said what assigning a
+          mentor does, which the two controls already say. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h3 className="text-sm font-semibold text-ink">Assign a mentor</h3>
         <div className="min-w-56">
-          <span className={labelClass}>Mentor</span>
-          <div className="mt-1">
+          <div>
             <Select
               name="mentorId"
               ariaLabel="Mentor"

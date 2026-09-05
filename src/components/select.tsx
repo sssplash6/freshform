@@ -30,7 +30,12 @@ type Row =
   | { kind: "header"; label: string };
 
 /** Options long enough that scanning beats reading get a search box. */
-const SEARCH_THRESHOLD = 8;
+// Six, not eight. Eight was the point at which a list stops being scannable in
+// one glance; in practice the lists that hurt are the mentor pickers, which sit
+// at seven and nine depending on the program, so half of them grew a search box
+// and half did not — and a control that is searchable on one page and not the
+// next teaches nobody it can be typed into.
+const SEARCH_THRESHOLD = 6;
 /** How many past picks lead the list when `recentKey` is set. */
 const RECENT_LIMIT = 4;
 /** Typeahead buffer lifetime, matching a native <select>. */
@@ -91,7 +96,7 @@ function matches(option: SelectOption, query: string) {
  * by aria-activedescendant; options are plain <li>s so there is exactly one
  * tab stop, as a native <select> has.
  *
- * Long lists (over eight options, or any list passed `searchable`) grow a search
+ * Long lists (over six options, or any list passed `searchable`) grow a search
  * box that matches label *and* hint, so a big caseload is filtered by name,
  * email, or program instead of scrolled.
  *
