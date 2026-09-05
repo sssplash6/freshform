@@ -69,32 +69,10 @@ export async function submitMentorFeedback(
       to: staff,
       type: NOTIFICATION_TYPES.FEEDBACK_RECEIVED,
       message: `A student rated their mentor ${rating} out of 5.`,
-      href: "/admin/feedback",
+      href: "/feedback",
     });
   });
 
   revalidatePath("/", "layout");
   return { ok: true, message: "Thanks! Your mentor feedback was recorded." };
-}
-
-/** Student rates the website (1–5 + optional comment). */
-export async function submitWebsiteFeedback(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const profile = await requireStudentProfile();
-  if (!profile) {
-    return { ok: false, error: "Only students can leave website feedback." };
-  }
-
-  const rating = parseRating(formData.get("rating"));
-  if (!rating) return { ok: false, error: "Pick a rating from 1 to 5." };
-  const comment = String(formData.get("comment") ?? "").trim() || null;
-
-  await prisma.websiteFeedback.create({
-    data: { studentId: profile.id, rating, comment },
-  });
-
-  revalidatePath("/", "layout");
-  return { ok: true, message: "Thanks! Your website feedback was recorded." };
 }

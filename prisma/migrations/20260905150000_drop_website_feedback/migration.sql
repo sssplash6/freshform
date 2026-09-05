@@ -1,0 +1,15 @@
+-- M5: drop WebsiteFeedback. REDESIGN.md §8.1 and owner decision 6, which makes
+-- this the plan's only deletion of a table.
+--
+-- Hand-written, like every migration in this directory, because Prisma's
+-- scaffolded SQLite output redefines tables and loses their rows (the header of
+-- 20260829110000_durations_in_minutes has the incident). A DROP needs no
+-- rebuild and no `defer_foreign_keys` pragmas: nothing references this table.
+--
+-- Nothing is preserved, and that is the decision rather than an oversight. The
+-- product asked a student to rate the WEBSITE on the page they had opened to
+-- book a mentor, and the answers were never read: /admin/feedback rendered them
+-- through two unscoped queries, so a leader granted one program was shown every
+-- student's website comment in the school under their name. The table holds a
+-- rating, an optional comment and a date; no other row joins to any of them.
+DROP TABLE "WebsiteFeedback";

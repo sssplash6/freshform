@@ -16,7 +16,6 @@ export async function resetDb() {
   await prisma.hourAllocation.deleteMany();
   await prisma.assignment.deleteMany();
   await prisma.mentorFeedback.deleteMany();
-  await prisma.websiteFeedback.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.mentorAssignment.deleteMany();
   await prisma.programStaff.deleteMany();

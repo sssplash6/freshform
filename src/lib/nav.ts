@@ -110,7 +110,7 @@ async function staffNav(viewer: User, inbox?: number): Promise<NavItem[]> {
     : [];
 
   const students: NavItem = { href: "/admin/students", label: "Students" };
-  const feedback: NavItem = { href: "/admin/feedback", label: "Feedback" };
+  const feedback: NavItem = { href: "/feedback", label: "Feedback" };
 
   if (level === "SALES") return [inboxItem, students, ...programItem];
   if (level === "LEADER") return [inboxItem, students, feedback, ...programItem];
@@ -141,7 +141,7 @@ function mentorNav(inbox?: number): NavItem[] {
   return [
     { href: "/mentor", label: "Inbox", count: inbox },
     { href: "/mentor/sessions", label: "Sessions" },
-    { href: "/mentor/feedback", label: "Feedback" },
+    { href: "/feedback", label: "Feedback" },
   ];
 }
 

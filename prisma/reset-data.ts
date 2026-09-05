@@ -31,7 +31,6 @@ async function main() {
   await prisma.hourAllotmentChange.deleteMany();
   await prisma.hourAllocation.deleteMany();
   await prisma.mentorFeedback.deleteMany();
-  await prisma.websiteFeedback.deleteMany();
   await prisma.mentorAssignment.deleteMany();
   await prisma.studentProfile.deleteMany();
   await prisma.cohort.deleteMany();

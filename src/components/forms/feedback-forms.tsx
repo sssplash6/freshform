@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  submitMentorFeedback,
-  submitWebsiteFeedback,
-} from "@/lib/actions/feedback";
+import { submitMentorFeedback } from "@/lib/actions/feedback";
 import { StarIcon } from "@/components/icons";
 import { Select } from "@/components/select";
 import { SaveState, useSaveState } from "@/components/ui/save-state";
@@ -110,32 +107,6 @@ export function MentorFeedbackForm({
       </div>
       <SubmitButton pendingText="Sending…" className="mt-3">
         Submit mentor feedback
-      </SubmitButton>
-      <SaveState state={save} />
-    </form>
-  );
-}
-
-export function WebsiteFeedbackForm() {
-  const [, action, save] = useSaveState(submitWebsiteFeedback);
-
-  return (
-    <form action={action} className="rounded-xl border border-line bg-surface p-4">
-      <h2 className="text-base font-semibold text-ink">Rate this website</h2>
-      <div className="mt-3 space-y-3">
-        <StarRating name="rating" idPrefix="website-rating" />
-        <label className="block text-sm">
-          <span className="text-muted-fg">Comment</span>
-          <textarea
-            name="comment"
-            rows={3}
-            placeholder="Optional: anything confusing or missing?"
-            className={inputClass}
-          />
-        </label>
-      </div>
-      <SubmitButton pendingText="Sending…" className="mt-3">
-        Submit website feedback
       </SubmitButton>
       <SaveState state={save} />
     </form>

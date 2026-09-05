@@ -48,9 +48,6 @@ type Move = { from: string; to: string; why: string };
  *   /admin/programs/:id      → /programs/:id                (the overview; seed goes)
  *   /admin/programs/:id/students → /programs/:id/students
  *   /admin/programs/:id/settings → /programs/:id/settings
- *   /admin/feedback          → /feedback
- *   /mentor/feedback         → /feedback
- *   /mentor/sessions         → /sessions
  *   /mentor/onboarding       → /onboarding
  *   /student/onboarding      → /onboarding
  *
@@ -61,6 +58,21 @@ type Move = { from: string; to: string; why: string };
  * deletion is a listed commit, not a someday.
  */
 const MOVED: Move[] = [
+  {
+    from: "/admin/feedback",
+    to: "/feedback",
+    why: "One feedback page for everyone; the staff half narrows to the reader's grants.",
+  },
+  {
+    from: "/mentor/feedback",
+    to: "/feedback",
+    why: "The mentor's own ratings, at the same address, and still anonymous.",
+  },
+  {
+    from: "/mentor/sessions",
+    to: "/sessions",
+    why: "One mentor's log lived at an address that says 'one mentor' about a page the whole school reads.",
+  },
   {
     from: "/admin/students/:id",
     to: "/students/:id",
@@ -93,7 +105,7 @@ const MOVED: Move[] = [
   },
   {
     from: "/leader/feedback",
-    to: "/admin/feedback",
+    to: "/feedback",
     why: "DEPT_LEADER's ratings; the feedback page narrows to their grants.",
   },
   { from: "/sales", to: "/admin", why: "SALES' dashboard, same as above." },

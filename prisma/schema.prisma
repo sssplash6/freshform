@@ -201,7 +201,6 @@ model StudentProfile {
   assignments      Assignment[]
   allotmentChanges HourAllotmentChange[]
   mentorFeedback   MentorFeedback[]
-  websiteFeedback  WebsiteFeedback[]
   interviews       Interview[]
 }
 
@@ -436,14 +435,4 @@ model MentorFeedback {
 
   student StudentProfile @relation(fields: [studentId], references: [id])
   mentor  User           @relation("FeedbackMentor", fields: [mentorId], references: [id])
-}
-
-model WebsiteFeedback {
-  id        String   @id @default(cuid())
-  studentId String
-  rating    Int // 1–5
-  comment   String?
-  createdAt DateTime @default(now())
-
-  student StudentProfile @relation(fields: [studentId], references: [id])
 }
