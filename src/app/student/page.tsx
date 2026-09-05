@@ -10,6 +10,7 @@ import { NotificationList } from "@/components/notification-list";
 import { PersonChip } from "@/components/person-chip";
 import { Timeline, type TimelineEntry } from "@/components/timeline";
 import { Disclosure } from "@/components/ui/disclosure";
+import { SessionRow, toSessionEntries } from "@/components/session-row";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArrowLink } from "@/components/ui/link";
 import { Meter } from "@/components/ui/meter";
@@ -58,7 +59,7 @@ function TaskRow({ task, statuses }: { task: LedgerAssignment; statuses: Status[
   const over = budget > 0 && task.loggedMinutes > budget;
 
   return (
-    <li className="px-4 py-3.5 sm:px-5">
+    <li className="bg-surface px-4 py-3.5 sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         {/* A purpose is occasionally written as a paragraph rather than a name,
             and one such row must not cost every other row its scanability. */}
@@ -290,6 +291,9 @@ export default async function StudentHomePage() {
   // `Assignment.deadline` is still the free text the tracking sheet held
   // ("March-May") — and wired anyway, so splitting that column into `dueOn`
   // lights the row up instead of waiting for someone to remember this page.
+  // Everything already delivered, newest first — the ledger's own order.
+  const held = ledger.sessions;
+
   const tasks = ledger.assignments.map((task) => ({
     task,
     statuses: taskStatuses(
@@ -479,7 +483,11 @@ export default async function StudentHomePage() {
         ) : (
           <>
             {live.length > 0 && (
-              <ul className="divide-y divide-line">
+              // Two up. A task card is a title, a chip or two and a bar — it
+              // never fills a phone-width row, so one per line spent the whole
+              // right-hand side on nothing and pushed the finished fold below
+              // the fold of the screen.
+              <ul className="grid gap-px bg-line sm:grid-cols-2">
                 {live.map(({ task, statuses }) => (
                   <TaskRow key={task.id} task={task} statuses={statuses} />
                 ))}
@@ -504,6 +512,41 @@ export default async function StudentHomePage() {
           </>
         )}
       </Section>
+
+      {/* Their own history, folded. It moved to /student/meetings in the
+          reorganisation and a student lost the ability to glance at what has
+          happened without leaving home — but open by default it is the longest
+          thing on the page and pushes everything that needs doing off screen.
+          So: on the page, closed, counted. */}
+      {held.length > 0 && (
+        <Section title="Meetings you've had" count={held.length}>
+          <div className="px-4 py-2 sm:px-5">
+            <Disclosure
+              label="Show them"
+              aside={
+                <Link
+                  href="/student/meetings"
+                  className="text-xs font-medium text-brand hover:underline"
+                >
+                  All meetings
+                </Link>
+              }
+            >
+              <ol className="divide-y divide-line/60">
+                {toSessionEntries(held).map((session, i) => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    viewer={viewer}
+                    variant="timeline"
+                    index={i}
+                  />
+                ))}
+              </ol>
+            </Disclosure>
+          </div>
+        </Section>
+      )}
 
       {latest && (
         <Section

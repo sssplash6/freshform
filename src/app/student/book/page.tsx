@@ -180,7 +180,10 @@ export default async function StudentBookPage() {
             {nothingToShow.explanation}
           </EmptyState>
         ) : (
-          <ul className="divide-y divide-line">
+          // Two up. A mentor's card is a name, a balance, a bar and a link —
+          // it never fills a row, and one per line turned five mentors into a
+          // page of scrolling with the right half empty the whole way down.
+          <ul className="grid gap-px bg-line sm:grid-cols-2">
             {open.map((row) => (
               <MentorRow
                 key={row.mentor.id}
@@ -198,7 +201,7 @@ export default async function StudentBookPage() {
             count={folded.length}
             className="border-t border-line px-4 sm:px-5"
           >
-            <ul className="-mx-4 divide-y divide-line border-t border-line sm:-mx-5">
+            <ul className="-mx-4 grid gap-px border-t border-line bg-line sm:-mx-5 sm:grid-cols-2">
               {folded.map((row) => (
                 <MentorRow
                   key={row.mentor.id}
@@ -249,7 +252,7 @@ function MentorRow({
         : null;
 
   return (
-    <li className="px-4 py-4 sm:px-5">
+    <li className="bg-surface px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <PersonChip person={mentor} size="sm" href={`/mentors/${mentor.id}`} />
         {hours ? (
@@ -264,7 +267,7 @@ function MentorRow({
           entry={hours}
           viewer={viewer}
           label={`Time used with ${name}`}
-          className="mt-2.5"
+          className="mt-2"
         />
       )}
 

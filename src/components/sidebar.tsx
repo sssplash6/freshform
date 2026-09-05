@@ -52,19 +52,22 @@ export function Sidebar({
 }
 
 /**
- * One field, two destinations, no JavaScript.
+ * One field, one destination, no JavaScript.
  *
- * A GET form has one `action`, and the two lists are two routes — so the second
- * destination is a second submit carrying `formAction` rather than a widget
- * that has to hydrate before it works. Naming both under the field also answers
- * the question a bare magnifier leaves open, which is what this actually
- * searches.
+ * It offered two — "Students" and "Mentors" as tiny submits under the box —
+ * and they sat directly above nav items reading Students and Mentors. The same
+ * two words twice in eight vertical pixels, once as a destination picker and
+ * once as navigation, is a question the reader has to stop and answer.
  *
- * The two submits are below 44px on purpose, and it is the one place in the app
- * that is allowed: this whole column only exists at ≥ lg, so nothing here is
- * ever a touch target.
+ * So the field goes to the students list, which is the one people search: it is
+ * an order of magnitude longer, and it is what somebody typing a person's name
+ * into a sidebar almost always means. Mentors are one click below with their
+ * own search at the top of the page, which is where searching a list of
+ * fourteen belongs anyway.
  */
 function NavSearch({ mentors }: { mentors: boolean }) {
+  // `mentors` still decides the wording: somebody who cannot see the mentors
+  // list should not be told this box could find one.
   return (
     <form method="get" action="/students" role="search">
       <label htmlFor="nav-search" className="sr-only">
@@ -79,23 +82,6 @@ function NavSearch({ mentors }: { mentors: boolean }) {
           placeholder={mentors ? "Find a student or mentor…" : "Find a student…"}
           className="w-full rounded-lg border border-line bg-canvas py-2 pl-8 pr-2 text-sm text-ink placeholder:text-muted-fg focus:border-brand focus:outline-none"
         />
-      </div>
-      <div className="mt-1.5 flex gap-3 px-1">
-        <button
-          type="submit"
-          className="cursor-pointer text-xs font-medium text-muted-fg transition-colors hover:text-brand"
-        >
-          Students
-        </button>
-        {mentors && (
-          <button
-            type="submit"
-            formAction="/mentors"
-            className="cursor-pointer text-xs font-medium text-muted-fg transition-colors hover:text-brand"
-          >
-            Mentors
-          </button>
-        )}
       </div>
     </form>
   );
