@@ -11,7 +11,7 @@ Five roles on one site. Freshman Academy staff (admin, department leaders, sales
 Track students' mentoring hours honestly. Admins grant per-mentor hour pools; mentors log sessions that draw them down, or record work given on top of the plan, which charges nothing; every change notifies the student and lands in an audit trail. Mentors also put interviews in the diary ahead of time and the student confirms them, so a meeting is agreed in the same place its hours are later logged. Each role's dashboard answers its one question: how many hours are left, who is running low, how is my program doing. Success: the numbers are trusted by everyone, students always know where they stand, and nothing about hours happens silently.
 
 ## Brand Personality
-Warm, encouraging, dependable. Mentoring is the product, so the interface should read like a supportive coach with a tidy ledger: friendly plain-language copy, generous use of the brand orange for warmth, and calm, exact numbers. Never cold, never bureaucratic — but never cute at the expense of clarity about hours.
+Warm, encouraging, dependable. Mentoring is the product, so the interface should read like a supportive coach with a tidy ledger: friendly plain-language copy, warmth carried by the words rather than by colour (the brand is blue; orange is spent on hours and progress and nothing else), and calm, exact numbers. Never cold, never bureaucratic — but never cute at the expense of clarity about hours.
 
 ## Anti-references
 - Heavy SaaS dashboards: stat-tile grids, gradients, badge overload, chart clutter.
