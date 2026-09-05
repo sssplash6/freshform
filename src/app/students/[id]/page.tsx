@@ -8,27 +8,24 @@ import {
 } from "@/components/allocation-row";
 import { ApproveStudentButtons } from "@/components/forms/approve-student-buttons";
 import { AssignTaskForm } from "@/components/forms/assign-task-form";
-import { AllocationRowActions, TaskRowActions } from "@/components/forms/hours-forms";
+import { AllocationRowActions } from "@/components/forms/hours-forms";
 import { MeetingRowActions } from "@/components/forms/meeting-forms";
 import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
-import { SessionRowActions } from "@/components/forms/session-forms";
 import {
   RemoveStudentButton,
   StudentEmailChange,
   StudentFolderChange,
   StudentProgramChange,
 } from "@/components/forms/student-details-forms";
-import { HoursBreakdown } from "@/components/hours-breakdown";
+import { LedgerBoard } from "@/components/ledger-board";
 import { PersonChip } from "@/components/person-chip";
-import { SessionsTable, toSessionEntries } from "@/components/session-row";
-import { TaskTable, toTaskEntries } from "@/components/task-row";
 import { Timeline, type TimelineEntry } from "@/components/timeline";
 import { LinkButton } from "@/components/ui/button";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FactList } from "@/components/ui/fact-list";
 import { Figure } from "@/components/ui/figure";
-import { ArrowLink, ExternalLink } from "@/components/ui/link";
+import { ExternalLink } from "@/components/ui/link";
 import { PageTitle, Section } from "@/components/ui/section";
 import { StatusChip } from "@/components/ui/status-chip";
 import {
@@ -56,13 +53,9 @@ import {
   programOptions,
   studentLedger,
   studentMeetings,
-  taskOptionsForSessions,
   toProgramOptions,
 } from "@/lib/queries";
 import { meetingStatus, studentStatuses } from "@/lib/status";
-
-/** The log is the last ten; the whole thing is one link away. */
-const SESSIONS_SHOWN = 10;
 
 /**
  * One student, at one address, for everyone entitled to open them.
@@ -141,7 +134,6 @@ export default async function StudentWorkspacePage({
         })
       : Promise.resolve([]),
   ]);
-  const tasksBySession = await taskOptionsForSessions(ledger.sessions);
 
   const name = profile.user.name ?? profile.user.email;
   const isPending = profile.user.status === USER_STATUS.PENDING;
@@ -228,9 +220,6 @@ export default async function StudentWorkspacePage({
 
   const openTasks = ledger.assignments.filter(
     (t) => t.progress !== ASSIGNMENT_PROGRESS.DONE
-  );
-  const doneTasks = ledger.assignments.filter(
-    (t) => t.progress === ASSIGNMENT_PROGRESS.DONE
   );
 
   // Their open tasks per mentor, so granting more hours for work already
@@ -334,32 +323,57 @@ export default async function StudentWorkspacePage({
 
       <AttentionList statuses={statuses} title="Needs attention" empty={null} />
 
+      {/* The tracking sheet's whole tab, side by side: what happened on the
+          left, what was planned on the right, and the balance across the top.
+          It leads the page because it is what the page is opened for — and it
+          is the ONLY place a session or a task renders, so nothing below
+          repeats a row. */}
+      <LedgerBoard
+        viewer={viewer}
+        sessions={ledger.sessions}
+        meetings={meetings}
+        assignments={ledger.assignments}
+        totals={hours}
+        mentorBase="/mentors"
+      />
+
+      {manages && mentorOptions.length > 0 && (
+        <Section
+          eyebrow="Adds to a mentor's ledger"
+          title="Allocate time"
+          caption="The hours go to the student; naming a mentor and a task can wait."
+        >
+          <div className="px-4 py-4 sm:px-5">
+            <AssignTaskForm
+              studentProfileId={profile.id}
+              mentors={mentorOptions}
+              openTasksByMentor={openTasksByMentor}
+              showAmountPaid={tracksPayment}
+            />
+          </div>
+        </Section>
+      )}
+
+      <Timeline
+        entries={entries}
+        now={viewer.now}
+        empty="Nothing scheduled with them."
+      />
+
+      {/* The two halves of the tracking sheet, side by side at ≥lg and stacked
+          below. That is how the deleted board earns its keep: holding both at
+          once was what it was prized for, and a grid keeps that reading while
+          every session and task renders exactly once. */}
       <Section
         eyebrow="Granted by an admin"
-        title="Time"
+        title="Time by mentor"
         caption="What sessions draw down, and the date each pool expires"
       >
-        <div className="space-y-5 px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-end gap-6">
-            <Figure
-              label={hours.remaining < 0 ? "Over" : "Time remaining"}
-              value={formatDuration(Math.abs(hours.remaining))}
-              tone={hours.remaining < 0 ? "danger" : "ink"}
-              size="lead"
-            />
-            {tracksPayment && manages && (
-              <Figure label="Total paid" value={formatMoney(hours.paid)} tone="muted" />
-            )}
+        {tracksPayment && manages && (
+          <div className="px-4 pt-4 sm:px-5">
+            <Figure label="Total paid" value={formatMoney(hours.paid)} tone="muted" />
           </div>
-          <HoursBreakdown
-            allotted={hours.allotted}
-            completed={hours.completed}
-            missed={hours.missed}
-            forfeited={hours.forfeited}
-            remaining={hours.remaining}
-            extra={hours.extra}
-          />
-        </div>
+        )}
 
         {hours.perMentor.length === 0 ? (
           <EmptyState framed={false} title="No time yet">
@@ -398,17 +412,6 @@ export default async function StudentWorkspacePage({
           />
         )}
 
-        {manages && mentorOptions.length > 0 && (
-          <div className="border-t border-line px-4 py-4 sm:px-5">
-            <AssignTaskForm
-              studentProfileId={profile.id}
-              mentors={mentorOptions}
-              openTasksByMentor={openTasksByMentor}
-              showAmountPaid={tracksPayment}
-            />
-          </div>
-        )}
-
         {manages && changes.length > 0 && (
           <div className="border-t border-line px-4 py-3 sm:px-5">
             <Disclosure label="History" count={changes.length}>
@@ -437,108 +440,6 @@ export default async function StudentWorkspacePage({
           </div>
         )}
       </Section>
-
-      <Timeline
-        entries={entries}
-        now={viewer.now}
-        empty="Nothing scheduled with them."
-      />
-
-      {/* The two halves of the tracking sheet, side by side at ≥lg and stacked
-          below. That is how the deleted board earns its keep: holding both at
-          once was what it was prized for, and a grid keeps that reading while
-          every session and task renders exactly once. */}
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Section
-          eyebrow="Logged by mentors"
-          title="Sessions"
-          caption={
-            ledger.sessions.length > SESSIONS_SHOWN
-              ? `Last ${SESSIONS_SHOWN} of ${ledger.sessions.length}`
-              : undefined
-          }
-          action={
-            ledger.sessions.length > SESSIONS_SHOWN ? (
-              <ArrowLink href={`/sessions?student=${profile.id}`} className="text-xs">
-                All sessions
-              </ArrowLink>
-            ) : undefined
-          }
-        >
-          <SessionsTable
-            sessions={toSessionEntries(ledger.sessions.slice(0, SESSIONS_SHOWN), {
-              mentorBase: "/mentors",
-            })}
-            viewer={viewer}
-            columns={["date", "mentor", "duration", "task", "notes"]}
-            framed={false}
-            renderActions={(row) =>
-              manages || row.mentor.id === me.id ? (
-                <SessionRowActions
-                  session={{
-                    id: row.id,
-                    minutes: row.minutes,
-                    date: toDateInputValue(row.date),
-                    attendance: row.attended ? (row.late ? "LATE" : "ATTENDED") : "NO_SHOW",
-                    timeKind: row.withinPlan ? "PLAN" : "EXTRA",
-                    note: row.note,
-                    assignmentId: row.task?.id ?? null,
-                  }}
-                  goals={tasksBySession[row.id] ?? []}
-                  canEdit={row.status !== "VOIDED"}
-                  canDelete={manages}
-                />
-              ) : null
-            }
-          />
-        </Section>
-
-        <Section eyebrow="What the time is for" title="Tasks">
-          <TaskTable
-            tasks={toTaskEntries(openTasks, { mentorBase: "/mentors" })}
-            viewer={viewer}
-            columns={["task", "mentor", "hours", "due", "progress"]}
-            framed={false}
-            empty={
-              <EmptyState framed={false} title="No tasks yet">
-                Tasks arrive with the time an admin allocates for them.
-              </EmptyState>
-            }
-            renderActions={
-              manages
-                ? (task) => (
-                    <TaskRowActions
-                      task={{
-                        id: task.id,
-                        purpose: task.purpose,
-                        mentorId: task.mentor?.id ?? null,
-                        minuteLimit: task.minuteLimit,
-                        dueNote: task.due ?? null,
-                        dueOn: task.dueOn ?? null,
-                        note: task.note,
-                        progress: task.progress,
-                        progressManual: task.progressManual ?? false,
-                      }}
-                      mentors={mentorOptions}
-                    />
-                  )
-                : undefined
-            }
-          />
-          {doneTasks.length > 0 && (
-            <div className="border-t border-line px-4 py-3 sm:px-5">
-              <Disclosure label="Finished" count={doneTasks.length}>
-                <TaskTable
-                  tasks={toTaskEntries(doneTasks, { mentorBase: "/mentors" })}
-                  viewer={viewer}
-                  columns={["task", "mentor", "hours"]}
-                  framed={false}
-                />
-              </Disclosure>
-            </div>
-          )}
-        </Section>
-      </div>
 
       {manages && (
         <Section eyebrow="Admin only" title="Details">
