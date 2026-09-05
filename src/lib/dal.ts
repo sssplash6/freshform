@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { adminScope, scopeCovers, scopeIsEmpty } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { canActAsMentor, ROLE_HOME, type Role } from "@/lib/constants";
+import { canActAsMentor, ROLE_HOME, ROLES, type Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -64,6 +64,25 @@ export async function requireAdminAccess(): Promise<User> {
   const user = await requireUser();
   if (scopeIsEmpty(await adminScope(user))) redirect(homeFor(user));
   return user;
+}
+
+/**
+ * Gate the staff INBOX: signed in, and staff — whether or not anybody has
+ * granted them a program yet.
+ *
+ * The distinction from `requireAdminAccess` is a redirect loop, and it is the
+ * reason both exist. An admin whose last grant was removed is still staff, and
+ * `homeFor` still sends them to /admin; a gate there that turned them away
+ * would send them to /admin again, forever. So /admin lets them in and answers
+ * the question honestly instead — "No programs granted. A platform admin
+ * grants you a program to work in." — and every other staff page keeps the
+ * stricter gate, which lands them on that sentence.
+ */
+export async function requireStaff(): Promise<User> {
+  const user = await requireUser();
+  if (user.role === ROLES.ADMIN) return user;
+  if (!scopeIsEmpty(await adminScope(user))) return user;
+  redirect(homeFor(user));
 }
 
 /**

@@ -13,7 +13,7 @@ import {
   SESSION_STATUS,
 } from "@/lib/constants";
 import { adminScope, scopeProgramFilter } from "@/lib/authz";
-import { requireAdminAccess } from "@/lib/dal";
+import { requireStaff } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatMinutes, formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
@@ -105,7 +105,7 @@ type RecentSession = Awaited<ReturnType<typeof recentMeetings>>[number];
 type Flag = { programId: string | null; status: Status };
 
 export default async function AdminInboxPage() {
-  const user = await requireAdminAccess();
+  const user = await requireStaff();
   await ensureDeadlineReminders();
 
   // Everything on this page is counted per program and then summed, so the

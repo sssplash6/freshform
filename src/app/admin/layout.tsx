@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { ROLES } from "@/lib/constants";
-import { requireAdminAccess } from "@/lib/dal";
+import { requireStaff } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
 // Never prerender them at build time — on Render the SQLite disk only exists
@@ -12,7 +12,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireAdminAccess();
+  // The inbox under this shell is where an admin with no grants lands and is
+  // told so, which a gate demanding a grant would make unreachable.
+  const user = await requireStaff();
   return (
     <AppShell user={user} mode={ROLES.ADMIN}>
       {children}
