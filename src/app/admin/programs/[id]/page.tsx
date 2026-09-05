@@ -2,21 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SessionsLog, toSessionEntries } from "@/components/session-row";
+import { TaskTable, toTaskEntries } from "@/components/task-row";
 import { PersonChip } from "@/components/person-chip";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArrowLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
-import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
-  ASSIGNMENT_PROGRESS_GLYPH,
-  ASSIGNMENT_PROGRESS_LABELS,
-  ASSIGNMENT_PROGRESS_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
 import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
-import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
+import { formatDate, formatDuration, formatMoney } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import {
@@ -24,13 +21,11 @@ import {
   recentMeetings,
   studentsWithHours,
   taskOptionsForSessions,
-  type ProgramTask,
   type StudentWithHours,
 } from "@/lib/queries";
 import { requireProgramScope } from "@/lib/dal";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { Severity } from "@/lib/status";
-import { severityOrNeutral } from "@/lib/status";
 
 const DAY = 24 * 60 * 60 * 1000;
 /** How far ahead a use-by date starts counting as "worth doing something about". */
@@ -150,14 +145,6 @@ export default async function AdminProgramOverviewPage({
     }))
     .filter((row) => row.flags.length > 0);
 
-  const taskColumns: Column[] = [
-    { label: "Task" },
-    { label: "Student" },
-    { label: "Mentor" },
-    { label: "Logged", align: "right" },
-    { label: "Budget", align: "right" },
-    { label: "Progress" },
-  ];
   const shownTasks = openTasks.slice(0, 8);
   const plannedMinutes = openTasks.reduce((sum, t) => sum + (t.minuteLimit ?? 0), 0);
 
@@ -245,70 +232,14 @@ export default async function AdminProgramOverviewPage({
             student and allocate time to start one.
           </EmptyState>
         ) : (
-          <Table framed={false} columns={taskColumns}>
-            {shownTasks.map((task: ProgramTask, i) => (
-              <Tr
-                key={task.id}
-                className="deal-in"
-                style={{ animationDelay: `${Math.min(i, 14) * 24}ms` }}
-              >
-                <Td className="sm:max-w-xs">
-                  <span className="font-medium text-ink">{task.purpose}</span>
-                </Td>
-                <Td label="Student">
-                  <Link
-                    href={`/admin/students/${task.studentId}`}
-                    className="text-ink hover:text-brand"
-                  >
-                    {task.student.user.name ?? task.student.user.email}
-                  </Link>
-                </Td>
-                <Td label="Mentor">
-                  {task.mentor ? (
-                    <PersonChip
-                      person={task.mentor}
-                      size="sm"
-                      href={`/admin/mentors/${task.mentor.id}`}
-                    />
-                  ) : (
-                    <StatusChip severity="attention">Needs a mentor</StatusChip>
-                  )}
-                </Td>
-                <Td
-                  label="Logged"
-                  align="right"
-                  className={`tabular-nums ${
-                    task.minuteLimit != null && task.loggedMinutes > task.minuteLimit
-                      ? "font-semibold text-warn-ink"
-                      : task.loggedMinutes > 0
-                        ? "text-ink"
-                        : "text-muted-fg"
-                  }`}
-                >
-                  {task.loggedMinutes > 0 ? formatMinutes(task.loggedMinutes) : "—"}
-                </Td>
-                <Td
-                  label="Budget"
-                  align="right"
-                  className="font-semibold tabular-nums text-ink"
-                >
-                  {task.minuteLimit == null ? (
-                    <span className="font-normal text-muted-fg">—</span>
-                  ) : (
-                    formatMinutes(task.minuteLimit)
-                  )}
-                </Td>
-                <Td label="Progress">
-                  <StatusChip
-          severity={severityOrNeutral(ASSIGNMENT_PROGRESS_STATUS[task.progress])}
-          glyph={ASSIGNMENT_PROGRESS_GLYPH[task.progress]}
-        >
-                    {ASSIGNMENT_PROGRESS_LABELS[task.progress] ?? task.progress}
-                  </StatusChip>
-                </Td>
-              </Tr>
-            ))}
-          </Table>
+          <TaskTable
+            tasks={toTaskEntries(shownTasks, {
+              mentorBase: "/admin/mentors",
+              studentBase: "/admin/students",
+            })}
+            viewer={viewer}
+            framed={false}
+          />
         )}
       </Section>
 

@@ -1,4 +1,6 @@
-import { AssignmentsPanel } from "@/components/assignments-panel";
+import { AssignTaskForm } from "@/components/forms/assign-task-form";
+import { AssignmentRowActions } from "@/components/forms/assignment-row-actions";
+import { TasksPanel, toTaskEntries } from "@/components/task-row";
 import { LedgerBoard } from "@/components/ledger-board";
 import type { ViewerContext } from "@/lib/status";
 import {
@@ -8,6 +10,7 @@ import {
 } from "@/components/session-row";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { formatDuration } from "@/lib/format";
 import type { ScheduledMeeting } from "@/lib/interviews";
@@ -120,16 +123,46 @@ export function StudentLedger({
         manage={manageSessions}
       />
 
-      <AssignmentsPanel
-        assignments={assignments}
-        studentProfileId={studentProfileId}
-        mentors={mentors}
-        openTasksByMentor={openTasksByMentor}
-        showAmountPaid={showAmountPaid}
+      <TasksPanel
+        tasks={toTaskEntries(assignments, { mentorBase })}
+        viewer={viewer}
         minutesAllotted={totals.allotted}
-        manage={manage}
-        mentorBase={mentorBase}
-      />
+        empty={
+          <EmptyState framed={false} title="No tasks yet">
+            {manage
+              ? "Allocate the first minutes below — naming the mentor and the task can wait until you know them."
+              : "An admin sets out the work planned for this student here."}
+          </EmptyState>
+        }
+        renderActions={
+          manage
+            ? (task) => (
+                <AssignmentRowActions
+                  assignment={{
+                    id: task.id,
+                    purpose: task.purpose,
+                    mentorId: task.mentor?.id ?? null,
+                    minuteLimit: task.minuteLimit,
+                    deadline: task.due ?? null,
+                    note: task.note,
+                    progress: task.progress,
+                    progressManual: task.progressManual ?? false,
+                  }}
+                  mentors={mentors ?? []}
+                />
+              )
+            : undefined
+        }
+      >
+        {manage && mentors && mentors.length > 0 && (
+          <AssignTaskForm
+            studentProfileId={studentProfileId}
+            mentors={mentors}
+            openTasksByMentor={openTasksByMentor}
+            showAmountPaid={showAmountPaid}
+          />
+        )}
+      </TasksPanel>
     </div>
   );
 }

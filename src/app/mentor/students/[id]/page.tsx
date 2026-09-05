@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { FolderIcon, SendIcon } from "@/components/icons";
 
 import { ArrowLink, ExternalLink } from "@/components/ui/link";
-import { AssignmentsPanel } from "@/components/assignments-panel";
+import { TasksPanel, toTaskEntries } from "@/components/task-row";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
 import { HoursBreakdown } from "@/components/hours-breakdown";
@@ -268,9 +268,9 @@ Folder
         manage={{ actorId: mentor.id, tasksBySession }}
       />
 
-      <AssignmentsPanel
-        assignments={ledger.assignments}
-        studentProfileId={profile.id}
+      <TasksPanel
+        tasks={toTaskEntries(ledger.assignments)}
+        viewer={viewer}
         minutesAllotted={hours.allotted}
       />
 

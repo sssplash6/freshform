@@ -3,24 +3,20 @@ import { HoursBreakdown } from "@/components/hours-breakdown";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { SessionRow, toSessionEntries } from "@/components/session-row";
+import { TaskRow, toTaskEntries } from "@/components/task-row";
 import { Section } from "@/components/ui/section";
 import {
   ASSIGNMENT_PROGRESS,
-  ASSIGNMENT_PROGRESS_GLYPH,
-  ASSIGNMENT_PROGRESS_LABELS,
-  ASSIGNMENT_PROGRESS_STATUS,
   SESSION_STATUS,
 } from "@/lib/constants";
 import {
   formatDuration,
   formatMeetingWhen,
-  formatMinutes,
   formatUntil,
 } from "@/lib/format";
 import { splitMeetings, type ScheduledMeeting } from "@/lib/interviews";
 import type { LedgerAssignment, LedgerSession } from "@/lib/queries";
-import { cn } from "@/lib/cn";
-import { meetingStatus, severityOrNeutral, type ViewerContext } from "@/lib/status";
+import { meetingStatus, type ViewerContext } from "@/lib/status";
 import { ExternalLink } from "@/components/ui/link";
 import { StatusChip } from "@/components/ui/status-chip";
 
@@ -135,75 +131,6 @@ function UpcomingMeetingRow({
           </ExternalLink>
         )}
       </div>
-    </li>
-  );
-}
-
-function TaskRow({
-  task,
-  mentorBase,
-}: {
-  task: LedgerAssignment;
-  mentorBase?: string;
-}) {
-  const done = task.progress === ASSIGNMENT_PROGRESS.DONE;
-  const over = task.minuteLimit != null && task.loggedMinutes > task.minuteLimit;
-  const pct =
-    task.minuteLimit && task.minuteLimit > 0
-      ? Math.min(100, Math.round((task.loggedMinutes / task.minuteLimit) * 100))
-      : 0;
-
-  return (
-    <li className={cn("px-4 py-2.5 sm:px-5", done && "bg-canvas/60")}>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-[13px] font-semibold text-ink">
-          {task.purpose}
-        </span>
-        {task.mentor ? (
-          <PersonChip
-            person={task.mentor}
-            size="sm"
-            href={mentorBase && `${mentorBase}/${task.mentor.id}`}
-          />
-        ) : (
-          <StatusChip severity="attention">Needs a mentor</StatusChip>
-        )}
-        <StatusChip
-          severity={severityOrNeutral(ASSIGNMENT_PROGRESS_STATUS[task.progress])}
-          glyph={ASSIGNMENT_PROGRESS_GLYPH[task.progress]}
-        >
-          {ASSIGNMENT_PROGRESS_LABELS[task.progress]}
-        </StatusChip>
-      </div>
-
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-fg">
-        <span className="tabular-nums">
-          <span className={cn("font-semibold", over ? "text-danger-ink" : "text-ink")}>
-            {formatMinutes(task.loggedMinutes)}
-          </span>
-          {task.minuteLimit != null
-            ? ` of ${formatMinutes(task.minuteLimit)}`
-            : " · no budget"}
-        </span>
-        {task.deadline && <span>by {task.deadline}</span>}
-      </div>
-
-      {/* The budget as a bar, so a plan running past its hours is visible
-          without reading two numbers and subtracting. */}
-      {task.minuteLimit != null && task.minuteLimit > 0 && (
-        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-line">
-          <div
-            className={cn("h-full rounded-full", over ? "bg-danger" : "bg-accent")}
-            style={{ width: `${over ? 100 : Math.max(pct, 2)}%` }}
-          />
-        </div>
-      )}
-
-      {task.note && (
-        <div className="mt-1 text-xs">
-          <ExpandableText text={task.note} lines={2} className="text-muted-fg" />
-        </div>
-      )}
     </li>
   );
 }
@@ -323,14 +250,22 @@ export function LedgerBoard({
             <>
               <GroupRule label="In flight" count={open.length} />
               <ul className="divide-y divide-line/50">
-                {open.map((a) => (
-                  <TaskRow key={a.id} task={a} mentorBase={mentorBase} />
+                {toTaskEntries(open, { mentorBase }).map((t, i) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    viewer={viewer}
+                    variant="list"
+                    index={i}
+                  />
                 ))}
               </ul>
               <GroupRule label="Finished" count={finished.length} />
+              {/* Finished work is one line each: it is here to be counted and
+                  to be findable, not to be read again. */}
               <ul className="divide-y divide-line/50">
-                {finished.map((a) => (
-                  <TaskRow key={a.id} task={a} mentorBase={mentorBase} />
+                {toTaskEntries(finished, { mentorBase }).map((t) => (
+                  <TaskRow key={t.id} task={t} viewer={viewer} variant="line" />
                 ))}
               </ul>
             </>

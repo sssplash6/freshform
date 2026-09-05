@@ -7,11 +7,13 @@ import { Meter } from "@/components/ui/meter";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
+import { Section } from "@/components/ui/section";
 import {
+  ASSIGNMENT_PROGRESS,
   ASSIGNMENT_PROGRESS_GLYPH,
   ASSIGNMENT_PROGRESS_STATUS,
 } from "@/lib/constants";
-import { formatDate, formatMinutes } from "@/lib/format";
+import { formatDate, formatDuration, formatMinutes } from "@/lib/format";
 import { taskStatuses, type Status, type ViewerContext } from "@/lib/status";
 
 /**
@@ -519,5 +521,168 @@ export function TaskTable({
         />
       ))}
     </Table>
+  );
+}
+
+/**
+ * A task as the database hands it over. Separate from `TaskEntry` for the
+ * reason the session row's is: this is what a caller HAS, that is what the row
+ * NEEDS, and the mapping between them belongs in one place rather than at five
+ * call sites.
+ */
+export type PlannedTask = {
+  id: string;
+  purpose: string;
+  progress: string;
+  progressManual?: boolean;
+  minuteLimit: number | null;
+  loggedMinutes: number;
+  deadline: string | null;
+  note: string | null;
+  mentor?: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatarUpdatedAt?: Date | null;
+  } | null;
+  student?: {
+    id: string;
+    user: { name: string | null; email: string; avatarUpdatedAt?: Date | null };
+  } | null;
+};
+
+/**
+ * Rows, with the links this reader is entitled to. Bases rather than
+ * functions: a function cannot cross into a client component — it type-checks,
+ * it builds, and it throws at render.
+ */
+export function toTaskEntries(
+  tasks: readonly PlannedTask[],
+  links: { mentorBase?: string; studentBase?: string } = {}
+): TaskEntry[] {
+  return tasks.map((t) => ({
+    id: t.id,
+    purpose: t.purpose,
+    progress: t.progress,
+    progressManual: t.progressManual,
+    minuteLimit: t.minuteLimit,
+    loggedMinutes: t.loggedMinutes,
+    // Free text until M6 splits the column, so there is no dueOn to give.
+    due: t.deadline,
+    note: t.note,
+    mentor: t.mentor
+      ? {
+          id: t.mentor.id,
+          name: t.mentor.name,
+          email: t.mentor.email,
+          avatarUpdatedAt: t.mentor.avatarUpdatedAt,
+          href: links.mentorBase ? `${links.mentorBase}/${t.mentor.id}` : undefined,
+        }
+      : null,
+    student: t.student
+      ? {
+          id: t.student.id,
+          name: t.student.user.name,
+          email: t.student.user.email,
+          avatarUpdatedAt: t.student.user.avatarUpdatedAt,
+          href: links.studentBase
+            ? `${links.studentBase}/${t.student.id}`
+            : undefined,
+        }
+      : null,
+  }));
+}
+
+/**
+ * The plan for one student, under a heading: what `AssignmentsPanel` was.
+ *
+ * The footer is the reason this is a component rather than a bare table. Three
+ * figures — logged, budgeted, allotted — only mean something beside each other,
+ * and the one comparison that catches a real mistake is the third against the
+ * second: a plan that promises more work than the student has paid for. Two of
+ * the four surfaces that render tasks were showing the first two and not the
+ * third, so the mistake was invisible on both.
+ */
+export function TasksPanel({
+  tasks,
+  viewer,
+  minutesAllotted,
+  columns,
+  renderActions,
+  empty,
+  children,
+}: {
+  tasks: TaskEntry[];
+  viewer: ViewerContext;
+  /** What the student actually holds, which the budget is measured against. */
+  minutesAllotted: number;
+  columns?: TaskColumn[];
+  renderActions?: (task: TaskEntry) => React.ReactNode;
+  empty?: React.ReactNode;
+  /** The add-a-task form, for the readers who may write here. */
+  children?: React.ReactNode;
+}) {
+  const planned = tasks.reduce((sum, t) => sum + (t.minuteLimit ?? 0), 0);
+  const logged = tasks.reduce((sum, t) => sum + t.loggedMinutes, 0);
+  const done = tasks.filter(
+    (t) => t.progress === ASSIGNMENT_PROGRESS.DONE
+  ).length;
+  const overPlanned = planned > minutesAllotted;
+
+  return (
+    <Section
+      eyebrow="What the time is for"
+      title="Tasks"
+      caption={
+        tasks.length === 0
+          ? "Nothing assigned yet"
+          : `${done} of ${tasks.length} done · ${formatDuration(planned)} budgeted`
+      }
+    >
+      {tasks.length === 0 ? (
+        (empty ?? (
+          <EmptyState framed={false} title="No tasks yet">
+            An admin sets out the work planned for this student here.
+          </EmptyState>
+        ))
+      ) : (
+        <>
+          <TaskTable
+            tasks={tasks}
+            viewer={viewer}
+            columns={columns}
+            renderActions={renderActions}
+            framed={false}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas px-4 py-3 text-xs sm:px-5">
+            <span className="text-muted-fg">
+              <span className="font-semibold tabular-nums text-ink">
+                {formatDuration(logged)}
+              </span>{" "}
+              logged against{" "}
+              <span className="font-semibold tabular-nums text-ink">
+                {formatDuration(planned)}
+              </span>{" "}
+              budgeted, of{" "}
+              <span className="font-semibold tabular-nums text-ink">
+                {formatDuration(minutesAllotted)}
+              </span>{" "}
+              allotted
+            </span>
+            {overPlanned && (
+              <span className="font-medium text-warn-ink">
+                Budgeted work exceeds the hours this student holds by{" "}
+                {formatDuration(planned - minutesAllotted)}.
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {children && (
+        <div className="border-t border-line px-4 py-4 sm:px-5">{children}</div>
+      )}
+    </Section>
   );
 }
