@@ -40,14 +40,6 @@ type Move = { from: string; to: string; why: string };
  * The list is kept here, unlisted, so the commit that moves each route can see
  * what it owes. Waiting on the commit that builds the destination:
  *
- *   /admin/mentors           → /mentors                     (the list)
- *   /admin/mentors/:id       → /mentors/:id                 (the three views; today
- *                                                            /mentors/:id is the profile
- *                                                            and carries none of the
- *                                                            delivery record)
- *   /admin/programs/:id      → /programs/:id                (the overview; seed goes)
- *   /admin/programs/:id/students → /programs/:id/students
- *   /admin/programs/:id/settings → /programs/:id/settings
  *   /mentor/onboarding       → /onboarding
  *   /student/onboarding      → /onboarding
  *
@@ -58,6 +50,31 @@ type Move = { from: string; to: string; why: string };
  * deletion is a listed commit, not a someday.
  */
 const MOVED: Move[] = [
+  {
+    from: "/admin/mentors",
+    to: "/mentors",
+    why: "A mentor is an entity, not an admin section.",
+  },
+  {
+    from: "/admin/mentors/:id",
+    to: "/mentors/:id",
+    why: "The three views of one mentor, at the address the rest of the app links to.",
+  },
+  {
+    from: "/admin/programs/:id",
+    to: "/programs/:id",
+    why: "A program is an entity, not an admin section. Its seed page went in the same change.",
+  },
+  {
+    from: "/admin/programs/:id/students",
+    to: "/programs/:id/students",
+    why: "Same move; :id matches one segment, so each nested route needs its own row.",
+  },
+  {
+    from: "/admin/programs/:id/settings",
+    to: "/programs/:id/settings",
+    why: "Same move — the gear the owner asked for.",
+  },
   {
     from: "/admin/feedback",
     to: "/feedback",

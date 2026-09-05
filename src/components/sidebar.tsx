@@ -90,7 +90,7 @@ function NavSearch({ mentors }: { mentors: boolean }) {
         {mentors && (
           <button
             type="submit"
-            formAction="/admin/mentors"
+            formAction="/mentors"
             className="cursor-pointer text-xs font-medium text-muted-fg transition-colors hover:text-brand"
           >
             Mentors

@@ -83,17 +83,6 @@ const RECENT_SHOWN = 5;
 
 const DAY = 24 * 60 * 60 * 1000;
 
-/**
- * `lib/status.ts` addresses people at the role-neutral homes the route plan
- * moves them to (`/students/:id`, `/programs/:id`); those pages still live
- * under `/admin` until Phase 6. One temporary map in the one file that reads
- * those hrefs, rather than a producer that lies about where a student lives —
- * it comes out with the redirect table (§2.3), and until then every row here is
- * a link that lands somewhere.
- */
-const reroute = (href: string): string =>
-  /^\/(students|programs)\//.test(href) ? `/admin${href}` : href;
-
 /** "1 program", "3 programs" — the one place this page pluralises. */
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
@@ -232,7 +221,7 @@ export default async function AdminInboxPage() {
         status: {
           ...s,
           ...(program ? { program } : {}),
-          ...(s.href ? { href: reroute(s.href) } : {}),
+          ...(s.href ? { href: s.href } : {}),
         },
       });
     }
@@ -366,7 +355,7 @@ export default async function AdminInboxPage() {
       title: `Meeting with ${m.mentor.name ?? m.mentor.email}`,
       status: meetingState.get(m.id),
       person: m.student.user,
-      href: reroute(`/students/${m.studentId}`),
+      href: `/students/${m.studentId}`,
       joinUrl: m.link,
       note: m.note,
     });
@@ -494,7 +483,7 @@ export default async function AdminInboxPage() {
                 </Td>
                 <Td align="right">
                   <ArrowLink
-                    href={`/admin/programs/${p.id}`}
+                    href={`/programs/${p.id}`}
                     className="text-[13px]"
                   >
                     Open

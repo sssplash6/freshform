@@ -393,7 +393,7 @@ export async function AppShell({
   const scope = await adminScope(user);
   const search = scopeIsEmpty(scope)
     ? undefined
-    : { mentors: items.some((i) => i.href === "/admin/mentors") };
+    : { mentors: items.some((i) => i.href === "/mentors") };
 
   return (
     <StaffShell

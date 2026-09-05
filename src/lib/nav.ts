@@ -106,7 +106,7 @@ async function staffNav(viewer: User, inbox?: number): Promise<NavItem[]> {
         })
       : null;
   const programItem: NavItem[] = onlyProgram
-    ? [{ href: `/admin/programs/${onlyProgram.id}`, label: onlyProgram.name }]
+    ? [{ href: `/programs/${onlyProgram.id}`, label: onlyProgram.name }]
     : [];
 
   const students: NavItem = { href: "/admin/students", label: "Students" };
@@ -124,7 +124,7 @@ async function staffNav(viewer: User, inbox?: number): Promise<NavItem[]> {
   return [
     inboxItem,
     students,
-    { href: "/admin/mentors", label: "Mentors" },
+    { href: "/mentors", label: "Mentors" },
     ...programItem,
     feedback,
   ];

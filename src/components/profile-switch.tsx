@@ -74,9 +74,13 @@ export function ProfileShortcut() {
       const other = document.querySelector<HTMLButtonElement>(
         "[data-profile-switch] button[type=submit]"
       );
-      if (!other) return;
+      if (!other?.form) return;
       e.preventDefault();
-      other.click();
+      // requestSubmit, not click(). A synthetic click reaches the server and
+      // flips the cookie, but does not drive React's action re-render the way a
+      // trusted click does — so the lens changed and the rail did not repaint
+      // until a reload. Measured in a browser, not reasoned about.
+      other.form.requestSubmit(other);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
