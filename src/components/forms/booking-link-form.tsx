@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
-import { setBookingLink } from "@/lib/actions/mentors";
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
+import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
-
-const inputClass =
-  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
+import { setBookingLink } from "@/lib/actions/mentors";
 
 /** One row per assignment: the mentor sets the booking link students in
  * that program (or cohort) use to book them. */
@@ -16,27 +15,38 @@ function BookingLinkRow({
 }: {
   assignment: { id: string; label: string; calendlyUrl: string | null };
 }) {
-  const [state, action] = useActionState(setBookingLink, null);
+  const saved = assignment.calendlyUrl ?? "";
+  const id = `booking-link-${assignment.id}`;
+  const [url, setUrl] = useState(saved);
+  const [, action, save] = useSaveState(setBookingLink, url !== saved);
 
   return (
-    <div>
-      <form action={action} className="flex flex-wrap items-end gap-2">
-        <input type="hidden" name="assignmentId" value={assignment.id} />
-        <label className="block min-w-56 flex-1 text-sm">
-          <span className="text-muted-fg">{assignment.label}</span>
-          <input
+    <SettingsRow
+      label={assignment.label}
+      htmlFor={id}
+      description={
+        assignment.calendlyUrl
+          ? undefined
+          : "Students in this program can't book you until this is set."
+      }
+      control={
+        <form action={action} className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="assignmentId" value={assignment.id} />
+          <Input
+            id={id}
             name="calendlyUrl"
             type="url"
             required
-            defaultValue={assignment.calendlyUrl ?? ""}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
             placeholder="https://calendly.com/…"
-            className={inputClass}
+            className="min-w-56 flex-1"
           />
-        </label>
-        <SubmitButton pendingText="Saving…">Save</SubmitButton>
-      </form>
-      <ActionFeedback state={state} />
-    </div>
+          <SubmitButton pendingText="Saving…">Save</SubmitButton>
+        </form>
+      }
+      state={<SaveState state={save} />}
+    />
   );
 }
 
@@ -78,10 +88,8 @@ export function BookingLinksForm({
           <p className="mt-1 text-xs text-muted-fg">
             Students book sessions through these links (e.g. your Calendly),
             one per program you&apos;re assigned to.
-            {missing > 0 &&
-              " Students can't book you until the link for their program is set."}
           </p>
-          <div className="mt-3 space-y-3">
+          <div className="mt-1">
             {assignments.map((a) => (
               <BookingLinkRow key={a.id} assignment={a} />
             ))}

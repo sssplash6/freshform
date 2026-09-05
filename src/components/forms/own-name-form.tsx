@@ -1,38 +1,45 @@
 "use client";
 
-import { useActionState } from "react";
+import { useId, useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
+import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { updateOwnName } from "@/lib/actions/profile";
-
-const inputClass =
-  "w-full rounded-lg border border-line px-3.5 py-2.5 text-[15px] focus:border-brand focus:outline-none";
 
 /**
  * A mentor edits the name that labels them everywhere — chips, session rows,
  * their students' booking cards. Same field as the signup step, kept editable.
  */
 export function OwnNameForm({ defaultName }: { defaultName: string }) {
-  const [state, action] = useActionState(updateOwnName, null);
+  const id = useId();
+  const [name, setName] = useState(defaultName);
+  // The comparison needs no reset: the action revalidates, so a saved name
+  // comes back as a new `defaultName` and this goes false on its own.
+  const [, action, save] = useSaveState(updateOwnName, name !== defaultName);
 
   return (
-    <div>
-      <form action={action} className="flex flex-wrap items-end gap-2">
-        <label className="block min-w-56 flex-1 text-sm">
-          <span className="text-muted-fg">Full name</span>
-          <input
+    <SettingsRow
+      label="Full name"
+      htmlFor={id}
+      description="What everyone reads you by — session rows, chips, your students' booking cards."
+      control={
+        <form action={action} className="flex flex-wrap items-end gap-2">
+          <Input
+            id={id}
             name="name"
             type="text"
             required
             maxLength={80}
-            defaultValue={defaultName}
-            className={inputClass}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="min-w-56 flex-1"
           />
-        </label>
-        <SubmitButton pendingText="Saving…">Save</SubmitButton>
-      </form>
-      <ActionFeedback state={state} />
-    </div>
+          <SubmitButton pendingText="Saving…">Save</SubmitButton>
+        </form>
+      }
+      state={<SaveState state={save} />}
+    />
   );
 }

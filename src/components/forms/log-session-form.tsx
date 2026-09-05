@@ -4,12 +4,12 @@ import { useActionState, useRef, useState } from "react";
 
 import { logSession } from "@/lib/actions/sessions";
 import type { ActionState } from "@/lib/actions/shared";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { TimeKindPicker } from "@/components/forms/time-kind-picker";
 import { Select } from "@/components/select";
 import { GrowingField } from "@/components/ui/field";
 import { Receipt } from "@/components/ui/receipt";
+import { SaveState, saveStateFrom } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { toDateInputValue } from "@/lib/format";
@@ -80,7 +80,7 @@ export function LogSessionForm({
   // unchecked while the component still believes it is on "Late", and the
   // mentor's answer is silently lost. Remounting them per attempt makes the
   // echoed value the one that wins.
-  const [{ state, attempt }, action] = useActionState(
+  const [{ state, attempt }, action, pending] = useActionState(
     async (prev: { state: ActionState; attempt: number }, formData: FormData) => ({
       state: await logSession(prev.state, formData),
       attempt: prev.attempt + 1,
@@ -299,7 +299,7 @@ export function LogSessionForm({
             {/* The whole-form error, for the failures no single field owns: not
           assigned to the program, hours expired, already logged. Suppressed
           when a field owns it, or the same sentence appears twice. */}
-      {!badField && <ActionFeedback state={state} />}
+      {!badField && <SaveState state={saveStateFrom(state, pending)} />}
     </form>
   );
 }

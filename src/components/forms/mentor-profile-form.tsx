@@ -1,9 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { completeMentorProfile } from "@/lib/actions/mentors";
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 const inputClass =
@@ -11,7 +9,7 @@ const inputClass =
 
 /** Self-signup step 2 for mentors: confirm the full name. */
 export function MentorProfileForm({ defaultName }: { defaultName: string }) {
-  const [state, action] = useActionState(completeMentorProfile, null);
+  const [, action, save] = useSaveState(completeMentorProfile);
 
   return (
     <form action={action} className="space-y-4">
@@ -28,7 +26,7 @@ export function MentorProfileForm({ defaultName }: { defaultName: string }) {
       <SubmitButton pendingText="Saving…" className="w-full">
         Continue
       </SubmitButton>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   deleteStudent,
   moveStudent,
   setStudentEmail,
 } from "@/lib/actions/students";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { Section } from "@/components/ui/section";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { ProgramOption } from "@/lib/queries";
@@ -36,9 +36,10 @@ export function StudentCorrections({
   currentCohortId: string | null;
   hasSessions: boolean;
 }) {
-  const [emailState, emailAction] = useActionState(setStudentEmail, null);
-  const [moveState, moveAction] = useActionState(moveStudent, null);
-  const [deleteState, deleteAction, deletePending] = useActionState(deleteStudent, null);
+  const [, emailAction, emailSave] = useSaveState(setStudentEmail);
+  const [, moveAction, moveSave] = useSaveState(moveStudent);
+  const [, deleteAction, deleteSave] = useSaveState(deleteStudent);
+  const deletePending = deleteSave.kind === "saving";
   const [programId, setProgramId] = useState(currentProgramId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
@@ -67,7 +68,7 @@ export function StudentCorrections({
           Save email
         </SubmitButton>
       </form>
-      <ActionFeedback state={emailState} />
+      <SaveState state={emailSave} />
 
       <p className="mt-4 border-t border-line pt-4 text-xs text-muted-fg">
         Enrolled in the wrong place? Move them — hours and session history
@@ -115,7 +116,7 @@ export function StudentCorrections({
           Move student
         </SubmitButton>
       </form>
-      <ActionFeedback state={moveState} />
+      <SaveState state={moveSave} />
 
       <div className="mt-4 border-t border-line pt-4">
         <form action={deleteAction}>
@@ -157,7 +158,7 @@ export function StudentCorrections({
             </button>
           )}
         </form>
-        <ActionFeedback state={deleteState} />
+        <SaveState state={deleteSave} />
       </div>
       </div>
     </Section>

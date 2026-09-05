@@ -1,17 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createCohort, createProgram } from "@/lib/actions/programs";
 
 /** Inline "open a new program" control on the admin dashboard. */
 export function CreateProgramForm() {
   const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(createProgram, null);
+  const [, action, save] = useSaveState(createProgram);
 
   if (!open) {
     return (
@@ -19,7 +19,7 @@ export function CreateProgramForm() {
         <Button variant="secondary" onClick={() => setOpen(true)}>
           New program
         </Button>
-        <ActionFeedback state={state} />
+        <SaveState state={save} />
       </div>
     );
   }
@@ -41,7 +41,7 @@ export function CreateProgramForm() {
           Cancel
         </Button>
       </form>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }
@@ -53,7 +53,7 @@ export function CreateProgramForm() {
  */
 export function CreateCohortForm({ programId }: { programId: string }) {
   const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(createCohort, null);
+  const [, action, save] = useSaveState(createCohort);
 
   if (!open) {
     return (
@@ -65,7 +65,7 @@ export function CreateCohortForm({ programId }: { programId: string }) {
         >
           + Add a cohort to this program
         </button>
-        <ActionFeedback state={state} />
+        <SaveState state={save} />
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function CreateCohortForm({ programId }: { programId: string }) {
           Cancel
         </Button>
       </form>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }

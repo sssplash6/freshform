@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   completeOnboarding,
   completeStudentProfile,
 } from "@/lib/actions/students";
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import type { ProgramOption } from "@/lib/queries";
 
@@ -51,7 +51,7 @@ function TelegramField() {
  * Telegram username. Their program was already set by the staff member.
  */
 export function CompleteProfileForm({ defaultName }: { defaultName: string }) {
-  const [state, action] = useActionState(completeStudentProfile, null);
+  const [, action, save] = useSaveState(completeStudentProfile);
 
   return (
     <form action={action} className="space-y-4">
@@ -60,7 +60,7 @@ export function CompleteProfileForm({ defaultName }: { defaultName: string }) {
       <SubmitButton pendingText="Submitting…" className="w-full">
         Save and continue
       </SubmitButton>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }
@@ -77,7 +77,7 @@ export function OnboardingForm({
   defaultName: string;
   programs: ProgramOption[];
 }) {
-  const [state, action] = useActionState(completeOnboarding, null);
+  const [, action, save] = useSaveState(completeOnboarding);
   const [programId, setProgramId] = useState("");
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
@@ -127,7 +127,7 @@ export function OnboardingForm({
       <SubmitButton pendingText="Submitting…" className="w-full">
         Submit registration
       </SubmitButton>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

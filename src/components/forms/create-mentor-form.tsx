@@ -1,10 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { ProgramTargetsPicker } from "@/components/forms/program-targets-picker";
 import { Field, Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createMentor } from "@/lib/actions/mentors";
 import type { ProgramOption } from "@/lib/queries";
@@ -15,7 +13,7 @@ import type { ProgramOption } from "@/lib/queries";
  * sets their own booking links — no self-signup step needed.
  */
 export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
-  const [state, action] = useActionState(createMentor, null);
+  const [, action, save] = useSaveState(createMentor);
 
   return (
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
@@ -41,7 +39,7 @@ export function CreateMentorForm({ programs }: { programs: ProgramOption[] }) {
       <div className="mt-3 flex justify-end">
         <SubmitButton pendingText="Registering…">Register mentor</SubmitButton>
       </div>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

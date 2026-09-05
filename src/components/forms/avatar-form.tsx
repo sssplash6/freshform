@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 import { Avatar } from "@/components/avatar";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { SaveState, saveStateFrom } from "@/components/ui/save-state";
 import { removeOwnAvatar, setOwnAvatar } from "@/lib/actions/profile";
 import { AVATAR_ACCEPT, AVATAR_PX } from "@/lib/avatar";
 import type { ActionState } from "@/lib/actions/shared";
@@ -174,7 +174,7 @@ export function AvatarForm({
           </p>
         </div>
       </div>
-      <ActionFeedback state={state} />
+      <SaveState state={saveStateFrom(state, busy)} />
     </div>
   );
 }

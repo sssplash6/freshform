@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { MoreVerticalIcon } from "@/components/icons";
 import { Select, type SelectOption } from "@/components/select";
 import { Button } from "@/components/ui/button";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
 import {
@@ -65,12 +65,10 @@ export function AssignmentRowActions({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [progressState, progressAction, progressPending] = useActionState(
-    setAssignmentProgress,
-    null,
-  );
-  const [editState, editAction] = useActionState(updateAssignment, null);
-  const [delState, delAction] = useActionState(deleteAssignment, null);
+  const [, progressAction, progressSave] = useSaveState(setAssignmentProgress);
+  const progressPending = progressSave.kind === "saving";
+  const [, editAction, editSave] = useSaveState(updateAssignment);
+  const [, delAction, delSave] = useSaveState(deleteAssignment);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const anchored = useAnchoredPosition(open, triggerRef, menuRef, {
@@ -179,7 +177,7 @@ export function AssignmentRowActions({
                     </button>
                   )}
                 </form>
-                <ActionFeedback state={progressState} />
+                <SaveState state={progressSave} />
 
                 <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5">
                   <button
@@ -219,7 +217,7 @@ export function AssignmentRowActions({
                     )}
                   </form>
                 </div>
-                <ActionFeedback state={delState} />
+                <SaveState state={delSave} />
               </>
             ) : (
               <>
@@ -295,7 +293,7 @@ export function AssignmentRowActions({
                     </Button>
                   </div>
                 </form>
-                <ActionFeedback state={editState} />
+                <SaveState state={editSave} />
               </>
             )}
           </div>,

@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { PersonCell } from "@/components/person-chip";
 import { ProgramTargetsPicker } from "@/components/forms/program-targets-picker";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { updateMentor } from "@/lib/actions/mentors";
 import { USER_STATUS } from "@/lib/constants";
@@ -37,28 +37,21 @@ function MentorRow({
   mentor: MentorListRow;
   programs: ProgramOption[];
 }) {
-  const [state, action] = useActionState(updateMentor, null);
+  const [, action, save] = useSaveState(updateMentor);
   const [editing, setEditing] = useState(false);
 
   return (
     <li className="rounded-xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 font-medium text-ink">
-            <Link
-              href={`/admin/mentors/${mentor.id}`}
-              className="hover:text-brand"
-            >
-              {mentor.name ?? mentor.email}
-            </Link>
+        <div className="min-w-0">
+          <PersonCell person={mentor} href={`/admin/mentors/${mentor.id}`}>
             {mentor.isAdmin && (
               <StatusChip severity="neutral">Admin · also mentor</StatusChip>
             )}
             {mentor.status === USER_STATUS.UNASSIGNED && (
               <StatusChip severity="attention">Not in any program</StatusChip>
             )}
-          </div>
-          <div className="text-xs text-muted-fg">{mentor.email}</div>
+          </PersonCell>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {mentor.assignments.length === 0 ? (
               <span className="text-xs text-muted-fg">
@@ -132,7 +125,7 @@ function MentorRow({
               Cancel
             </button>
           </div>
-          <ActionFeedback state={state} />
+          <SaveState state={save} />
         </form>
       )}
     </li>

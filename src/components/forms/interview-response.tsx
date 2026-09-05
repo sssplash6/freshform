@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { respondToInterview } from "@/lib/actions/interviews";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { buttonClasses, type ButtonVariant } from "@/components/ui/button";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { INTERVIEW_STATUS } from "@/lib/constants";
 
 function Spinner() {
@@ -81,7 +80,7 @@ export function InterviewResponse({
   interviewId: string;
   status: string;
 }) {
-  const [state, action] = useActionState(respondToInterview, null);
+  const [, action, save] = useSaveState(respondToInterview);
   const confirmed = status === INTERVIEW_STATUS.CONFIRMED;
   const declined = status === INTERVIEW_STATUS.DECLINED;
 
@@ -102,7 +101,7 @@ export function InterviewResponse({
           variant={declined ? "ghost" : "danger"}
         />
       </form>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }

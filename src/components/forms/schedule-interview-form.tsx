@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { GrowingField } from "@/components/ui/field";
 
 import { scheduleInterview } from "@/lib/actions/interviews";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { toDateInputValue } from "@/lib/format";
 
@@ -28,7 +28,7 @@ export function ScheduleInterviewForm({
   studentProfileId: string;
   studentName: string;
 }) {
-  const [state, action] = useActionState(scheduleInterview, null);
+  const [state, action, save] = useSaveState(scheduleInterview);
   const [open, setOpen] = useState(false);
   const today = toDateInputValue(new Date());
 
@@ -50,7 +50,7 @@ export function ScheduleInterviewForm({
         </Button>
         {/* The last result survives the form closing, so a mentor who submits
             and collapses it still sees that it worked. */}
-        <ActionFeedback state={state} />
+        <SaveState state={save} />
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function ScheduleInterviewForm({
           Cancel
         </Button>
       </div>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   submitMentorFeedback,
   submitWebsiteFeedback,
 } from "@/lib/actions/feedback";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { StarIcon } from "@/components/icons";
 import { Select } from "@/components/select";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 const inputClass =
@@ -76,7 +76,7 @@ export function MentorFeedbackForm({
   mentors: { id: string; label: string }[];
   defaultMentorId?: string;
 }) {
-  const [state, action] = useActionState(submitMentorFeedback, null);
+  const [, action, save] = useSaveState(submitMentorFeedback);
 
   return (
     // No heading of its own: the page's title says "Rate a mentor" directly
@@ -111,13 +111,13 @@ export function MentorFeedbackForm({
       <SubmitButton pendingText="Sending…" className="mt-3">
         Submit mentor feedback
       </SubmitButton>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }
 
 export function WebsiteFeedbackForm() {
-  const [state, action] = useActionState(submitWebsiteFeedback, null);
+  const [, action, save] = useSaveState(submitWebsiteFeedback);
 
   return (
     <form action={action} className="rounded-xl border border-line bg-surface p-4">
@@ -137,7 +137,7 @@ export function WebsiteFeedbackForm() {
       <SubmitButton pendingText="Sending…" className="mt-3">
         Submit website feedback
       </SubmitButton>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

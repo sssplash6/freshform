@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useId, useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Select, type SelectOption } from "@/components/select";
 import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
+import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { assignMentorToProgram } from "@/lib/actions/mentors";
 import { deleteCohort, deleteProgram, renameProgram } from "@/lib/actions/programs";
@@ -13,7 +14,7 @@ import { deleteStudent } from "@/lib/actions/students";
 const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
 
-/** Rename the program. Its name is its identity, so this is a deliberate save. */
+/** Rename the program — one settings row, saved on its own. */
 export function RenameProgramForm({
   programId,
   currentName,
@@ -21,28 +22,36 @@ export function RenameProgramForm({
   programId: string;
   currentName: string;
 }) {
-  const [state, action] = useActionState(renameProgram, null);
+  const id = useId();
+  const [name, setName] = useState(currentName);
+  // No reset needed: the action revalidates, so a saved name arrives back as a
+  // new `currentName` and the comparison goes false on its own.
+  const [, action, save] = useSaveState(renameProgram, name !== currentName);
 
   return (
-    <form action={action}>
-      <input type="hidden" name="programId" value={programId} />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-56 flex-1">
-          <span className={labelClass}>Program name</span>
+    <SettingsRow
+      label="Program name"
+      htmlFor={id}
+      description="Its name is its identity, so this is a deliberate save."
+      control={
+        <form action={action} className="flex flex-wrap items-end gap-3">
+          <input type="hidden" name="programId" value={programId} />
           <Input
+            id={id}
             name="name"
             type="text"
             required
             minLength={3}
             maxLength={80}
-            defaultValue={currentName}
-            className="mt-1"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="min-w-56 flex-1"
           />
-        </label>
-        <SubmitButton pendingText="Saving…">Save name</SubmitButton>
-      </div>
-      <ActionFeedback state={state} />
-    </form>
+          <SubmitButton pendingText="Saving…">Save name</SubmitButton>
+        </form>
+      }
+      state={<SaveState state={save} />}
+    />
   );
 }
 
@@ -59,7 +68,7 @@ export function AssignMentorForm({
   mentors: SelectOption[];
   cohorts: SelectOption[];
 }) {
-  const [state, action] = useActionState(assignMentorToProgram, null);
+  const [, action, save] = useSaveState(assignMentorToProgram);
 
   return (
     <form action={action}>
@@ -97,7 +106,7 @@ export function AssignMentorForm({
         )}
         <SubmitButton pendingText="Assigning…">Assign</SubmitButton>
       </div>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }
@@ -159,19 +168,19 @@ export function DeleteCohortButton({
   cohortId: string;
   cohortName: string;
 }) {
-  const [state, action, pending] = useActionState(deleteCohort, null);
+  const [, action, save] = useSaveState(deleteCohort);
 
   return (
     <div className="flex flex-col items-end gap-1">
       <DangerButton
         action={action}
-        pending={pending}
+        pending={save.kind === "saving"}
         hidden={<input type="hidden" name="cohortId" value={cohortId} />}
         label="Delete"
         confirmLabel="Yes, delete"
         question={`Delete ${cohortName}?`}
       />
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }
@@ -189,7 +198,7 @@ export function RemoveStudentButton({
   label: string;
   hasSessions: boolean;
 }) {
-  const [state, action, pending] = useActionState(deleteStudent, null);
+  const [, action, save] = useSaveState(deleteStudent);
 
   if (hasSessions) {
     return (
@@ -203,7 +212,7 @@ export function RemoveStudentButton({
     <div className="flex flex-col items-end gap-1">
       <DangerButton
         action={action}
-        pending={pending}
+        pending={save.kind === "saving"}
         hidden={
           <input type="hidden" name="studentProfileId" value={studentProfileId} />
         }
@@ -211,7 +220,7 @@ export function RemoveStudentButton({
         confirmLabel="Yes, remove"
         question={`Remove ${label} and their allocations?`}
       />
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }
@@ -227,7 +236,7 @@ export function DeleteProgramButton({
   /** Why it can't go yet, shown in place of the button. */
   blockedReason?: string;
 }) {
-  const [state, action, pending] = useActionState(deleteProgram, null);
+  const [, action, save] = useSaveState(deleteProgram);
 
   if (blockedReason) {
     return <p className="text-sm text-muted-fg">{blockedReason}</p>;
@@ -237,13 +246,13 @@ export function DeleteProgramButton({
     <div>
       <DangerButton
         action={action}
-        pending={pending}
+        pending={save.kind === "saving"}
         hidden={<input type="hidden" name="programId" value={programId} />}
         label={`Delete ${programName}`}
         confirmLabel="Yes, delete it"
         question="This removes the program and its empty cohorts."
       />
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </div>
   );
 }

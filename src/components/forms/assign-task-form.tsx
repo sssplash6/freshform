@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { TaskPicker, type OpenTask } from "@/components/forms/task-picker";
 import { Select, type SelectOption } from "@/components/select";
 import { Input } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { setMentorAllocation } from "@/lib/actions/students";
 import { toDateInputValue } from "@/lib/format";
@@ -38,7 +38,7 @@ export function AssignTaskForm({
   openTasksByMentor?: Record<string, OpenTask[]>;
   showAmountPaid?: boolean;
 }) {
-  const [state, action] = useActionState(setMentorAllocation, null);
+  const [, action, save] = useSaveState(setMentorAllocation);
   const [mentorId, setMentorId] = useState("");
   const today = toDateInputValue(new Date());
 
@@ -143,7 +143,7 @@ export function AssignTaskForm({
       <div className="mt-3.5">
         <SubmitButton pendingText="Allocating…">Allocate time</SubmitButton>
       </div>
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

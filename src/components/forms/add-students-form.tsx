@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input, inputClasses } from "@/components/ui/field";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { createStudents } from "@/lib/actions/students";
 import { EMAIL_RE, normalizeEmail, type ActionState } from "@/lib/actions/shared";
 import { cn } from "@/lib/cn";
@@ -27,20 +27,20 @@ export function AddStudentsForm({ program }: { program: ProgramOption }) {
   // body is the cascade react-hooks/set-state-in-effect warns about, and it
   // also painted the submitted values once before clearing them.
   const [attempt, setAttempt] = useState(0);
-  const [state, action, pending] = useActionState(
+  const [, action, save] = useSaveState(
     async (previous: ActionState, formData: FormData) => {
       const result = await createStudents(previous, formData);
       if (result?.ok) setAttempt((n) => n + 1);
       return result;
     },
-    null as ActionState,
   );
+  const pending = save.kind === "saving";
 
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="programId" value={program.id} />
       <StudentRows key={attempt} program={program} pending={pending} />
-      <ActionFeedback state={state} />
+      <SaveState state={save} />
     </form>
   );
 }

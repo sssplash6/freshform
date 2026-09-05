@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
-import { FolderIcon } from "@/components/icons";
+import { useState } from "react";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
+import { FolderIcon } from "@/components/icons";
 import { Input } from "@/components/ui/field";
 import { ExternalLink } from "@/components/ui/link";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { Section } from "@/components/ui/section";
+import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { setStudentFolder } from "@/lib/actions/students";
 
@@ -22,45 +23,60 @@ export function StudentFolderForm({
   studentProfileId: string;
   currentFolderUrl: string | null;
 }) {
-  const [state, action] = useActionState(setStudentFolder, null);
+  const saved = currentFolderUrl ?? "";
+  const id = `student-folder-${studentProfileId}`;
+  const [url, setUrl] = useState(saved);
+  const [, action, save] = useSaveState(setStudentFolder, url !== saved);
 
   return (
     <Section
-        eyebrow="Set by staff"
-        title="Student folder"
-        action={
-currentFolderUrl ? (
-<ExternalLink variant="chip" href={currentFolderUrl} icon={<FolderIcon className="h-3.5 w-3.5" />} title="Open the student's folder">
-Folder
-</ExternalLink>
-) : undefined
-}
-      >
-      <div className="px-4 py-4 sm:px-5">
-      <p className="text-xs text-muted-fg">
-        A link to the student&apos;s folder (Drive, Docs, …). Every mentor working
-        with them can open it from their list and their page. Leave it empty to
-        remove the link.
-      </p>
-
-      <form action={action} className="mt-3 flex flex-wrap items-center gap-2">
-        <input type="hidden" name="studentProfileId" value={studentProfileId} />
-        {/* type="text", not "url": a pasted `drive.google.com/…` is valid input
-            here — the action https-prefixes it rather than rejecting it. */}
-        <Input
-          name="folderUrl"
-          type="text"
-          inputMode="url"
-          defaultValue={currentFolderUrl ?? ""}
-          placeholder="https://drive.google.com/…"
-          aria-label="Student folder link"
-          className="min-w-64 flex-1"
+      eyebrow="Set by staff"
+      title="Student folder"
+      action={
+        currentFolderUrl ? (
+          <ExternalLink
+            variant="chip"
+            href={currentFolderUrl}
+            icon={<FolderIcon className="h-3.5 w-3.5" />}
+            title="Open the student's folder"
+          >
+            Folder
+          </ExternalLink>
+        ) : undefined
+      }
+    >
+      <div className="px-4 sm:px-5">
+        <SettingsRow
+          label="Folder link"
+          htmlFor={id}
+          description="A link to the student's folder (Drive, Docs, …). Every mentor working with them can open it from their list and their page. Leave it empty to remove the link."
+          control={
+            <form action={action} className="flex flex-wrap items-end gap-2">
+              <input
+                type="hidden"
+                name="studentProfileId"
+                value={studentProfileId}
+              />
+              {/* type="text", not "url": a pasted `drive.google.com/…` is valid
+                  input here — the action https-prefixes it rather than
+                  rejecting it. */}
+              <Input
+                id={id}
+                name="folderUrl"
+                type="text"
+                inputMode="url"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder="https://drive.google.com/…"
+                className="min-w-56 flex-1"
+              />
+              <SubmitButton variant="secondary" pendingText="Saving…">
+                Save
+              </SubmitButton>
+            </form>
+          }
+          state={<SaveState state={save} />}
         />
-        <SubmitButton variant="secondary" pendingText="Saving…" className="min-h-11">
-          Save folder link
-        </SubmitButton>
-      </form>
-      <ActionFeedback state={state} />
       </div>
     </Section>
   );

@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
 import { deleteSession, editSession, voidSession } from "@/lib/actions/sessions";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { AttendancePicker } from "@/components/forms/attendance-picker";
 import { TimeKindPicker } from "@/components/forms/time-kind-picker";
 import { PencilIcon } from "@/components/icons";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
@@ -60,9 +60,9 @@ export function SessionRowActions({
   const [open, setOpen] = useState(false);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [editState, editAction] = useActionState(editSession, null);
-  const [voidState, voidAction] = useActionState(voidSession, null);
-  const [delState, delAction] = useActionState(deleteSession, null);
+  const [, editAction, editSave] = useSaveState(editSession);
+  const [, voidAction, voidSave] = useSaveState(voidSession);
+  const [, delAction, delSave] = useSaveState(deleteSession);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -217,7 +217,7 @@ export function SessionRowActions({
                 Save changes
               </SubmitButton>
             </form>
-            <ActionFeedback state={editState} />
+            <SaveState state={editSave} />
 
             <div className="mt-3 border-t border-line pt-2.5">
               <form action={voidAction}>
@@ -252,7 +252,7 @@ export function SessionRowActions({
                   </button>
                 )}
               </form>
-              <ActionFeedback state={voidState} />
+              <SaveState state={voidSave} />
             </div>
             </>
             )}
@@ -292,7 +292,7 @@ export function SessionRowActions({
                     </button>
                   )}
                 </form>
-                <ActionFeedback state={delState} />
+                <SaveState state={delSave} />
               </div>
             )}
           </div>,

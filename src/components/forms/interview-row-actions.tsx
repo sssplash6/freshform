@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GrowingField } from "@/components/ui/field";
 import { createPortal } from "react-dom";
 
@@ -8,8 +8,8 @@ import {
   cancelInterview,
   rescheduleInterview,
 } from "@/lib/actions/interviews";
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { PencilIcon } from "@/components/icons";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
@@ -43,8 +43,8 @@ export function InterviewRowActions({
 }) {
   const [open, setOpen] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
-  const [editState, editAction] = useActionState(rescheduleInterview, null);
-  const [cancelState, cancelAction] = useActionState(cancelInterview, null);
+  const [, editAction, editSave] = useSaveState(rescheduleInterview);
+  const [, cancelAction, cancelSave] = useSaveState(cancelInterview);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -175,7 +175,7 @@ export function InterviewRowActions({
                 Save changes
               </SubmitButton>
             </form>
-            <ActionFeedback state={editState} />
+            <SaveState state={editSave} />
 
             <div className="mt-3 border-t border-line pt-2.5">
               <form action={cancelAction}>
@@ -210,7 +210,7 @@ export function InterviewRowActions({
                   </button>
                 )}
               </form>
-              <ActionFeedback state={cancelState} />
+              <SaveState state={cancelSave} />
             </div>
           </div>,
           document.body,

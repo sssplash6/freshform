@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { ActionFeedback } from "@/components/forms/action-feedback";
 import { TaskPicker, type OpenTask } from "@/components/forms/task-picker";
 import { MoreVerticalIcon } from "@/components/icons";
+import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { removeMentorAllocation, setMentorAllocation } from "@/lib/actions/students";
 import { useAnchoredPosition } from "@/lib/use-anchored-position";
@@ -47,11 +47,8 @@ export function AllocationRowActions({
   const [minutes, setMinutes] = useState(String(currentMinutes));
   // A raise grants hours, and hours arriving name the work they are for.
   const granting = Number(minutes) > currentMinutes;
-  const [setState, setAction] = useActionState(setMentorAllocation, null);
-  const [delState, delAction] = useActionState(
-    removeMentorAllocation,
-    null,
-  );
+  const [, setAction, setSave] = useSaveState(setMentorAllocation);
+  const [, delAction, delSave] = useSaveState(removeMentorAllocation);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // Portaled to <body> and positioned `fixed` so it escapes the table's
@@ -167,7 +164,7 @@ export function AllocationRowActions({
               Save
             </SubmitButton>
           </form>
-          <ActionFeedback state={setState} />
+          <SaveState state={setSave} />
 
           <div className="mt-3 border-t border-line pt-2.5">
             <form action={delAction}>
@@ -203,7 +200,7 @@ export function AllocationRowActions({
                 </button>
               )}
             </form>
-            <ActionFeedback state={delState} />
+            <SaveState state={delSave} />
           </div>
           </div>,
           document.body,
