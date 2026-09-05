@@ -37,7 +37,6 @@ model User {
   // anything does it through the grants below, program by program.
   platformAdmin Boolean @default(false)
   status    String   @default("ACTIVE") // ACTIVE | UNASSIGNED (freshly signed-up mentors) | PENDING (self-signed-up students awaiting approval)
-  programId String? // set for DEPT_LEADER and SALES (their scope)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -55,7 +54,6 @@ model User {
   // re-run of the cron, or two instances firing at once, must not send twice.
   digestSentAt DateTime?
 
-  program           Program?              @relation(fields: [programId], references: [id])
   studentProfile    StudentProfile?       @relation("StudentUser")
   createdStudents   StudentProfile[]      @relation("CreatedBy")
   mentorAssignments MentorAssignment[]    @relation("MentorUser")
@@ -109,10 +107,6 @@ model Program {
   // across the app, silently.
   tracksPayment Boolean @default(false)
   cohorts Cohort[]
-  // Legacy DEPT_LEADER / SALES scope, emptied by the grants migration and
-  // dropped with User.programId. Read `staffGrants` instead.
-  staff   User[]
-
   students          StudentProfile[]
   mentorAssignments MentorAssignment[]
   staffGrants       ProgramStaff[]

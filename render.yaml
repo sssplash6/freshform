@@ -21,8 +21,16 @@ services:
     # devDependencies (typescript, tailwind, tsx) are needed to build and to
     # run the seed, so force-install them even though Render sets production.
     buildCommand: npm install --include=dev && npm run build
-    # Apply migrations and (idempotently) seed the disk before starting.
-    startCommand: npm run db:migrate:deploy && npm run db:seed && npm start
+    # Apply migrations, then start. The seed is NOT run here any more.
+    #
+    # It was, on every boot, and that was load-bearing while staff lived in
+    # config/app-config.ts. It stopped being safe the moment access became
+    # rows: a seed that runs on every restart is a seed that can undo a
+    # decision somebody made on /settings/platform, and "it came back after the
+    # next deploy" is the worst way to learn your permission model has a second
+    # writer. The seed still exists for a fresh database — `npm run db:seed`,
+    # by hand, once.
+    startCommand: npm run db:migrate:deploy && npm start
 
     # Persistent storage for the SQLite database. Wiped-on-deploy without this.
     disk:
