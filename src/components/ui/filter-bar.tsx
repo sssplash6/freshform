@@ -148,14 +148,38 @@ export function FilterBar({
   const showValues = Boolean(q || selects.length > 0 || dateRange);
   const showFoot = Boolean(summary) || (reset && count > 0);
 
+  // A select on its own is not worth a fold. Opening "Program" only to reveal
+  // a control also labelled Program is two taps to reach one dropdown, and the
+  // word was the only thing behind the disclosure. So one or two selects with
+  // no date range sit on the surface, and the fold is kept for what genuinely
+  // needs hiding — a date range, or more controls than a row can hold.
+  const inlineSelects = !dateRange && selects.length <= 2 ? selects : [];
+  const foldedSelects = inlineSelects.length > 0 ? [] : selects;
+
   // What is behind the fold, named on the summary so it can be opened on
   // purpose rather than on spec. Open already when one of them is on: a
   // filtered list must show the control that filtered it, or the reader has to
   // go hunting for the reason their list is short.
-  const folded = [...selects.map((s) => s.label), ...(dateRange ? ["dates"] : [])];
+  const folded = [...foldedSelects.map((s) => s.label), ...(dateRange ? ["dates"] : [])];
   const foldOpen =
     selects.some((s) => readParam(params, s.name)) ||
     Boolean(dateRange && (dateRange.fromValue || dateRange.toValue));
+
+  // Built once and placed in exactly one of two rows: beside the fold's summary
+  // when there is a fold, otherwise beside the selects on the controls row.
+  // Never a row of its own — three pills made the bar taller than the table.
+  const chips =
+    presets.length > 0
+      ? presets.map((preset) => (
+          <Chip
+            key={Object.entries(preset.params).map(([k, v]) => `${k}=${v}`).join("&")}
+            href={presetHref(basePath, params, preset)}
+            label={preset.label}
+            hint={preset.hint}
+            active={presetIsActive(params, preset)}
+          />
+        ))
+      : null;
 
   return (
     <div
@@ -205,8 +229,41 @@ export function FilterBar({
             </div>
           )}
 
+          {/* One row: what you narrow BY and what you narrow TO. They were two
+              rows, and the second was nothing but chips, which made a bar three
+              rows tall on a page whose first job is the table underneath it. */}
+          {(inlineSelects.length > 0 || (presets.length > 0 && folded.length === 0)) && (
+            <div className={cn("flex flex-wrap items-center gap-2", q && "mt-3")}>
+              {inlineSelects.map((select) => (
+                <span key={select.name} className="min-w-0 basis-full sm:w-48 sm:basis-auto">
+                  <Select
+                    name={select.name}
+                    ariaLabel={select.label}
+                    options={[...select.options]}
+                    placeholder={select.all}
+                    defaultValue={readParam(params, select.name)}
+                    required={false}
+                    searchable={select.searchable}
+                    recentKey={select.recentKey}
+                  />
+                </span>
+              ))}
+              {inlineSelects.length > 0 && !q && (
+                <Button type="submit" size="md">
+                  Apply
+                </Button>
+              )}
+              {folded.length === 0 && chips}
+            </div>
+          )}
+
           {folded.length > 0 && (
-            <Disclosure label={sentence(folded)} defaultOpen={foldOpen} className={cn(q && "mt-1")}>
+            <Disclosure
+              label={sentence(folded)}
+              defaultOpen={foldOpen}
+              aside={chips}
+              className={cn(q && "mt-1")}
+            >
               {/* items-end so the captions line up along the controls' bottom
                   edge, and wrap so the fold grows downward on a phone instead
                   of pushing the page sideways. */}
@@ -221,7 +278,7 @@ export function FilterBar({
                   hidden input instead of opening the list, in all three of the
                   cards this replaces.
                 */}
-                {selects.map((select) => (
+                {foldedSelects.map((select) => (
                   <div
                     key={select.name}
                     className="min-w-0 basis-full text-sm sm:basis-auto"
@@ -285,13 +342,10 @@ export function FilterBar({
         </Form>
       )}
 
-      {presets.length > 0 && (
-        <div
-          className={cn(
-            "flex flex-wrap gap-1.5 px-3 py-2.5 sm:px-4",
-            showValues && "border-t border-line"
-          )}
-        >
+      {/* Only reached when there is no form to carry them — otherwise the
+          chips sit on the controls row beside the selects they narrow. */}
+      {presets.length > 0 && !showValues && (
+        <div className="flex flex-wrap gap-1.5 px-3 py-2.5 sm:px-4">
           {presets.map((preset) => (
             <Chip
               key={Object.entries(preset.params).map(([k, v]) => `${k}=${v}`).join("&")}
@@ -369,7 +423,10 @@ function Chip({
       title={hint}
       aria-pressed={active}
       className={cn(
-        "inline-flex min-h-11 items-center rounded-full border px-3.5 text-[13px] font-medium transition-colors",
+        // rounded-lg, not rounded-full. A pill reads as a status, and these are
+        // controls: they sit beside a select and a button that are both 8px,
+        // and a full radius next to those looks like a different design system.
+        "inline-flex min-h-11 items-center rounded-lg border px-3.5 text-[13px] font-medium transition-colors",
         active
           ? "border-brand bg-brand-soft font-semibold text-brand"
           : "border-line bg-surface text-muted-fg hover:border-brand/40 hover:text-ink"

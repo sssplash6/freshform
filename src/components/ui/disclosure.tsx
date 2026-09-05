@@ -39,6 +39,7 @@ export function Disclosure({
   count,
   hint,
   defaultOpen = false,
+  aside,
   children,
   className,
 }: {
@@ -49,17 +50,25 @@ export function Disclosure({
   /** One line under the summary, ≤ 12 words. */
   hint?: React.ReactNode;
   defaultOpen?: boolean;
+  /**
+   * Rendered on the summary's own line, after the label.
+   *
+   * For controls that belong beside the fold rather than inside it — filter
+   * chips next to the selects they narrow. A row of its own for three pills
+   * made the bar taller than the table it filters.
+   */
+  aside?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   // Nothing to open.
   if (count === 0) return null;
 
-  return (
-    <details open={defaultOpen} className={cn("group", className)}>
+  const fold = (
+    <details open={defaultOpen} className={cn("group", !aside && className)}>
       <summary
         className={cn(
-          "flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-brand",
+          "flex min-h-11 w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-brand",
           "hover:text-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2",
           // Safari still paints its own triangle without this.
           "[&::-webkit-details-marker]:hidden"
@@ -77,5 +86,16 @@ export function Disclosure({
       {hint && <p className="mb-2 ml-5.5 text-xs text-muted-fg">{hint}</p>}
       {children}
     </details>
+  );
+
+  if (!aside) return fold;
+
+  // The fold keeps its own full-width line so its contents open underneath,
+  // and the aside rides the summary's row beside it.
+  return (
+    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", className)}>
+      {fold}
+      {aside}
+    </div>
   );
 }
