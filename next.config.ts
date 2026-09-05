@@ -46,6 +46,11 @@ type Move = { from: string; to: string; why: string };
  * `:id` matches ONE segment, so `/admin/programs/:id` will not swallow
  * `/admin/programs/x/settings` — each nested route needs its own row.
  *
+ * A row's destination must be a LIVE address, never another row's source. Two
+ * rows here pointed at /admin/students after that address had itself become a
+ * redirect, which costs every follower a second round trip and breaks the day
+ * the first row is deleted.
+ *
  * The whole map is deleted one released version after the last row lands; the
  * deletion is a listed commit, not a someday.
  */
@@ -117,7 +122,7 @@ const MOVED: Move[] = [
   },
   {
     from: "/leader/students",
-    to: "/admin/students",
+    to: "/students",
     why: "DEPT_LEADER's roster; the students list narrows to their grants.",
   },
   {
@@ -128,7 +133,7 @@ const MOVED: Move[] = [
   { from: "/sales", to: "/admin", why: "SALES' dashboard, same as above." },
   {
     from: "/sales/students",
-    to: "/admin/students",
+    to: "/students",
     why: "SALES' roster, same as above.",
   },
 ];
