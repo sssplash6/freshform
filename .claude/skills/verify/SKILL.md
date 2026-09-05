@@ -42,6 +42,6 @@ Set it as cookie `authjs.session-token` on `localhost` and visit the role's page
 ## Flows worth driving
 
 - Admin (`tech@freshman.academy` is the seeded ADMIN): create student on `/admin/students` (cohort field appears only for programs that have cohorts), register/assign mentors on `/admin/mentors` (program-wide target = one row per pairing; re-assign updates the Calendly link), allocate hours on `/admin/students/[id]` (per-mentor spinbutton + Set).
-- Student first sign-in: staff-registered students land on `/student/onboarding` to confirm name + Telegram (`@` prefix is stripped; 5–32 word chars), then `/student` shows hours per mentor.
+- Student first sign-in: every first sign-in lands on `/onboarding`, which picks its own branch from the reader's record — staff-registered students confirm name + Telegram (`@` prefix is stripped; 5–32 word chars), self-signups also pick a program, and a PENDING student gets the "waiting for approval" step. Then `/student` shows hours per mentor.
 - Mentor: `/mentor` lists students + log-session form; per-student detail at `/mentor/students/[id]` (there is deliberately no `/mentor/students` index — it 404s).
 - Clean up any test rows you create: `Session`, `HourAllotmentChange`, `HourAllocation`, `Notification`, `MentorAssignment`, `StudentProfile`, then `User` (FK order matters).

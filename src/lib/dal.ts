@@ -106,7 +106,8 @@ export async function requireProgramScope(programId: string): Promise<User> {
 /**
  * Gate mentor-area access to users who may act as a mentor — a plain MENTOR
  * or a dual-role ADMIN flagged as a mentor. No onboarding redirect, so it's
- * safe to use in the mentor layout (which also wraps /mentor/onboarding).
+ * safe to use in the mentor layout. Onboarding lives at /onboarding, outside
+ * this tree, so there is no page under /mentor this could lock somebody out of.
  */
 export async function requireMentorAccess(): Promise<User> {
   const user = await requireUser();
@@ -122,7 +123,7 @@ export async function requireMentorAccess(): Promise<User> {
  */
 export async function requireMentor(): Promise<User> {
   const user = await requireMentorAccess();
-  if (!user.name?.trim()) redirect("/mentor/onboarding");
+  if (!user.name?.trim()) redirect("/onboarding");
   return user;
 }
 

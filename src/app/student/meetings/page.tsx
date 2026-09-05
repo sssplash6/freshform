@@ -35,7 +35,7 @@ export default async function StudentMeetingsPage() {
     where: { userId: user.id },
     select: { id: true },
   });
-  if (!profile) redirect("/student/onboarding");
+  if (!profile) redirect("/onboarding");
 
   const [meetings, ledger] = await Promise.all([
     studentMeetings(profile.id),

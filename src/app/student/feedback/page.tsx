@@ -41,7 +41,7 @@ export default async function StudentFeedbackPage({
     where: { userId: user.id },
     select: { id: true },
   });
-  if (!profile) redirect("/student/onboarding");
+  if (!profile) redirect("/onboarding");
 
   const [hours, given] = await Promise.all([
     allocationSummary(profile.id),

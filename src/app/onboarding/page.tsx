@@ -15,10 +15,10 @@ import { programOptions, toProgramOptions } from "@/lib/queries";
 /**
  * One step: what is being asked, why, and the form that answers it.
  *
- * `max-w-md` inside the shell's `max-w-2xl`, because a single column of two or
- * three fields set to 672px is a line of inputs a phone-shaped reader has to
- * sweep their eyes across. The card is the app's own surface — a step is still
- * a form on a page, not a modal.
+ * `max-w-md` (448px) inside the shell's `max-w-2xl` (672px): two or three
+ * fields stretched to the shell's full measure read as a page that has not
+ * finished loading, and on the phone most of these readers are holding, the
+ * two measures are the same thing anyway.
  */
 function Step({
   eyebrow,

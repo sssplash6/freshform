@@ -2,7 +2,7 @@
  * Profile pictures: the rules both sides of the upload agree on.
  *
  * Pictures are resized and re-encoded to WebP in the BROWSER before they are
- * sent (see components/forms/avatar-form.tsx), which keeps the payload under
+ * sent (see components/forms/profile-forms.tsx), which keeps the payload under
  * the 1MB server-action body limit without a native image dependency on the
  * server. The server still re-checks size and sniffs the real format, because
  * nothing a client sends is trustworthy.

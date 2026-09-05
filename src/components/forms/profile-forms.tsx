@@ -33,11 +33,12 @@ import type { ProgramOption } from "@/lib/queries";
  *
  * They are one file because they were four, and three of the four asked for the
  * same thing. "Full name" had three implementations — `onboarding-form.tsx`'s
- * `NameField`, `mentor-profile-form.tsx` and `own-name-form.tsx` — and two of
- * them carried a private copy of the input styling that predates
- * `ui/field.tsx`, so the field a student typed their name into did not look
- * like the field a mentor typed theirs into. One `NameField` below, used by all
- * three steps, is what stops that coming back.
+ * `NameField`, `mentor-profile-form.tsx` and `own-name-form.tsx` — and the
+ * first two shared a copied `inputClass` string that predates `ui/field.tsx`:
+ * no `min-h-11`, so the very first field a student or a mentor ever typed into
+ * was the one field in the app whose height was whatever the inherited
+ * line-height happened to make it, rather than the 44px floor. One `NameField`
+ * below, on the shared `Input`, is what stops that coming back.
  *
  * The onboarding steps redirect on success rather than reporting one: their
  * actions end in `redirect()`, so the reader is already on their home page

@@ -40,8 +40,6 @@ type Move = { from: string; to: string; why: string };
  * The list is kept here, unlisted, so the commit that moves each route can see
  * what it owes. Waiting on the commit that builds the destination:
  *
- *   /mentor/onboarding       → /onboarding
- *   /student/onboarding      → /onboarding
  *
  * `:id` matches ONE segment, so `/admin/programs/:id` will not swallow
  * `/admin/programs/x/settings` — each nested route needs its own row.
@@ -79,6 +77,16 @@ const MOVED: Move[] = [
     from: "/admin/programs/:id/settings",
     to: "/programs/:id/settings",
     why: "Same move — the gear the owner asked for.",
+  },
+  {
+    from: "/mentor/onboarding",
+    to: "/onboarding",
+    why: "One door for every first sign-in; the branch comes from the reader's record, not the URL.",
+  },
+  {
+    from: "/student/onboarding",
+    to: "/onboarding",
+    why: "Same door, which also gained the approval step that used to wall off /student.",
   },
   {
     from: "/admin/feedback",
