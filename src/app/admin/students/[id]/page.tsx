@@ -3,7 +3,7 @@ import { FolderIcon, SendIcon } from "@/components/icons";
 import { notFound } from "next/navigation";
 
 import { ArrowLink, ExternalLink } from "@/components/ui/link";
-import { AllocationRowActions } from "@/components/forms/allocation-row-actions";
+import { AllocationRowActions } from "@/components/forms/hours-forms";
 import {
   AllocationsTable,
   toAllocationEntries,

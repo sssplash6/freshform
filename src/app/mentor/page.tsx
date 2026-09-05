@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { AttentionList } from "@/components/attention-list";
-import { InterviewRowActions } from "@/components/forms/interview-row-actions";
+import { MeetingRowActions } from "@/components/forms/meeting-forms";
 import { PersonChip } from "@/components/person-chip";
 import { Timeline, type TimelineEntry } from "@/components/timeline";
 import { LinkButton } from "@/components/ui/button";
@@ -236,8 +236,8 @@ export default async function MentorHomePage({
         // row is theirs to move. The old component offered these controls on
         // any list a mentor was looking at, including other people's.
         action: (
-          <InterviewRowActions
-            interview={{
+          <MeetingRowActions
+            meeting={{
               id: m.id,
               date: toDateInputValue(m.scheduledAt),
               time: m.hasTime ? toTimeInputValue(m.scheduledAt) : "",

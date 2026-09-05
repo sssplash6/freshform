@@ -5,7 +5,7 @@ import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { SessionRowActions } from "@/components/forms/session-row-actions";
+import { SessionRowActions } from "@/components/forms/session-forms";
 import { ArrowLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import {

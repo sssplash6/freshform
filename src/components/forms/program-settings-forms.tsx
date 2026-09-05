@@ -3,11 +3,12 @@
 import { useId, useState } from "react";
 
 import { Select, type SelectOption } from "@/components/select";
+import { ConfirmInline } from "@/components/ui/confirm-inline";
 import { Input } from "@/components/ui/field";
 import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { assignMentorToProgram } from "@/lib/actions/mentors";
+import { assignMentorToProgram, removeAssignment } from "@/lib/actions/mentors";
 import { deleteCohort, deleteProgram, renameProgram } from "@/lib/actions/programs";
 import { deleteStudent } from "@/lib/actions/students";
 
@@ -111,52 +112,37 @@ export function AssignMentorForm({
   );
 }
 
-/** Two-step inline confirm, the app's one shape for a destructive action. */
-function DangerButton({
-  action,
-  hidden,
-  label,
-  confirmLabel,
-  question,
-  pending,
+/**
+ * Remove a mentor from this program — the pairing `AssignMentorForm` makes,
+ * unmade. Only the pairing goes: time already allocated to students belongs to
+ * the student and the mentor, not to the program row, so it stays.
+ *
+ * This was `forms/remove-assignment-button.tsx`, a file for one button, with
+ * its own `useActionState` and its own hand-written `<span role="alert">` for
+ * the error. `SaveState` says that better and says the other four states too,
+ * and the button itself is now the same one the three below use.
+ */
+export function RemoveMentorButton({
+  assignmentId,
 }: {
-  action: (formData: FormData) => void;
-  hidden: React.ReactNode;
-  label: string;
-  confirmLabel: string;
-  question: React.ReactNode;
-  pending: boolean;
+  /** The MentorAssignment row — the pairing, not the mentor. */
+  assignmentId: string;
 }) {
-  const [confirming, setConfirming] = useState(false);
+  const [, action, save] = useSaveState(removeAssignment);
 
   return (
-    <form action={action}>
-      {hidden}
-      {confirming ? (
-        <span className="rise-in flex flex-wrap items-center justify-end gap-2 text-xs">
-          <span className="text-muted-fg">{question}</span>
-          <SubmitButton variant="dangerSolid" size="xs" pendingText="Removing…">
-            {confirmLabel}
-          </SubmitButton>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setConfirming(false)}
-            className="rounded-lg px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
-          >
-            Cancel
-          </button>
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          className="rounded-lg border border-danger-line px-3 py-1.5 text-xs font-medium text-danger-ink transition-colors hover:bg-danger-soft"
-        >
-          {label}
-        </button>
-      )}
-    </form>
+    <div className="flex flex-col items-end gap-1">
+      <ConfirmInline
+        action={action}
+        values={{ assignmentId }}
+        pending={save.kind === "saving"}
+        label="Remove"
+        question="They leave this program. Hours already allocated to students stay."
+        confirmLabel="Yes, remove"
+        pendingLabel="Removing…"
+      />
+      <SaveState state={save} />
+    </div>
   );
 }
 
@@ -172,13 +158,16 @@ export function DeleteCohortButton({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <DangerButton
+      <ConfirmInline
         action={action}
+        values={{ cohortId }}
         pending={save.kind === "saving"}
-        hidden={<input type="hidden" name="cohortId" value={cohortId} />}
-        label="Delete"
+        // Named, because the row it sits in is one of several and a bare
+        // "Delete" announces nothing about which.
+        label={`Delete ${cohortName}`}
+        question="Nobody is in it, so nothing moves."
         confirmLabel="Yes, delete"
-        question={`Delete ${cohortName}?`}
+        pendingLabel="Deleting…"
       />
       <SaveState state={save} />
     </div>
@@ -200,25 +189,23 @@ export function RemoveStudentButton({
 }) {
   const [, action, save] = useSaveState(deleteStudent);
 
-  if (hasSessions) {
-    return (
-      <span className="text-xs text-muted-fg">
-        Has logged sessions — can&apos;t be removed
-      </span>
-    );
-  }
-
   return (
     <div className="flex flex-col items-end gap-1">
-      <DangerButton
+      <ConfirmInline
         action={action}
+        values={{ studentProfileId }}
         pending={save.kind === "saving"}
-        hidden={
-          <input type="hidden" name="studentProfileId" value={studentProfileId} />
-        }
-        label="Remove"
+        label={`Remove ${label}`}
+        // The same sentence the student's own Corrections panel uses for the
+        // same action, so a reader who has met one recognises the other.
+        question="Removes the account, enrollment, and any allocations. This can't be undone."
         confirmLabel="Yes, remove"
-        question={`Remove ${label} and their allocations?`}
+        pendingLabel="Removing…"
+        // Disabled rather than absent: a row with no control at all reads as an
+        // oversight, and the reason is the interesting part.
+        disabledReason={
+          hasSessions ? "Has logged sessions — part of the ledger now." : undefined
+        }
       />
       <SaveState state={save} />
     </div>
@@ -233,24 +220,22 @@ export function DeleteProgramButton({
 }: {
   programId: string;
   programName: string;
-  /** Why it can't go yet, shown in place of the button. */
+  /** Why it can't go yet, shown beside the disabled button. */
   blockedReason?: string;
 }) {
   const [, action, save] = useSaveState(deleteProgram);
 
-  if (blockedReason) {
-    return <p className="text-sm text-muted-fg">{blockedReason}</p>;
-  }
-
   return (
     <div>
-      <DangerButton
+      <ConfirmInline
         action={action}
+        values={{ programId }}
         pending={save.kind === "saving"}
-        hidden={<input type="hidden" name="programId" value={programId} />}
         label={`Delete ${programName}`}
-        confirmLabel="Yes, delete it"
         question="This removes the program and its empty cohorts."
+        confirmLabel="Yes, delete it"
+        pendingLabel="Deleting…"
+        disabledReason={blockedReason}
       />
       <SaveState state={save} />
     </div>

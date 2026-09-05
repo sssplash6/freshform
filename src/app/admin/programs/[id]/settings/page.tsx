@@ -7,10 +7,10 @@ import {
   AssignMentorForm,
   DeleteCohortButton,
   DeleteProgramButton,
+  RemoveMentorButton,
   RemoveStudentButton,
   RenameProgramForm,
 } from "@/components/forms/program-settings-forms";
-import { RemoveAssignmentButton } from "@/components/forms/remove-assignment-button";
 import { ArrowLink } from "@/components/ui/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
@@ -188,7 +188,7 @@ export default async function AdminProgramSettingsPage({
                     <StatusChip severity="attention">No booking link</StatusChip>
                   )}
                 </div>
-                <RemoveAssignmentButton assignmentId={p.id} />
+                <RemoveMentorButton assignmentId={p.id} />
               </li>
             ))}
           </ul>

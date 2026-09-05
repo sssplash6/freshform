@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { InterviewResponse } from "@/components/forms/interview-response";
-import { InterviewRowActions } from "@/components/forms/interview-row-actions";
+import { MeetingRowActions } from "@/components/forms/meeting-forms";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -156,8 +156,8 @@ function MeetingRow({
       </div>
 
       {view === "mentor" && (
-        <InterviewRowActions
-          interview={{
+        <MeetingRowActions
+          meeting={{
             id: meeting.id,
             date: toDateInputValue(meeting.scheduledAt),
             time: meeting.hasTime ? toTimeInputValue(meeting.scheduledAt) : "",

@@ -1,4 +1,4 @@
-import { SessionRowActions } from "@/components/forms/session-row-actions";
+import { SessionRowActions } from "@/components/forms/session-forms";
 import { SessionsTable, toSessionEntries } from "@/components/session-row";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";

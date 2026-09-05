@@ -7,6 +7,7 @@ import {
   moveStudent,
   setStudentEmail,
 } from "@/lib/actions/students";
+import { ConfirmInline } from "@/components/ui/confirm-inline";
 import { Input } from "@/components/ui/field";
 import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { Section } from "@/components/ui/section";
@@ -41,7 +42,6 @@ export function StudentCorrections({
   const [, deleteAction, deleteSave] = useSaveState(deleteStudent);
   const deletePending = deleteSave.kind === "saving";
   const [programId, setProgramId] = useState(currentProgramId);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const cohorts = programs.find((p) => p.id === programId)?.cohorts ?? [];
 
   return (
@@ -119,45 +119,24 @@ export function StudentCorrections({
       <SaveState state={moveSave} />
 
       <div className="mt-4 border-t border-line pt-4">
-        <form action={deleteAction}>
-          <input type="hidden" name="studentProfileId" value={studentProfileId} />
-          {hasSessions ? (
-            <p className="text-xs text-muted-fg">
-              This student has logged sessions, so their record can&apos;t be
-              deleted — it&apos;s part of the hour ledger now.
-            </p>
-          ) : confirmingDelete ? (
-            <span className="rise-in flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-muted-fg">
-                Removes the account, enrollment, and any allocations. This
-                can&apos;t be undone.
-              </span>
-              <SubmitButton
-                variant="dangerSolid"
-                size="xs"
-                pendingText="Removing…"
-              >
-                Yes, remove them
-              </SubmitButton>
-              <button
-                type="button"
-                disabled={deletePending}
-                onClick={() => setConfirmingDelete(false)}
-                className="rounded-lg px-2.5 py-1.5 text-xs text-muted-fg transition-colors hover:bg-canvas"
-              >
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              className="rounded-lg border border-danger-line px-3 py-1.5 text-xs font-medium text-danger-ink transition-colors hover:bg-danger-soft"
-            >
-              Remove this student
-            </button>
-          )}
-        </form>
+        <ConfirmInline
+          action={deleteAction}
+          values={{ studentProfileId }}
+          pending={deletePending}
+          label="Remove this student"
+          question="Removes the account, enrollment, and any allocations. This can't be undone."
+          confirmLabel="Yes, remove them"
+          pendingLabel="Removing…"
+          // The refusal used to replace the control with a paragraph, so the
+          // panel's third section looked like prose rather than an action a
+          // reader could have taken. Disabled says both: it exists, and why
+          // this student is the exception.
+          disabledReason={
+            hasSessions
+              ? "Has logged sessions — part of the hour ledger now."
+              : undefined
+          }
+        />
         <SaveState state={deleteSave} />
       </div>
       </div>

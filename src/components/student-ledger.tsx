@@ -1,5 +1,5 @@
 import { AssignTaskForm } from "@/components/forms/assign-task-form";
-import { AssignmentRowActions } from "@/components/forms/assignment-row-actions";
+import { TaskRowActions } from "@/components/forms/hours-forms";
 import { TasksPanel, toTaskEntries } from "@/components/task-row";
 import { LedgerBoard } from "@/components/ledger-board";
 import type { ViewerContext } from "@/lib/status";
@@ -137,8 +137,8 @@ export function StudentLedger({
         renderActions={
           manage
             ? (task) => (
-                <AssignmentRowActions
-                  assignment={{
+                <TaskRowActions
+                  task={{
                     id: task.id,
                     purpose: task.purpose,
                     mentorId: task.mentor?.id ?? null,
