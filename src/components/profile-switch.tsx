@@ -106,7 +106,11 @@ export function ProfileSwitch({ active }: { active: Profile }) {
       role="group"
       aria-label="Switch profile"
       aria-keyshortcuts="Alt+M"
-      className="flex items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
+      // w-fit, not just flex: the sidebar stacks its header with flex-col, so a
+      // stretch child fills all 220px and the control reads as a wide empty
+      // trough with two words at one end. It should be the size of its two
+      // segments and no larger.
+      className="flex w-fit items-center gap-0.5 rounded-lg border border-line bg-canvas p-0.5"
     >
       <input type="hidden" name="path" value={pathname} />
       {ITEMS.map((it) =>
