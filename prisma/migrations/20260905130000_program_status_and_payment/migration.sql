@@ -18,6 +18,25 @@ ALTER TABLE "Program" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'ACTIVE';
 ALTER TABLE "Program" ADD COLUMN "archivedAt" DATETIME;
 ALTER TABLE "Program" ADD COLUMN "tracksPayment" BOOLEAN NOT NULL DEFAULT false;
 
--- The one program that bills per student today, named once, here, instead of
--- at four places in the application code forever.
-UPDATE "Program" SET "tracksPayment" = 1 WHERE "name" = 'Master''s Program';
+-- Which programs bill per student, decided from the DATA first and the name
+-- second.
+--
+-- The name is not trustworthy enough to be the only test on a live database:
+-- this migration runs against whatever the deployment actually holds, and a
+-- program renamed, or carrying a stray space, would silently come out with the
+-- money fields switched OFF — which is the exact failure this column exists to
+-- prevent, reintroduced by the migration that adds it.
+--
+-- So: any program that already has an allocation with an amount recorded bills
+-- per student. That is provable rather than assumed. The name match stays as a
+-- fallback for a program that bills but has not taken a payment yet, and it is
+-- trimmed and case-folded so the obvious drifts still hit.
+UPDATE "Program" SET "tracksPayment" = 1 WHERE "id" IN (
+  SELECT DISTINCT sp."programId"
+  FROM "HourAllocation" ha
+  JOIN "StudentProfile" sp ON sp."id" = ha."studentId"
+  WHERE ha."amountPaid" IS NOT NULL
+);
+
+UPDATE "Program" SET "tracksPayment" = 1
+WHERE lower(trim("name")) = lower('Master''s Program');
