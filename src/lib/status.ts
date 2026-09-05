@@ -1130,6 +1130,24 @@ export function rollUp(
  * "Nothing to do right now". `ALL_CLEAR` stays in the model for a caller that
  * genuinely wants an all-clear row in a list of rows.
  */
+/**
+ * A reader's dismissals, as the predicate that drops their rows.
+ *
+ * Keyed the way the table is — type plus the subject it is about — so that
+ * dismissing "Not in any program" for one mentor says nothing about the next
+ * mentor in the same state. A rolled-up row has no subject and dismisses the
+ * whole roll-up, which is the only thing it could mean.
+ */
+export type Dismissals = ReadonlySet<string>;
+
+export function dismissalKey(type: string, subjectId?: string | null): string {
+  return `${type}:${subjectId ?? ""}`;
+}
+
+export function notDismissed(dismissed: Dismissals) {
+  return (s: Status) => !dismissed.has(dismissalKey(s.type, s.subject?.id));
+}
+
 export function attentionList(
   list: Status[],
   v: ViewerContext,

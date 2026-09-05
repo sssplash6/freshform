@@ -4,6 +4,7 @@ import { ArrowRightIcon } from "@/components/icons";
 import { Section } from "@/components/ui/section";
 import { StatusChip } from "@/components/ui/status-chip";
 import { cn } from "@/lib/cn";
+import { DismissStatus } from "@/components/forms/dismiss-status";
 import { actionableCount, type Status } from "@/lib/status";
 
 /**
@@ -31,6 +32,7 @@ export function AttentionList({
   empty,
   /** A row's own action — Approve, an RSVP — keyed by status type. */
   renderAction,
+  dismissible = false,
   moreHref,
   moreLabel,
   className,
@@ -39,6 +41,15 @@ export function AttentionList({
   title?: string;
   empty?: React.ReactNode;
   renderAction?: (status: Status) => React.ReactNode;
+  /**
+   * Offer "don't show me this again" per row.
+   *
+   * For the inboxes, where a row that cannot resolve itself otherwise sits
+   * there forever. Not for a single entity's page, where the list is short,
+   * scoped to what you are looking at, and hiding a row would hide it from the
+   * one screen that explains it.
+   */
+  dismissible?: boolean;
   moreHref?: string;
   moreLabel?: string;
   className?: string;
@@ -78,6 +89,7 @@ export function AttentionList({
               key={`${s.type}-${s.subject?.id ?? i}`}
               status={s}
               action={renderAction?.(s)}
+              dismissible={dismissible}
             />
           ))}
         </ul>
@@ -97,9 +109,11 @@ export function AttentionList({
 function AttentionRow({
   status,
   action,
+  dismissible = false,
 }: {
   status: Status;
   action?: React.ReactNode;
+  dismissible?: boolean;
 }) {
   const { explanation, subject, program, href } = status;
 
@@ -122,7 +136,7 @@ function AttentionRow({
   );
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
+    <li className="group/row flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
       {href && !action ? (
         // The row is the target. `min-w-0` so the subject's truncate works;
         // without it the name sets the width and pushes the arrow off.
@@ -136,7 +150,18 @@ function AttentionRow({
       ) : (
         <span className={cn("min-w-0", action ? "" : "flex-1")}>{body}</span>
       )}
-      {action && <span className="flex shrink-0 items-center gap-2">{action}</span>}
+      {(action || dismissible) && (
+        <span className="flex shrink-0 items-center gap-2">
+          {action}
+          {dismissible && (
+            <DismissStatus
+              type={status.type}
+              subjectId={status.subject?.id}
+              label={status.label}
+            />
+          )}
+        </span>
+      )}
     </li>
   );
 }

@@ -29,6 +29,8 @@ import {
   studentStatuses,
   type Status,
   type ViewerContext,
+  dismissalKey,
+  notDismissed,
 } from "@/lib/status";
 import { bucketOf, daysAway } from "@/lib/when";
 
@@ -71,6 +73,14 @@ export default async function MentorHomePage({
   // One instant for the whole page, so two sections cannot disagree about what
   // "today" is — and so nothing reads the clock during a render.
   const viewer: ViewerContext = { audience: "mentor", userId: user.id, now: new Date() };
+  const dismissed = new Set(
+    (
+      await prisma.statusDismissal.findMany({
+        where: { userId: user.id },
+        select: { type: true, subjectId: true },
+      })
+    ).map((d) => dismissalKey(d.type, d.subjectId))
+  );
   const { program = "", students: studentRows } = await searchParams;
   // "Show me the rest of them", in the URL, so it survives a reload and can be
   // linked. The whole caseload on the page it is already on beats a second
@@ -183,8 +193,10 @@ export default async function MentorHomePage({
       ];
     }),
   ];
-    const attentionRows = attentionList(rows, viewer).length;
-  const needsYou = attentionList(rows, viewer, { limit: NEEDS_YOU_ROWS });
+  // Rows this reader has silenced come out before anything counts them.
+  const live = rows.filter(notDismissed(dismissed));
+  const attentionRows = attentionList(live, viewer).length;
+  const needsYou = attentionList(live, viewer, { limit: NEEDS_YOU_ROWS });
 
   // ------------------------------------------------------------------ Up next
   //
@@ -327,6 +339,7 @@ export default async function MentorHomePage({
       />
 
             <AttentionList
+        dismissible
         statuses={needsYou}
         empty="Nothing needs you."
         // A cap that discards row 11 in silence reads as a complete list.

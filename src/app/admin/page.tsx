@@ -14,6 +14,7 @@ import {
 import { adminScope, scopeProgramFilter } from "@/lib/authz";
 import { SessionRow, toSessionEntries } from "@/components/session-row";
 import { requireStaff } from "@/lib/dal";
+import { dismissalKey, notDismissed } from "@/lib/status";
 import { formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
@@ -98,6 +99,14 @@ export default async function AdminInboxPage() {
   // I happen to have fetched", which would go stale the moment a program is
   // created.
   const programIds = scopeProgramFilter(await adminScope(user));
+  const dismissed = new Set(
+    (
+      await prisma.statusDismissal.findMany({
+        where: { userId: user.id },
+        select: { type: true, subjectId: true },
+      })
+    ).map((d) => dismissalKey(d.type, d.subjectId))
+  );
   const inScope = programIds ? { in: [...programIds] } : undefined;
   const ofMine = inScope ? { student: { programId: inScope } } : {};
 
@@ -328,7 +337,9 @@ export default async function AdminInboxPage() {
   }
 
   const needsYou = attentionList(
-    flags.map((f) => f.status),
+    // Rows this reader has silenced are dropped before the roll-up, so hiding
+    // eight of ten does not leave a row saying "10 students…".
+    flags.map((f) => f.status).filter(notDismissed(dismissed)),
     viewer,
     { threshold: ROLL_UP_AT }
   );
@@ -430,6 +441,7 @@ export default async function AdminInboxPage() {
       />
 
       <AttentionList
+        dismissible
         statuses={shown}
         renderAction={(s) =>
           s.type === "STUDENT_PENDING_APPROVAL" && s.subject ? (
