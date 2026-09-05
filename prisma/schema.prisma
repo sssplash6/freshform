@@ -32,6 +32,10 @@ model User {
   name      String?
   role      String // ADMIN | DEPT_LEADER | SALES | MENTOR | STUDENT
   isMentor  Boolean  @default(false) // ADMINs with this flag can also act as a mentor and toggle into the mentor dashboard
+  // Runs the platform: sees every program without a grant, and is the only
+  // person who can write ProgramStaff rows. Everyone else who administers
+  // anything does it through the grants below, program by program.
+  platformAdmin Boolean @default(false)
   status    String   @default("ACTIVE") // ACTIVE | UNASSIGNED (freshly signed-up mentors) | PENDING (self-signed-up students awaiting approval)
   programId String? // set for DEPT_LEADER and SALES (their scope)
   createdAt DateTime @default(now())
@@ -55,6 +59,8 @@ model User {
   studentProfile    StudentProfile?       @relation("StudentUser")
   createdStudents   StudentProfile[]      @relation("CreatedBy")
   mentorAssignments MentorAssignment[]    @relation("MentorUser")
+  staffGrants       ProgramStaff[]        @relation("StaffGrantUser")
+  grantsMade        ProgramStaff[]        @relation("StaffGrantCreatedBy")
   mentorSessions    Session[]             @relation("SessionMentor")
   hourAllocations   HourAllocation[]      @relation("AllocationMentor")
   assignments       Assignment[]          @relation("AssignmentMentor")
@@ -90,10 +96,43 @@ model Program {
   id      String   @id @default(cuid())
   name    String   @unique
   cohorts Cohort[]
+  // Legacy DEPT_LEADER / SALES scope, emptied by the grants migration and
+  // dropped with User.programId. Read `staffGrants` instead.
   staff   User[]
 
   students          StudentProfile[]
   mentorAssignments MentorAssignment[]
+  staffGrants       ProgramStaff[]
+}
+
+// One person may administer one program. This table IS the permission model
+// for staff: `platformAdmin` sees everything, and everyone else sees exactly
+// the programs they hold a row for.
+//
+// Deliberately not a column on User: an admin routinely covers two programs
+// and not the third, which a single `programId` cannot say. It is also an
+// audit trail — who granted this, and when — because access that appears
+// without a name beside it is the kind nobody removes.
+//
+// Written from ONE place only (/settings/platform). The seed never writes
+// here: a grant list in config would be re-applied on every boot and would
+// quietly restore an admin the owner had just removed.
+model ProgramStaff {
+  id String @id @default(cuid())
+  userId    String
+  programId String
+  // ADMIN | LEADER | SALES — what this person may do inside this program.
+  // ADMIN is the only level the UI grants today; the other two are the old
+  // roles, kept as values so the grant can express them when they return.
+  role        String
+  createdById String? // the platform admin who made the grant; null for the migration backfill
+  createdAt   DateTime @default(now())
+
+  user      User    @relation("StaffGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("StaffGrantCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([userId, programId])
 }
 
 model Cohort {

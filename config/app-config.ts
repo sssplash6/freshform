@@ -42,93 +42,32 @@ export const PROGRAMS: { name: string; cohorts: string[] }[] = [
 ];
 
 /**
- * Staff preset list, seeded on every deploy (managing staff via the UI is
- * post-MVP). `program` must match a PROGRAMS entry name and is required for
- * DEPT_LEADER and SALES; it must be null for ADMIN. `isMentor: true` marks a
- * dual-role admin who can also act as a mentor (toggle into the mentor
- * dashboard, be assigned to programs).
+ * The bootstrap admin, and nothing else.
  *
- * This is the exclusive list of admins. Most are mentors too; admins who
- * simply don't mentor are left without the flag. Add DEPT_LEADER / SALES
- * entries with real emails when those people are known, then re-run the seed
- * (the seed only upserts, so it never removes anyone).
+ * Staff used to be a list here, seeded on every deploy. They are rows now:
+ * `User.platformAdmin` for the people who run the platform, and one
+ * `ProgramStaff` row per program somebody administers, both written from
+ * /settings/platform. That move had to take this list with it — `render.yaml`
+ * runs the seed on every boot, so any admin still named here would be
+ * re-created the next time the app restarted, however deliberately the owner
+ * had removed them.
+ *
+ * What is left is the account that can make the others. It is seeded so a
+ * fresh database is never locked out of its own platform page.
  */
 export const STAFF_SEED: {
   email: string;
   name: string;
-  role: "ADMIN" | "DEPT_LEADER" | "SALES";
-  program: string | null;
+  role: "ADMIN";
   isMentor?: boolean;
+  platformAdmin: true;
 }[] = [
   {
     email: "tech@freshman.academy",
     name: "Freshman Academy Admin",
     role: "ADMIN",
-    program: null,
     // Runs the platform and mentors students, so it carries both roles.
     isMentor: true,
-  },
-  {
-    email: "sharofiddin@freshman.academy",
-    name: "Sharofiddin",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "sega@freshman.academy",
-    name: "Sega",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "sanjar@freshman.academy",
-    name: "Sanjar",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "valera@freshman.academy",
-    name: "Valera",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "shahrizoda@freshman.academy",
-    name: "Shahrizoda",
-    role: "ADMIN",
-    program: null,
-    // Admin only — does not mentor students.
-  },
-  {
-    email: "khusanboy@freshman.academy",
-    name: "Khusanboy",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "nigel@freshman.academy",
-    name: "Nigel",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "assistant@freshman.academy",
-    name: "Assistant",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
-  },
-  {
-    email: "malika@freshman.academy",
-    name: "Malika",
-    role: "ADMIN",
-    program: null,
-    isMentor: true,
+    platformAdmin: true,
   },
 ];

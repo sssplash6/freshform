@@ -136,7 +136,7 @@ export async function deleteProgram(
     where: { id: programId },
     include: {
       cohorts: true,
-      _count: { select: { students: true, staff: true, mentorAssignments: true } },
+      _count: { select: { students: true, staffGrants: true, mentorAssignments: true } },
     },
   });
   if (!program) return { ok: false, error: "Program not found." };
@@ -147,10 +147,15 @@ export async function deleteProgram(
       error: `${program.name} still has ${program._count.students} student${program._count.students === 1 ? "" : "s"}. Remove or move them first.`,
     };
   }
-  if (program._count.staff > 0) {
+  // Grants outlive the program row unless somebody looks: deleting a program
+  // out from under them would leave people holding access to nothing, and the
+  // owner would never see it happen. Removing the access is a decision, so it
+  // is made on /settings/platform, not silently here.
+  if (program._count.staffGrants > 0) {
+    const n = program._count.staffGrants;
     return {
       ok: false,
-      error: `${program.name} is some staff member's scope. Move them to another program first.`,
+      error: `${n} ${n === 1 ? "person administers" : "people administer"} ${program.name}. Remove their access on Platform settings first.`,
     };
   }
 

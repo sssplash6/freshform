@@ -1,6 +1,9 @@
-// Idempotent seed: inserts the three programs, starter cohorts, and the
-// staff preset list from config/app-config.ts. Safe to re-run after editing
-// the config (uses upserts; never deletes).
+// Idempotent seed: inserts the three programs, their starter cohorts, and the
+// bootstrap platform admin from config/app-config.ts. Safe to re-run after
+// editing the config (uses upserts; never deletes).
+//
+// It deliberately writes NO program-access grants. Admin access lives in
+// ProgramStaff, which only /settings/platform writes — see the note there.
 //
 // Run with: npx prisma db seed
 
@@ -30,37 +33,30 @@ async function main() {
     console.log(`Program "${name}" (${cohorts.length} cohort(s))`);
   }
 
-  // Staff preset list
+  // The bootstrap admin. Everyone else who administers anything is a
+  // ProgramStaff row, written from /settings/platform and NEVER from here:
+  // this file runs on every boot (render.yaml), so a grant seeded from config
+  // would come back the next time the app restarted, undoing a removal the
+  // owner had just made.
   for (const staff of STAFF_SEED) {
-    if (staff.role !== "ADMIN" && !staff.program) {
-      throw new Error(
-        `Staff entry ${staff.email}: role ${staff.role} requires a program.`
-      );
-    }
-    const program = staff.program
-      ? await prisma.program.findUniqueOrThrow({ where: { name: staff.program } })
-      : null;
-
     const email = staff.email.toLowerCase();
     await prisma.user.upsert({
       where: { email },
       update: {
         role: staff.role,
-        programId: program?.id ?? null,
         isMentor: staff.isMentor ?? false,
+        platformAdmin: staff.platformAdmin,
       },
       create: {
         email,
         name: staff.name,
         role: staff.role,
         status: "ACTIVE",
-        programId: program?.id ?? null,
         isMentor: staff.isMentor ?? false,
+        platformAdmin: staff.platformAdmin,
       },
     });
-    console.log(
-      `Staff ${email} → ${staff.role}${staff.isMentor ? " + mentor" : ""}${staff.program ? ` (${staff.program})` : ""}`
-    );
+    console.log(`Platform admin ${email}${staff.isMentor ? " + mentor" : ""}`);
   }
 }
 

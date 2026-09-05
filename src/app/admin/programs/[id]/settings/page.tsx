@@ -44,7 +44,7 @@ export default async function AdminProgramSettingsPage({
           _count: { select: { students: true, mentorAssignments: true } },
         },
       },
-      _count: { select: { staff: true } },
+      _count: { select: { staffGrants: true } },
     },
   });
   if (!program) notFound();
@@ -82,8 +82,8 @@ export default async function AdminProgramSettingsPage({
   const blockedReason =
     students.length > 0
       ? `${program.name} still has ${students.length} student${students.length === 1 ? "" : "s"}. Remove or move them before the program can go.`
-      : program._count.staff > 0
-        ? "A staff account is still scoped to this program. Move them first."
+      : program._count.staffGrants > 0
+        ? "Someone still administers this program. Remove their access on Platform settings first."
         : undefined;
 
   return (
