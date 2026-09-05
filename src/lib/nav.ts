@@ -137,7 +137,7 @@ async function staffNav(viewer: User, inbox?: number): Promise<NavItem[]> {
 function mentorNav(inbox?: number): NavItem[] {
   return [
     { href: "/mentor", label: "Inbox", count: inbox },
-    { href: "/mentor/sessions", label: "Sessions" },
+    { href: "/sessions", label: "Sessions" },
     { href: "/feedback", label: "Feedback" },
   ];
 }

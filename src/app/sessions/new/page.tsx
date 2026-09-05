@@ -84,7 +84,7 @@ export default async function LogSessionPage({
           students={students}
           mode="page"
           draft={draft}
-                    correctBase="/mentor/sessions#session-"
+                    correctBase="/sessions#session-"
           againHref="/sessions/new"
         />
       )}

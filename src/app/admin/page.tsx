@@ -437,7 +437,7 @@ export default async function AdminInboxPage() {
           ) : null
         }
         {...(spilled > 0
-          ? { moreHref: "/admin/students", moreLabel: `${spilled} more` }
+          ? { moreHref: "/students", moreLabel: `${spilled} more` }
           : {})}
       />
 
@@ -501,7 +501,7 @@ export default async function AdminInboxPage() {
       {recent.length > 0 && (
         <Section title="Recent">
           <ul className="divide-y divide-line">
-            {toSessionEntries(recent, { studentBase: "/admin/students" }).map(
+            {toSessionEntries(recent, { studentBase: "/students" }).map(
               (session, i) => (
                 <SessionRow
                   key={session.id}

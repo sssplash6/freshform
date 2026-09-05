@@ -335,13 +335,11 @@ export default async function MentorHomePage({
           : {})}
       />
 
-            {/* No "see all" link yet on purpose: this section is what is SCHEDULED,
-          and /mentor/sessions is a log of what was delivered. Pointing one at
-          the other is worse than pointing nowhere. `/sessions?view=scheduled`
-          arrives in Phase 6. */}
       <Timeline
         entries={entries}
         now={viewer.now}
+        moreHref="/sessions?view=scheduled"
+        moreLabel="All scheduled"
         empty="Nothing scheduled. Meetings are scheduled from a student's page."
       />
 
@@ -363,13 +361,14 @@ export default async function MentorHomePage({
                 ]}
               />
             )}
-            {/* Unfolds the rest of the caseload HERE. It used to point at
-                /mentor/sessions, which is a log of hours delivered: a mentor
-                asking to see all twelve of their students was handed a filtered
-                table of their own sessions and no student list at all. The
-                product's one students list arrives at /students in phase 4
-                (REDESIGN.md §6.8, "Mine" on by default in the mentor lens) and
-                this link moves there with it. */}
+            {/* Unfolds the rest of the caseload HERE rather than navigating.
+                It used to point at /mentor/sessions — a log of hours delivered
+                — so a mentor asking to see all twelve of their students was
+                handed a filtered table of their own sessions and no student
+                list at all. /students now exists with "Mine" on by default,
+                and the header's own link goes there; this one stays in place,
+                because opening the rest of a list you are reading should not
+                cost you the page. */}
             {inView.length > CASELOAD_ROWS &&
               (showAllStudents ? (
                 <Link
