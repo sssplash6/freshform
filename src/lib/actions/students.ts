@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { assertProgramScope } from "@/lib/authz";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { notify, notificationHref } from "@/lib/notify";
@@ -28,8 +29,6 @@ import {
 import { emailConfigured } from "@/lib/email/send";
 import { sendWelcomeEmails, welcomeMail } from "@/lib/email/welcome";
 import type { Cohort, Program } from "@/generated/prisma/client";
-
-const STAFF_ROLES: string[] = [ROLES.ADMIN, ROLES.DEPT_LEADER, ROLES.SALES];
 
 /** "Program" or "Program / Cohort" display label. */
 function enrollmentLabel(programName: string, cohortName?: string | null) {
@@ -84,11 +83,11 @@ async function resolveEnrollment(
 
 /**
  * Register a LIST of student emails into a program (+ cohort where the
- * program has them), skipping the self-signup approval queue. Admin may
- * create anywhere; Dept Leader / Sales only inside their own program. Each
- * student confirms their full name and Telegram username on first sign-in;
- * hours are NOT granted here — an admin allocates them per mentor afterwards.
- * An optional student-folder link per row is stored for their mentors to open.
+ * program has them), skipping the self-signup approval queue. Whoever
+ * administers the program may add students to it. Each student confirms their
+ * full name and Telegram username on first sign-in; hours are NOT granted
+ * here — an admin allocates them per mentor afterwards. An optional
+ * student-folder link per row is stored for their mentors to open.
  * Already-registered and malformed entries are skipped and reported. Each
  * student created here is emailed a welcome with a sign-in link — staff
  * registration is the one door into a program the student can't see happen.
@@ -98,9 +97,16 @@ export async function createStudents(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || !STAFF_ROLES.includes(actor.role)) {
-    return { ok: false, error: "You aren't allowed to create students." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
+
+  // The program these rows land in is what decides who may add them, so the
+  // enrollment is resolved before any of the rest of the form is read.
+  const enrollment = await resolveEnrollment(formData);
+  if ("error" in enrollment) return { ok: false, error: enrollment.error };
+  const { program, cohort } = enrollment;
+
+  const denied = await assertProgramScope(actor, program.id);
+  if (denied) return denied;
 
   // One (email, name, folder link) triple per row, index-aligned with the
   // emails. The name is required: every list, chip and log in the app reads
@@ -133,17 +139,6 @@ export async function createStudents(
     .filter((r) => EMAIL_RE.test(r.email) && !r.name)
     .map((r) => `${r.email} (no full name)`);
   const valid = withFolders.filter((r) => EMAIL_RE.test(r.email) && r.name);
-
-  const enrollment = await resolveEnrollment(formData);
-  if ("error" in enrollment) return { ok: false, error: enrollment.error };
-  const { program, cohort } = enrollment;
-
-  if (actor.role !== ROLES.ADMIN && program.id !== actor.programId) {
-    return {
-      ok: false,
-      error: "You can only create students in your own program.",
-    };
-  }
 
   const existing = await prisma.user.findMany({
     where: { email: { in: valid.map((r) => r.email) } },
@@ -214,18 +209,16 @@ export async function createStudents(
 
 /**
  * Attach, replace, or clear a student's folder link after registration — for
- * students added before a folder existed, or when it moves. Same
- * permissions as creating the student: admin anywhere, Dept Leader / Sales
- * only within their own program. Submitting an empty field removes the link.
+ * students added before a folder existed, or when it moves. Same permissions
+ * as creating the student: whoever administers their program. Submitting an
+ * empty field removes the link.
  */
 export async function setStudentFolder(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || !STAFF_ROLES.includes(actor.role)) {
-    return { ok: false, error: "You aren't allowed to edit student folders." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -234,12 +227,8 @@ export async function setStudentFolder(
   });
   if (!profile) return { ok: false, error: "Student not found." };
 
-  if (actor.role !== ROLES.ADMIN && profile.programId !== actor.programId) {
-    return {
-      ok: false,
-      error: "You can only edit students in your own program.",
-    };
-  }
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
 
   const link = parseLinkField(formData.get("folderUrl"), "The folder link");
   if ("error" in link) return { ok: false, error: link.error };
@@ -381,9 +370,7 @@ export async function setStudentEmail(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change a student's email." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -391,6 +378,15 @@ export async function setStudentEmail(
     include: { user: true, program: true, cohort: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  // Changing a login email hands somebody a working sign-in as that person,
+  // which is why the same edit on a MENTOR is platform-admin-only: a mentor may
+  // hold grants of their own, so taking their account can take programs with
+  // it. A student holds none, so this edit reaches no further than the program
+  // the editor already administers — and replacing an imported placeholder with
+  // a real address is that program's own work to finish.
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
 
   const email = normalizeEmail(formData.get("email"));
   if (!EMAIL_RE.test(email)) {
@@ -447,9 +443,7 @@ export async function moveStudent(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can move students." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -458,9 +452,19 @@ export async function moveStudent(
   });
   if (!profile) return { ok: false, error: "Student not found." };
 
+  // A move writes to two programs, so BOTH are gated. Gating only the
+  // destination would let an admin of one program pull a student out of a
+  // program they have no part in; gating only the source would let them push a
+  // student into somebody else's.
+  const deniedSource = await assertProgramScope(actor, profile.programId);
+  if (deniedSource) return deniedSource;
+
   const enrollment = await resolveEnrollment(formData);
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
   const { program, cohort } = enrollment;
+
+  const deniedTarget = await assertProgramScope(actor, program.id);
+  if (deniedTarget) return deniedTarget;
 
   if (
     program.id === profile.programId &&
@@ -503,9 +507,7 @@ export async function deleteStudent(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can remove students." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -513,6 +515,10 @@ export async function deleteStudent(
     include: { user: true, _count: { select: { sessions: true } } },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
+
   if (profile._count.sessions > 0) {
     return {
       ok: false,
@@ -549,9 +555,7 @@ export async function approveStudent(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can approve students." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -559,6 +563,10 @@ export async function approveStudent(
     include: { user: true, program: true, cohort: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
+
   if (profile.user.status !== USER_STATUS.PENDING) {
     return { ok: true, message: "This student is already approved." };
   }
@@ -604,9 +612,7 @@ export async function rejectStudent(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can reject students." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   const profile = await prisma.studentProfile.findUnique({
@@ -614,6 +620,10 @@ export async function rejectStudent(
     include: { user: true, _count: { select: { sessions: true } } },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
+
   if (profile.user.status !== USER_STATUS.PENDING) {
     return { ok: false, error: "Only pending students can be rejected." };
   }
@@ -657,9 +667,7 @@ export async function setMentorAllocation(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can change hour allocations." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   // Empty = the unassigned pool: hours granted before a mentor is chosen.
@@ -686,6 +694,9 @@ export async function setMentorAllocation(
     include: { user: true, program: true },
   });
   if (!profile) return { ok: false, error: "Student not found." };
+
+  const denied = await assertProgramScope(actor, profile.programId);
+  if (denied) return denied;
 
   // Master's Program allocations also record how much the student paid.
   const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
@@ -950,9 +961,7 @@ export async function removeMentorAllocation(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can remove a mentor's hours." };
-  }
+  if (!actor) return { ok: false, error: "Sign in to do that." };
 
   const profileId = String(formData.get("studentProfileId") ?? "");
   // Empty = the unassigned pool, which is removable the same way.
@@ -975,6 +984,11 @@ export async function removeMentorAllocation(
         : "This student has no unassigned time.",
     };
   }
+
+  // The student's program is what decides this, and the allocation is the way
+  // to it: the mentor may work in several.
+  const denied = await assertProgramScope(actor, allocation.student.programId);
+  if (denied) return denied;
 
   // The pool has no sessions by construction — only mentors log them.
   if (mentorId) {

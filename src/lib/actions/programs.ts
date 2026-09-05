@@ -3,24 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { assertPlatformAdmin, assertProgramScope } from "@/lib/authz";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
 import type { ActionState } from "@/lib/actions/shared";
 
 /**
- * Admin opens a new program. Programs created here live alongside the seeded
- * ones (the seed only upserts by name, it never deletes). Students and
- * mentors attach to the program directly until it's given cohorts.
+ * A platform admin opens a new program. Programs created here live alongside
+ * the seeded ones (the seed only upserts by name, it never deletes). Students
+ * and mentors attach to the program directly until it's given cohorts.
  */
 export async function createProgram(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can create programs." };
-  }
+  // A program is the unit access is granted in, and a new one arrives with
+  // nobody administering it — so making one belongs to the people who can hand
+  // that access out, not to an admin of some other program.
+  const denied = assertPlatformAdmin(actor);
+  if (denied) return denied;
 
   const name = String(formData.get("name") ?? "").trim();
   if (name.length < 3) {
@@ -48,11 +50,13 @@ export async function renameProgram(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can rename programs." };
-  }
 
   const programId = String(formData.get("programId") ?? "");
+  // Gated before the row is read, so a program outside the scope answers the
+  // same whether or not the id names a real one.
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
   const program = await prisma.program.findUnique({ where: { id: programId } });
   if (!program) return { ok: false, error: "Program not found." };
 
@@ -85,9 +89,6 @@ export async function deleteCohort(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can delete cohorts." };
-  }
 
   const cohortId = String(formData.get("cohortId") ?? "");
   const cohort = await prisma.cohort.findUnique({
@@ -97,6 +98,11 @@ export async function deleteCohort(
     },
   });
   if (!cohort) return { ok: false, error: "Cohort not found." };
+
+  // A cohort is part of one program's setup, so the row names the program the
+  // gate asks about — the form never gets to say.
+  const denied = await assertProgramScope(actor, cohort.programId);
+  if (denied) return denied;
 
   if (cohort._count.students > 0) {
     return {
@@ -127,11 +133,11 @@ export async function deleteProgram(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can delete programs." };
-  }
 
   const programId = String(formData.get("programId") ?? "");
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
   const program = await prisma.program.findUnique({
     where: { id: programId },
     include: {
@@ -172,20 +178,20 @@ export async function deleteProgram(
 }
 
 /**
- * Admin adds a cohort to a program. The first cohort switches the program to
- * cohort-based enrollment for NEW students/assignments; existing program-wide
- * members are unaffected.
+ * An admin of the program adds a cohort to it. The first cohort switches the
+ * program to cohort-based enrollment for NEW students/assignments; existing
+ * program-wide members are unaffected.
  */
 export async function createCohort(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
-    return { ok: false, error: "Only admins can create cohorts." };
-  }
 
   const programId = String(formData.get("programId") ?? "");
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
   const program = await prisma.program.findUnique({ where: { id: programId } });
   if (!program) return { ok: false, error: "Program not found." };
 
