@@ -40,8 +40,6 @@ type Move = { from: string; to: string; why: string };
  * The list is kept here, unlisted, so the commit that moves each route can see
  * what it owes. Waiting on the commit that builds the destination:
  *
- *   /admin/students/:id      → /students/:id                (the workspace; seed goes)
- *   /mentor/students/:id     → /students/:id                (same commit)
  *   /admin/mentors           → /mentors                     (the list)
  *   /admin/mentors/:id       → /mentors/:id                 (the three views; today
  *                                                            /mentors/:id is the profile
@@ -63,6 +61,16 @@ type Move = { from: string; to: string; why: string };
  * deletion is a listed commit, not a someday.
  */
 const MOVED: Move[] = [
+  {
+    from: "/admin/students/:id",
+    to: "/students/:id",
+    why: "One student, one address. The two pages disagreed about the same ledger.",
+  },
+  {
+    from: "/mentor/students/:id",
+    to: "/students/:id",
+    why: "The mentor's half of that same page; the workspace renders the union of the viewer's rights.",
+  },
   {
     from: "/admin/students",
     to: "/students",
