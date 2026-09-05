@@ -9,8 +9,13 @@ import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SettingsRow } from "@/components/ui/settings-row";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { assignMentorToProgram, removeAssignment } from "@/lib/actions/mentors";
-import { deleteCohort, deleteProgram, renameProgram } from "@/lib/actions/programs";
-import { deleteStudent } from "@/lib/actions/students";
+import {
+  archiveProgram,
+  deleteCohort,
+  deleteProgram,
+  renameProgram,
+  setProgramTracksPayment,
+} from "@/lib/actions/programs";
 
 const labelClass =
   "block text-xs font-semibold uppercase tracking-[0.06em] text-muted-fg";
@@ -175,37 +180,81 @@ export function DeleteCohortButton({
 }
 
 /**
- * Remove a student from the program entirely. Blocked once they have logged
- * sessions — at that point the record is part of the hour ledger, not a typo.
+ * Does allocating time here also ask what the student paid?
+ *
+ * A button that names the change rather than a switch that needs a legend
+ * beside it: the row already says what the setting is, so the control only has
+ * to say which way it is about to move. One 44px target, one write, and the
+ * state it is in now is a sentence rather than a position.
  */
-export function RemoveStudentButton({
-  studentProfileId,
-  label,
-  hasSessions,
+export function TrackPaymentToggle({
+  programId,
+  tracksPayment,
 }: {
-  studentProfileId: string;
-  label: string;
-  hasSessions: boolean;
+  programId: string;
+  tracksPayment: boolean;
 }) {
-  const [, action, save] = useSaveState(deleteStudent);
+  const [, action, save] = useSaveState(setProgramTracksPayment);
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <SettingsRow
+      label="Track amount paid per allocation"
+      description={
+        tracksPayment
+          ? "Allocating time here asks for the amount, and the program's total carries it."
+          : "Allocating time here asks for hours only."
+      }
+      control={
+        <form action={action}>
+          <input type="hidden" name="programId" value={programId} />
+          <input
+            type="hidden"
+            name="tracksPayment"
+            value={tracksPayment ? "off" : "on"}
+          />
+          <SubmitButton variant="secondary" pendingText="Saving…">
+            {tracksPayment ? "Stop asking for amounts" : "Ask for amounts"}
+          </SubmitButton>
+        </form>
+      }
+      state={<SaveState state={save} />}
+    />
+  );
+}
+
+/**
+ * Archive the program, or put it back.
+ *
+ * The non-destructive end of the same life-cycle `DeleteProgramButton` sits at,
+ * which is why they share a page and a shape. Archiving is what a program that
+ * RAN does: deletion is refused while it holds a single student, and a finished
+ * cohort's ledger is exactly what nobody wants deleted.
+ */
+export function ArchiveProgramButton({
+  programId,
+  programName,
+  archived,
+}: {
+  programId: string;
+  programName: string;
+  archived: boolean;
+}) {
+  const [, action, save] = useSaveState(archiveProgram);
+
+  return (
+    <div>
       <ConfirmInline
         action={action}
-        values={{ studentProfileId }}
+        values={{ programId, restore: archived ? "true" : "false" }}
         pending={save.kind === "saving"}
-        label={`Remove ${label}`}
-        // The same sentence the student's own Corrections panel uses for the
-        // same action, so a reader who has met one recognises the other.
-        question="Removes the account, enrollment, and any allocations. This can't be undone."
-        confirmLabel="Yes, remove"
-        pendingLabel="Removing…"
-        // Disabled rather than absent: a row with no control at all reads as an
-        // oversight, and the reason is the interesting part.
-        disabledReason={
-          hasSessions ? "Has logged sessions — part of the ledger now." : undefined
+        label={archived ? `Reopen ${programName}` : `Archive ${programName}`}
+        question={
+          archived
+            ? "It comes back to the pickers and the lists it left."
+            : "It leaves the pickers and the lists. Every session and allocation stays where it is."
         }
+        confirmLabel={archived ? "Yes, reopen it" : "Yes, archive it"}
+        pendingLabel={archived ? "Reopening…" : "Archiving…"}
       />
       <SaveState state={save} />
     </div>

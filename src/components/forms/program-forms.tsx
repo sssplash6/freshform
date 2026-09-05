@@ -1,94 +1,72 @@
 "use client";
 
-import { useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Input } from "@/components/ui/field";
 import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createCohort, createProgram } from "@/lib/actions/programs";
 
-/** Inline "open a new program" control on the admin dashboard. */
+/**
+ * The two "open something new" folds.
+ *
+ * Both were hand-rolled `useState` toggles in this one file, and in two
+ * different shapes: a secondary `Button` that swapped itself for a form, and a
+ * bare "+ Add a cohort to this program" text link that did the same thing
+ * without a chevron, a focus ring or a name a screen reader could announce.
+ * `ui/disclosure.tsx` exists because of these two — see the list in its header
+ * — and it brings the thing neither had: a closed `<details>` still expands
+ * when a browser finds text inside it.
+ */
+
+/** Open a new program. Platform admins only, gated in the action (§8.3). */
 export function CreateProgramForm() {
-  const [open, setOpen] = useState(false);
   const [, action, save] = useSaveState(createProgram);
 
-  if (!open) {
-    return (
-      <div>
-        <Button variant="secondary" onClick={() => setOpen(true)}>
-          New program
-        </Button>
-        <SaveState state={save} />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <form action={action} className="rise-in flex flex-wrap items-center gap-2">
+    <Disclosure
+      label="New program"
+      hint="It starts flat and empty; grant its admins access afterwards."
+    >
+      <form action={action} className="flex flex-wrap items-center gap-2">
         <div className="w-56">
           <Input
             name="name"
             type="text"
             required
-            autoFocus
+            minLength={3}
+            maxLength={80}
             placeholder="Program name"
           />
         </div>
         <SubmitButton pendingText="Creating…">Create program</SubmitButton>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
       </form>
       <SaveState state={save} />
-    </div>
+    </Disclosure>
   );
 }
 
 /**
- * Collapsed "add a cohort" control on a program's page. Programs are flat by
- * default, so no input is shown until the admin explicitly reaches for
- * cohorts.
+ * Add a cohort to a program.
+ *
+ * Folded because programs are FLAT by default and most stay that way: the first
+ * cohort changes how new enrollments work, which is a decision, not a field.
  */
 export function CreateCohortForm({ programId }: { programId: string }) {
-  const [open, setOpen] = useState(false);
   const [, action, save] = useSaveState(createCohort);
 
-  if (!open) {
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="text-xs font-medium text-muted-fg transition-colors hover:text-ink"
-        >
-          + Add a cohort to this program
-        </button>
-        <SaveState state={save} />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <form action={action} className="rise-in flex flex-wrap items-center gap-2">
+    <Disclosure
+      label="Add a cohort"
+      hint="The first one switches NEW enrollments to cohorts; people already here stay put."
+    >
+      <form action={action} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="programId" value={programId} />
         <div className="w-56">
-          <Input
-            name="name"
-            type="text"
-            required
-            autoFocus
-            placeholder="e.g. Cohort 1"
-          />
+          <Input name="name" type="text" required placeholder="e.g. Cohort 1" />
         </div>
         <SubmitButton pendingText="Adding…">Add cohort</SubmitButton>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
       </form>
       <SaveState state={save} />
-    </div>
+    </Disclosure>
   );
 }

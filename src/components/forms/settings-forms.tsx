@@ -2,7 +2,10 @@
 
 import { useId, useState } from "react";
 
-import { setWeeklyDigest } from "@/lib/actions/email-prefs";
+import {
+  setNotificationPreference,
+  setWeeklyDigest,
+} from "@/lib/actions/email-prefs";
 import { setOwnTelegram } from "@/lib/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -99,5 +102,80 @@ export function WeeklyDigestForm({
         </form>
       }
     />
+  );
+}
+
+/**
+ * The per-category matrix: what reaches you in the app, and what by email.
+ *
+ * Six rows, not seventeen. A person deciding what they want to hear about is
+ * answering "do I care about meetings", not "do I care about INTERVIEW_MOVED"
+ * — and a preference screen with a row per notification type is a preference
+ * screen nobody finishes reading.
+ *
+ * Each row saves itself. The default — in the app, not by email — is what
+ * everybody had before this existed, and setting a row back to it deletes the
+ * row rather than storing a no-op.
+ */
+export function NotificationMatrix({
+  categories,
+}: {
+  categories: {
+    key: string;
+    label: string;
+    inApp: boolean;
+    email: boolean;
+  }[];
+}) {
+  return (
+    <div className="divide-y divide-line">
+      {categories.map((c) => (
+        <CategoryRow key={c.key} category={c} />
+      ))}
+    </div>
+  );
+}
+
+function CategoryRow({
+  category,
+}: {
+  category: { key: string; label: string; inApp: boolean; email: boolean };
+}) {
+  const [inApp, setInApp] = useState(category.inApp);
+  const [email, setEmail] = useState(category.email);
+
+  return (
+    <form
+      action={setNotificationPreference}
+      className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-2"
+    >
+      <input type="hidden" name="category" value={category.key} />
+      <span className="text-sm font-medium text-ink">{category.label}</span>
+      <div className="flex items-center gap-4">
+        <label className="flex min-h-11 items-center gap-2 text-sm text-muted-fg">
+          <input
+            type="checkbox"
+            name="inApp"
+            checked={inApp}
+            onChange={(e) => setInApp(e.target.checked)}
+            className="h-4 w-4 accent-brand"
+          />
+          In the app
+        </label>
+        <label className="flex min-h-11 items-center gap-2 text-sm text-muted-fg">
+          <input
+            type="checkbox"
+            name="email"
+            checked={email}
+            onChange={(e) => setEmail(e.target.checked)}
+            className="h-4 w-4 accent-brand"
+          />
+          Email
+        </label>
+        <Button type="submit" variant="secondary" size="sm">
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }
