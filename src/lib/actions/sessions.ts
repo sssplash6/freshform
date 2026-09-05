@@ -35,7 +35,7 @@ import {
   formatMinutes,
 } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
-import { adminIds, notify, notificationHref } from "@/lib/notify";
+import { notify, notificationHref, staffIdsFor } from "@/lib/notify";
 import {
   parseDateField,
   parseMinutesField,
@@ -353,7 +353,7 @@ export async function logSession(
     );
   }
 
-  const staff = await adminIds();
+  const staff = await staffIdsFor(profile.programId);
   const mentorLabel = mentor.name ?? mentor.email;
   const studentName = profile.user.name ?? profile.user.email;
 
@@ -726,7 +726,7 @@ export async function editSession(
       : kind === TIME_KIND.EXTRA
         ? " These hours are now extra, on top of the plan — they no longer count against the allocation."
         : " These hours now count against the allocation.";
-  const staff = await adminIds();
+  const staff = await staffIdsFor(session.student.programId);
   const actorLabel = actor.name ?? actor.email;
   const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
@@ -798,7 +798,7 @@ export async function voidSession(
   }
   const { actor, session } = auth;
 
-  const staff = await adminIds();
+  const staff = await staffIdsFor(session.student.programId);
   const actorLabel = actor.name ?? actor.email;
   const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;
@@ -874,7 +874,7 @@ export async function deleteSession(
     };
   }
 
-  const staff = await adminIds();
+  const staff = await staffIdsFor(session.student.programId);
   const actorLabel = actor.name ?? actor.email;
   const mentorLabel = session.mentor.name ?? session.mentor.email;
   const studentName = session.student.user.name ?? session.student.user.email;

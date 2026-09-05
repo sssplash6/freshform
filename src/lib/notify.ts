@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { ROLES, type NotificationType } from "@/lib/constants";
+import { type NotificationType } from "@/lib/constants";
 
 /**
  * The one way notifications get written. Producers used to call
@@ -62,19 +62,30 @@ export async function notify(db: Writer, notice: Notice): Promise<void> {
 }
 
 /**
- * Every admin, for events the whole staff should see (a session logged, work
- * finished). Kept as a query rather than a cached list so an admin added today
- * starts receiving notices immediately.
+ * The staff who should hear about something that happened in ONE program: the
+ * people who administer it, plus the platform admins.
  *
- * Dual-role admins are included: they are admins first, and an admin-mentor
- * logging their own session is filtered out by `notify` as the actor anyway.
+ * This replaced `adminIds()`, which sent every session in every program to all
+ * ten admins — nine of whom are mentors, and most of whom have nothing to do
+ * with the program it happened in. A notification that always arrives is one
+ * nobody reads, and it was the loudest thing in the app.
+ *
+ * A query rather than a cached list, so somebody granted a program this
+ * morning starts hearing about it this afternoon. Dual-role admins are
+ * included: an admin-mentor logging their own session is filtered out by
+ * `notify` as the actor anyway.
  */
-export async function adminIds(): Promise<string[]> {
-  const admins = await prisma.user.findMany({
-    where: { role: ROLES.ADMIN },
+export async function staffIdsFor(programId: string): Promise<string[]> {
+  const staff = await prisma.user.findMany({
+    where: {
+      OR: [
+        { platformAdmin: true },
+        { staffGrants: { some: { programId, role: "ADMIN" } } },
+      ],
+    },
     select: { id: true },
   });
-  return admins.map((a) => a.id);
+  return staff.map((s) => s.id);
 }
 
 /**

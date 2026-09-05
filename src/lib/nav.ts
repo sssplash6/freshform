@@ -17,14 +17,17 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/admin/mentors", label: "Mentors" },
     { href: "/admin/feedback", label: "Feedback" },
   ],
+  // The two scoped roles read the admin pages now, narrowed by their grants
+  // rather than by a route of their own. Their old sections were the same three
+  // lists with a different prefix and no way to be given a second program.
   [ROLES.DEPT_LEADER]: [
-    { href: "/leader", label: "Dashboard" },
-    { href: "/leader/students", label: "Students" },
-    { href: "/leader/feedback", label: "Feedback" },
+    { href: "/admin", label: "Dashboard" },
+    { href: "/admin/students", label: "Students" },
+    { href: "/admin/feedback", label: "Feedback" },
   ],
   [ROLES.SALES]: [
-    { href: "/sales", label: "Dashboard" },
-    { href: "/sales/students", label: "Students" },
+    { href: "/admin", label: "Dashboard" },
+    { href: "/admin/students", label: "Students" },
   ],
   [ROLES.MENTOR]: [
     { href: "/mentor", label: "My students" },

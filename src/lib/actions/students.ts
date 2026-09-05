@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { assertProgramScope } from "@/lib/authz";
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { notify, notificationHref } from "@/lib/notify";
+import { notify, notificationHref, staffIdsFor } from "@/lib/notify";
 import {
   ASSIGNMENT_PROGRESS,
   canActAsMentor,
@@ -321,10 +321,9 @@ export async function completeOnboarding(
   if ("error" in enrollment) return { ok: false, error: enrollment.error };
   const { program, cohort } = enrollment;
 
-  const admins = await prisma.user.findMany({
-    where: { role: ROLES.ADMIN },
-    select: { id: true },
-  });
+  // The people who administer the program this student just picked — not
+  // every admin in the school, most of whom cannot approve them anyway.
+  const staff = await staffIdsFor(program.id);
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
@@ -341,7 +340,7 @@ export async function completeOnboarding(
       },
     });
     await notify(tx, {
-      to: admins.map((admin) => admin.id),
+      to: staff,
       type: NOTIFICATION_TYPES.STUDENT_SIGNUP,
       actorId: actor.id,
       // Straight at the approval screen: a signup that needs approving should

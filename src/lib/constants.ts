@@ -345,8 +345,10 @@ export function canActAsMentor(user: {
 // Home route for each role after sign-in.
 export const ROLE_HOME: Record<Role, string> = {
   ADMIN: "/admin",
-  DEPT_LEADER: "/leader",
-  SALES: "/sales",
+  // Scoped staff land on the same inbox as an admin; what they see there is
+  // decided by their grants, not by which route they were sent to.
+  DEPT_LEADER: "/admin",
+  SALES: "/admin",
   MENTOR: "/mentor",
   STUDENT: "/student",
 };

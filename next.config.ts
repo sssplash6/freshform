@@ -56,11 +56,6 @@ type Move = { from: string; to: string; why: string };
  *   /mentor/sessions         → /sessions
  *   /mentor/onboarding       → /onboarding
  *   /student/onboarding      → /onboarding
- *   /leader, /leader/students, /leader/feedback, /sales, /sales/students
- *                            → /admin, /students, /feedback, scoped by grant
- *                              (these wait on the permission model, not on a
- *                              page: sending a leader to /admin today bounces
- *                              them off the role gate straight back to /leader)
  *
  * `:id` matches ONE segment, so `/admin/programs/:id` will not swallow
  * `/admin/programs/x/settings` — each nested route needs its own row.
@@ -68,7 +63,34 @@ type Move = { from: string; to: string; why: string };
  * The whole map is deleted one released version after the last row lands; the
  * deletion is a listed commit, not a someday.
  */
-const MOVED: Move[] = [];
+const MOVED: Move[] = [
+  // The two scoped roles had their own copies of three lists. What made them
+  // separate trees was that scope lived in `User.programId` — one program, set
+  // by a seed — so a leader could not be given a second one and an admin could
+  // not be given only one. Scope is a grant now, the admin pages narrow to it,
+  // and the copies had nothing left to be.
+  {
+    from: "/leader",
+    to: "/admin",
+    why: "DEPT_LEADER's dashboard; the inbox narrows to their grants.",
+  },
+  {
+    from: "/leader/students",
+    to: "/admin/students",
+    why: "DEPT_LEADER's roster; the students list narrows to their grants.",
+  },
+  {
+    from: "/leader/feedback",
+    to: "/admin/feedback",
+    why: "DEPT_LEADER's ratings; the feedback page narrows to their grants.",
+  },
+  { from: "/sales", to: "/admin", why: "SALES' dashboard, same as above." },
+  {
+    from: "/sales/students",
+    to: "/admin/students",
+    why: "SALES' roster, same as above.",
+  },
+];
 
 const nextConfig: NextConfig = {
   // A stray lockfile exists in the home directory; pin the workspace root.

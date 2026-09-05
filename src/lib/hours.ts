@@ -186,8 +186,8 @@ export async function remainingWithMentor(
  * One program's — or one cohort's, or the whole platform's — hours, summed
  * across students.
  *
- * There were four copies of this reduce (`admin/page.tsx`, `program-dashboard`,
- * `admin/programs/[id]`, `program-students-island`) plus a separate one for
+ * There were four copies of this reduce (`admin/page.tsx`, `admin/programs/[id]`
+ * and the two program islands the scoped roles had) plus a separate one for
  * money, and they did not agree on what a total IS: two summed four fields, one
  * summed two, and none carried `extra`, `forfeited` or the fields' own
  * relationship. A page showing `allotted` and `completed` but not `forfeited`

@@ -64,9 +64,15 @@ export default async function AdminMentorsPage({
       programOptions(programIds),
     ]);
 
-  // Only the pairings of the mentors actually on this page.
+  // Only the pairings of the mentors actually on this page — and only the ones
+  // in programs the reader administers. A mentor may work in three programs
+  // and be this reader's colleague in one; the other two are not theirs to
+  // read, and the row would otherwise name them and show their booking links.
   const assignments = await prisma.mentorAssignment.findMany({
-    where: { mentorId: { in: mentors.map((m) => m.id) } },
+    where: {
+      mentorId: { in: mentors.map((m) => m.id) },
+      ...(programIds ? { programId: { in: [...programIds] } } : {}),
+    },
     include: { program: true, cohort: true },
     orderBy: { createdAt: "asc" },
   });
