@@ -445,7 +445,7 @@ async function main() {
         (t) =>
           t.mentorId === mentor.id &&
           t.purpose === purpose &&
-          (t.deadline ?? "") === (task.deadline ?? "") &&
+          (t.dueNote ?? "") === (task.deadline ?? "") &&
           (t.minuteLimit ?? null) ===
             (task.hourLimit == null ? null : toMinutes(task.hourLimit))
       );
@@ -471,7 +471,9 @@ async function main() {
             mentorId: mentor.id,
             purpose,
             minuteLimit: task.hourLimit == null ? null : toMinutes(task.hourLimit),
-            deadline: task.deadline,
+            // The sheet's due column is prose as often as it is a date, so it
+            // lands in the note half. Nothing imported gets a dueOn.
+            dueNote: task.deadline,
             note: combined,
             progress: state.progress,
             progressManual: state.pinned,

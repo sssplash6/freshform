@@ -537,7 +537,8 @@ export type PlannedTask = {
   progressManual?: boolean;
   minuteLimit: number | null;
   loggedMinutes: number;
-  deadline: string | null;
+  dueNote: string | null;
+  dueOn: Date | null;
   note: string | null;
   mentor?: {
     id: string;
@@ -567,8 +568,8 @@ export function toTaskEntries(
     progressManual: t.progressManual,
     minuteLimit: t.minuteLimit,
     loggedMinutes: t.loggedMinutes,
-    // Free text until M6 splits the column, so there is no dueOn to give.
-    due: t.deadline,
+    due: t.dueNote,
+    dueOn: t.dueOn,
     note: t.note,
     mentor: t.mentor
       ? {

@@ -24,8 +24,7 @@ import {
   interviewIsOpen,
 } from "@/lib/constants";
 import { requireRole } from "@/lib/dal";
-import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatMinutes } from "@/lib/format";
+import { formatDate, formatMinutes } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { bucketOf } from "@/lib/when";
 import { prisma } from "@/lib/prisma";
@@ -66,12 +65,13 @@ function TaskRow({ task, statuses }: { task: LedgerAssignment; statuses: Status[
         <div className="min-w-0 flex-1 text-[15px] font-semibold leading-snug">
           <ExpandableText text={task.purpose} lines={2} />
         </div>
-        {/* Free text on purpose — the tracking sheet holds both "Aug 7" and
-            "March-May", so this is a note about timing, not a date the app can
-            reason about, and it carries no severity. */}
-        {task.deadline && (
+        {/* Whichever half this task has. The note is free text — the tracking
+            sheet holds both "Aug 7" and "March-May" — and carries no severity
+            of its own; the row's own statuses say if it is overdue, which only
+            a real dueOn can decide. */}
+        {(task.dueNote ?? task.dueOn) && (
           <StatusChip severity="neutral" className="shrink-0">
-            {task.deadline}
+            {task.dueNote ?? formatDate(task.dueOn!)}
           </StatusChip>
         )}
       </div>
@@ -195,7 +195,6 @@ export default async function StudentHomePage() {
 
   // Before the feed is read rather than after, so a deadline reminder this very
   // request creates is the change the page reports.
-  await ensureDeadlineReminders();
 
   const [hours, ledger, meetings, pairings, latest] = await Promise.all([
     allocationSummary(profile.id),
@@ -294,6 +293,7 @@ export default async function StudentHomePage() {
         mentorId: task.mentorId,
         minuteLimit: task.minuteLimit,
         loggedMinutes: task.loggedMinutes,
+        dueOn: task.dueOn,
       },
       viewer
     ),

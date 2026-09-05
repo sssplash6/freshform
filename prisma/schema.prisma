@@ -212,10 +212,17 @@ model Assignment {
   mentorId  String?
   purpose   String // what this work is: "Main essay", "Recommendation letters"
   minuteLimit Int? // minutes this piece of work should take; null = not budgeted
-  // When the work is due, as free text on purpose: the tracking sheet holds both
-  // "Aug 7" and "March-May". Not the same thing as HourAllocation.deadline,
-  // which is a hard date that forfeits the hours it carries.
-  deadline String?
+  // When the work is due, in the two forms it actually comes in.
+  //
+  // `dueNote` is free text on purpose: the tracking sheet holds both "Aug 7"
+  // and "March-May", and the second is not a date. `dueOn` is a real date when
+  // there is one, and it is the ONLY thing that decides whether a task is
+  // overdue — a range a task is still inside must never be flagged.
+  //
+  // Neither is HourAllocation.deadline, which is a hard date that forfeits the
+  // hours it carries. Missing a task's due date costs nothing automatically.
+  dueNote String?
+  dueOn   DateTime?
   // What a person needs to say about this task that the state can't: "missed an
   // hour, not excused", "GMAT prep but when?". The tracking spreadsheet wrote
   // exactly this into its Progress cells next to the state, so a status word

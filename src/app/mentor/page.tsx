@@ -19,7 +19,6 @@ import {
   interviewIsOpen,
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
-import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatDate, formatDuration, formatRough, toDateInputValue, toTimeInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { mentorCaseload, mentorMeetings } from "@/lib/queries";
@@ -69,7 +68,6 @@ export default async function MentorHomePage({
   searchParams: Promise<{ program?: string; students?: string }>;
 }) {
   const user = await requireMentor();
-  await ensureDeadlineReminders();
   // One instant for the whole page, so two sections cannot disagree about what
   // "today" is — and so nothing reads the clock during a render.
   const viewer: ViewerContext = { audience: "mentor", userId: user.id, now: new Date() };

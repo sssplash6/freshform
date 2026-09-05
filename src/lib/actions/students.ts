@@ -871,9 +871,12 @@ export async function setMentorAllocation(
             purpose: task,
             minuteLimit: granted,
             note: taskNote,
-            // The date THIS grant was aimed at, which the pooled use-by date can
-            // outlive once other hours are added to the same mentor.
-            deadline: formatDate(enteredDeadline),
+            // The date THIS grant was aimed at, which the pooled use-by date
+            // can outlive once other hours are added to the same mentor. A
+            // real date, so the task can actually be overdue: this line used
+            // to write formatDate() text into a free-text column, which is
+            // how every task in the school arrived unreadable by a clock.
+            dueOn: enteredDeadline,
             position: (last?.position ?? -1) + 1,
             createdById: actor.id,
           },

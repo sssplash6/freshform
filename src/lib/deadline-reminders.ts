@@ -12,8 +12,15 @@ const UPCOMING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
  * allocation's deadline enters the 7-day window, and once more if it passes
  * with hours still unused. `deadlineStage` on the allocation dedupes the
  * sends and is reset whenever an admin changes the deadline. Runs from the
- * daily Render cron (see /api/cron/deadline-reminders) and, as a fallback,
- * from the dashboards on page load.
+ * daily Render cron (see /api/cron/deadline-reminders), and from nowhere else.
+ *
+ * It used to run from the three dashboards on page load as a "fallback". That
+ * put a write, a scan of every allocation in the school and a fan-out of
+ * notifications inside the render of the page three roles open all day — so
+ * the cost was paid on every visit, and the notifications went out at whatever
+ * moment somebody happened to open a dashboard rather than on a schedule
+ * anybody could reason about. A missed cron tick now delays reminders until
+ * the next tick, which is what a missed tick should do.
  */
 export async function ensureDeadlineReminders() {
   const now = new Date();

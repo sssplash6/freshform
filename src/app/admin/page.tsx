@@ -14,7 +14,6 @@ import {
 import { adminScope, scopeProgramFilter } from "@/lib/authz";
 import { SessionRow, toSessionEntries } from "@/components/session-row";
 import { requireStaff } from "@/lib/dal";
-import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
 import { formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
@@ -103,7 +102,6 @@ type Flag = { programId: string | null; status: Status };
 
 export default async function AdminInboxPage() {
   const user = await requireStaff();
-  await ensureDeadlineReminders();
 
   // Everything on this page is counted per program and then summed, so the
   // reader's grants are applied ONCE here and every read below carries them.
@@ -295,6 +293,7 @@ export default async function AdminInboxPage() {
           mentorId: t.mentorId,
           minuteLimit: t.minuteLimit,
           loggedMinutes: minutesByTask.get(t.id) ?? 0,
+          dueOn: t.dueOn,
           student: {
             id: t.studentId,
             name: t.student.user.name ?? t.student.user.email,

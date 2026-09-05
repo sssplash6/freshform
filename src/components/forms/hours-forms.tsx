@@ -10,6 +10,7 @@ import { Field, GrowingField, Input } from "@/components/ui/field";
 import { RowActionGroup, RowActionMenu } from "@/components/ui/row-action-menu";
 import { SaveState, useSaveState } from "@/components/ui/save-state";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { toDateInputValue } from "@/lib/format";
 import {
   deleteAssignment,
   setAssignmentProgress,
@@ -176,7 +177,8 @@ type TaskFields = {
   /** Null = no mentor chosen yet; the edit below is where one is picked. */
   mentorId: string | null;
   minuteLimit: number | null;
-  deadline: string | null;
+  dueNote: string | null;
+  dueOn: Date | null;
   note: string | null;
   progress: string;
   /** True when an admin pinned the progress, so hours no longer move it. */
@@ -270,16 +272,29 @@ function TaskPanel({
                 defaultValue={task.minuteLimit ?? ""}
               />
             </Field>
-            <Field label="Deadline" className="min-w-0 flex-1">
+            {/* The half a clock can read. Only this one can make a task
+                overdue, which is why it is a date field and not more prose. */}
+            <Field label="Due date" className="min-w-0 flex-1">
               <Input
-                name="deadline"
-                type="text"
-                maxLength={60}
-                placeholder="August 7"
-                defaultValue={task.deadline ?? ""}
+                name="dueOn"
+                type="date"
+                defaultValue={task.dueOn ? toDateInputValue(task.dueOn) : ""}
               />
             </Field>
           </div>
+
+          {/* And the half a person writes. The sheet this came from holds
+              "March-May" as often as "August 7", and a note that cannot be
+              parsed is still the truest thing anybody knows about the date. */}
+          <Field label="Due, in words" hint="Optional. Shown as you type it.">
+            <Input
+              name="dueNote"
+              type="text"
+              maxLength={60}
+              placeholder="March-May"
+              defaultValue={task.dueNote ?? ""}
+            />
+          </Field>
 
           <Field label="Note">
             <GrowingField

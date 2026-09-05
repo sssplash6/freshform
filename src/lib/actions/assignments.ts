@@ -12,11 +12,15 @@ import {
   canActAsMentor,
   NOTIFICATION_TYPES,
 } from "@/lib/constants";
-import { formatDuration } from "@/lib/format";
+import { formatDate, formatDuration } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { notify, notificationHref } from "@/lib/notify";
 import { parseTaskField } from "@/lib/tasks";
-import { parseMinutesField, type ActionState } from "@/lib/actions/shared";
+import {
+  parseDateField,
+  parseMinutesField,
+  type ActionState,
+} from "@/lib/actions/shared";
 
 /**
  * The plan half of a student's ledger: which mentor is doing what task, with
@@ -48,8 +52,9 @@ function parseFields(
   | { error: string }
   | {
       purpose: string;
+      dueNote: string | null;
+      dueOn: Date | null;
       minuteLimit: number | null;
-      deadline: string | null;
       note: string | null;
       progress: string;
     } {
@@ -73,10 +78,22 @@ function parseFields(
     minuteLimit = parsed.value;
   }
 
-  // Free text on purpose: the team writes both "August 7" and "March-May".
-  const deadline = String(formData.get("deadline") ?? "").trim();
-  if (deadline.length > MAX_DEADLINE) {
-    return { error: `Keep the deadline under ${MAX_DEADLINE} characters.` };
+  // Free text on purpose: the team writes both "August 7" and "March-May",
+  // and the second is not a date. It is kept as somebody typed it and shown as
+  // typed — it just cannot be compared to a clock.
+  const dueNote = String(formData.get("dueNote") ?? "").trim();
+  if (dueNote.length > MAX_DEADLINE) {
+    return { error: `Keep the due note under ${MAX_DEADLINE} characters.` };
+  }
+
+  // The half a clock can read. Optional, because most tasks only ever have the
+  // note — and only this one decides whether a task is overdue.
+  const rawDue = String(formData.get("dueOn") ?? "").trim();
+  let dueOn: Date | null = null;
+  if (rawDue) {
+    const parsed = parseDateField(formData.get("dueOn"));
+    if ("error" in parsed) return { error: parsed.error };
+    dueOn = parsed.value;
   }
 
   const note = String(formData.get("note") ?? "").trim();
@@ -92,7 +109,8 @@ function parseFields(
   return {
     purpose,
     minuteLimit,
-    deadline: deadline || null,
+    dueNote: dueNote || null,
+    dueOn,
     note: note || null,
     progress,
   };
@@ -156,8 +174,14 @@ export async function updateAssignment(
         : `now ${formatDuration(fields.minuteLimit)}`
     );
   }
-  if (fields.deadline !== existing.deadline) {
-    news.push(fields.deadline ? `due ${fields.deadline}` : "no deadline now");
+  // Either half moving is a change to when the work is due, and the sentence
+  // says whichever one the reader will actually see on the row.
+  if (
+    fields.dueNote !== existing.dueNote ||
+    fields.dueOn?.getTime() !== existing.dueOn?.getTime()
+  ) {
+    const due = fields.dueNote ?? (fields.dueOn ? formatDate(fields.dueOn) : null);
+    news.push(due ? `due ${due}` : "no due date now");
   }
   if (fields.progress !== existing.progress) {
     news.push(
@@ -212,7 +236,7 @@ export async function updateAssignment(
       // and an unassigned end of a hand-off is simply nobody to tell.
       const state = [
         fields.minuteLimit != null ? formatDuration(fields.minuteLimit) : null,
-        fields.deadline ? `due ${fields.deadline}` : null,
+        fields.dueNote ?? (fields.dueOn ? `due ${formatDate(fields.dueOn)}` : null),
       ]
         .filter(Boolean)
         .join(", ");
