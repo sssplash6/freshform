@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { type NotificationType } from "@/lib/constants";
+import { CATEGORY_OF, type NotificationType } from "@/lib/constants";
 
 /**
  * The one way notifications get written. Producers used to call
@@ -20,6 +20,7 @@ type Writer = {
       data: {
         userId: string;
         type: string;
+        category: string;
         message: string;
         href?: string | null;
         actorId?: string | null;
@@ -54,6 +55,10 @@ export async function notify(db: Writer, notice: Notice): Promise<void> {
     data: recipients.map((userId) => ({
       userId,
       type: notice.type,
+      // Derived here, from the one map, so a new type cannot be added without
+      // being placed in a category — which is what the feed filters on and
+      // what a person's email preferences switch.
+      category: CATEGORY_OF[notice.type],
       message: notice.message,
       href: notice.href ?? null,
       actorId: notice.actorId ?? null,

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { NOTIFICATION_TYPES, ROLES } from "@/lib/constants";
+import { notify, staffIdsFor } from "@/lib/notify";
 import { assignmentsForStudentWhere } from "@/lib/queries";
 import type { ActionState } from "@/lib/actions/shared";
 
@@ -54,8 +55,22 @@ export async function submitMentorFeedback(
     return { ok: false, error: "Pick one of your mentors." };
   }
 
-  await prisma.mentorFeedback.create({
-    data: { studentId: profile.id, mentorId, rating, comment },
+  const staff = await staffIdsFor(profile.programId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.mentorFeedback.create({
+      data: { studentId: profile.id, mentorId, rating, comment },
+    });
+    // The rating, not the comment. A low score is the thing staff need to see
+    // today; what the student wrote about their mentor belongs on the feedback
+    // page behind the reader's own grants, not pushed into a feed and an
+    // email where it outlives the context it was written in.
+    await notify(tx, {
+      to: staff,
+      type: NOTIFICATION_TYPES.FEEDBACK_RECEIVED,
+      message: `A student rated their mentor ${rating} out of 5.`,
+      href: "/admin/feedback",
+    });
   });
 
   revalidatePath("/", "layout");

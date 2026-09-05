@@ -1,7 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { canActAsMentor, SESSION_STATUS, USER_STATUS } from "@/lib/constants";
+import {
+  canActAsMentor,
+  NOTIFICATION_TYPES,
+  SESSION_STATUS,
+  USER_STATUS,
+} from "@/lib/constants";
+import { notify } from "@/lib/notify";
 import { formatDate, formatDuration } from "@/lib/format";
 import { renderEmail, type Section } from "@/lib/email/layout";
 import { appUrl, emailConfigured, sendAll, type Mail } from "@/lib/email/send";
@@ -496,9 +502,20 @@ export async function sendWeeklyDigest({
   // wall halfway through does not re-mail everyone who already got theirs.
   const { sent, failed, errors } = await sendAll(mails, async (mail) => {
     const userId = (mail as Mail & { userId: string }).userId;
-    await prisma.user.update({
-      where: { id: userId },
-      data: { digestSentAt: now },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { digestSentAt: now },
+      });
+      // The same summary, in the feed. An email is the only place this
+      // existed, so anybody who had switched it off — or whose address
+      // bounced — had no way to see the week at all.
+      await notify(tx, {
+        to: [userId],
+        type: NOTIFICATION_TYPES.WEEKLY_SUMMARY,
+        message: (mail as Mail & { subject: string }).subject,
+        href: "/notifications",
+      });
     });
   });
 

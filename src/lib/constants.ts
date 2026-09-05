@@ -297,7 +297,65 @@ export const NOTIFICATION_TYPES = {
   INTERVIEW_MOVED: "INTERVIEW_MOVED", // to the student: that meeting changed time, please confirm again
   INTERVIEW_CANCELLED: "INTERVIEW_CANCELLED", // to the other side: it's off
   INTERVIEW_ANSWERED: "INTERVIEW_ANSWERED", // to the mentor: the student confirmed, or can't make it
+  FEEDBACK_RECEIVED: "FEEDBACK_RECEIVED", // to admins: a student rated a mentor
+  WEEKLY_SUMMARY: "WEEKLY_SUMMARY", // to everyone who wants it: the Monday digest, in the feed too
 } as const;
+
+/**
+ * The six things a notification can be about.
+ *
+ * Six, not seventeen: a filter with a row per type is a filter nobody uses, and
+ * a person deciding which emails they want is answering "do I care about
+ * meetings" rather than about INTERVIEW_MOVED specifically. Each category is
+ * one subscription in the notification preferences.
+ */
+export const NOTIFICATION_CATEGORY = {
+  HOURS: "HOURS",
+  SESSIONS: "SESSIONS",
+  MEETINGS: "MEETINGS",
+  TASKS: "TASKS",
+  DEADLINES: "DEADLINES",
+  ACCOUNTS: "ACCOUNTS",
+} as const;
+
+export type NotificationCategory =
+  (typeof NOTIFICATION_CATEGORY)[keyof typeof NOTIFICATION_CATEGORY];
+
+export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  HOURS: "Time",
+  SESSIONS: "Sessions",
+  MEETINGS: "Meetings",
+  TASKS: "Tasks",
+  DEADLINES: "Deadlines",
+  ACCOUNTS: "Accounts",
+};
+
+/**
+ * Which category each type belongs to, stated once. The migration that added
+ * the column derived exactly this in SQL; this is the same map for every row
+ * written from here on, so a new type cannot land without being placed.
+ */
+export const CATEGORY_OF: Record<NotificationType, NotificationCategory> = {
+  HOURS_GRANTED: "HOURS",
+  SESSION_LOGGED: "SESSIONS",
+  SESSION_EDITED: "SESSIONS",
+  SESSION_VOIDED: "SESSIONS",
+  SESSION_DELETED: "SESSIONS",
+  STUDENT_SIGNUP: "ACCOUNTS",
+  ACCOUNT_APPROVED: "ACCOUNTS",
+  MENTOR_ASSIGNED: "ACCOUNTS",
+  HOURS_DEADLINE: "DEADLINES",
+  ENROLLMENT_MOVED: "ACCOUNTS",
+  GOAL_ASSIGNED: "TASKS",
+  GOAL_CHANGED: "TASKS",
+  GOAL_DONE: "TASKS",
+  INTERVIEW_SCHEDULED: "MEETINGS",
+  INTERVIEW_MOVED: "MEETINGS",
+  INTERVIEW_CANCELLED: "MEETINGS",
+  INTERVIEW_ANSWERED: "MEETINGS",
+  FEEDBACK_RECEIVED: "ACCOUNTS",
+  WEEKLY_SUMMARY: "ACCOUNTS",
+};
 
 export type NotificationType =
   (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
@@ -328,6 +386,8 @@ export const NOTIFICATION_META: Record<
   INTERVIEW_MOVED: { label: "Meeting moved", tone: "plan" },
   INTERVIEW_CANCELLED: { label: "Meeting cancelled", tone: "warning" },
   INTERVIEW_ANSWERED: { label: "Meeting answer", tone: "success" },
+  FEEDBACK_RECEIVED: { label: "Feedback", tone: "brand" },
+  WEEKLY_SUMMARY: { label: "Weekly summary", tone: "plan" },
 };
 
 /**

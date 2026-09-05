@@ -11,7 +11,9 @@ export async function markAllNotificationsRead(): Promise<void> {
 
   await prisma.notification.updateMany({
     where: { userId: user.id, read: false },
-    data: { read: true },
+    // The instant, not just the fact: "read" answers the badge, "when" is what
+    // lets a feed say which of these are new since somebody last looked.
+    data: { read: true, readAt: new Date() },
   });
 
   revalidatePath("/", "layout");

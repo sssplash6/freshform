@@ -407,6 +407,16 @@ model Notification {
   actorId   String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  // Which of the six things this is about: HOURS | SESSIONS | MEETINGS | TASKS
+  // | DEADLINES | ACCOUNTS. See NOTIFICATION_CATEGORY in lib/constants.ts.
+  //
+  // Stored rather than derived from `type` at read time, because it is what the
+  // feed filters on and what the per-category email preferences switch — and a
+  // mapping living in a switch statement is one the database cannot group by.
+  category String @default("ACCOUNTS")
+  // When it was read. `read` stays for the unread badge and the unsubscribe
+  // path; this is the half that lets a feed say "new since you last looked".
+  readAt   DateTime?
 
   user  User  @relation(fields: [userId], references: [id])
   // SetNull so removing a staff account never deletes the history of what they
