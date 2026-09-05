@@ -12,7 +12,6 @@ import {
   ASSIGNMENT_PROGRESS,
   USER_STATUS,
 } from "@/lib/constants";
-import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMoney } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
@@ -115,7 +114,7 @@ export default async function AdminProgramOverviewPage({
   const meetingTasks = await taskOptionsForSessions(recentSessions);
   const totals = programTotals(students);
   const mentorCount = new Set(pairings.map((p) => p.mentorId)).size;
-  const isMasters = program.name === MASTERS_PROGRAM_NAME;
+  const tracksPayment = program.tracksPayment;
   
 
   // The nearest use-by date each student is up against, so hours about to expire
@@ -165,7 +164,7 @@ export default async function AdminProgramOverviewPage({
           label="Time remaining"
           value={formatDuration(totals.remaining)}
         />
-        {isMasters && (
+        {tracksPayment && (
           <Figure label="Total paid" value={formatMoney(totals.paid)} />
         )}
       </FigureRow>

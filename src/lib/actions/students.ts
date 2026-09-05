@@ -14,7 +14,6 @@ import {
   ROLES,
   USER_STATUS,
 } from "@/lib/constants";
-import { MASTERS_PROGRAM_NAME } from "../../../config/app-config";
 import { formatDate, formatDuration, formatMoney } from "@/lib/format";
 import { syncGoalProgress } from "@/lib/goal-progress";
 import { parseOptionalTaskField } from "@/lib/tasks";
@@ -697,10 +696,12 @@ export async function setMentorAllocation(
   const denied = await assertProgramScope(actor, profile.programId);
   if (denied) return denied;
 
-  // Master's Program allocations also record how much the student paid.
-  const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
+  // Programs that bill per student also record what was paid. A column on the
+  // program, not a comparison against its name: renaming a program must not
+  // change what the app collects.
+  const tracksPayment = profile.program.tracksPayment;
   let enteredPaid: number | null = null;
-  if (isMasters) {
+  if (tracksPayment) {
     const raw = String(formData.get("amountPaid") ?? "").trim();
     const n = Number.parseFloat(raw);
     if (!Number.isFinite(n) || n < 0) {
@@ -756,12 +757,12 @@ export async function setMentorAllocation(
   // Money follows the hours: "add" records another payment on top of the total
   // already banked, "set" states the total outright. Non-Master's never touch it.
   const oldPaid = existing?.amountPaid ?? null;
-  const newPaid = !isMasters
+  const newPaid = !tracksPayment
     ? null
     : mode === "add" && existing
       ? Number(((oldPaid ?? 0) + (enteredPaid ?? 0)).toFixed(2))
       : enteredPaid;
-  const sameAmount = !isMasters || oldPaid === newPaid;
+  const sameAmount = !tracksPayment || oldPaid === newPaid;
 
   if (newMinutes === oldMinutes && sameDeadline && sameAmount) {
     return { ok: true, message: "No change: allocation is already at that value." };
@@ -815,7 +816,7 @@ export async function setMentorAllocation(
           deadline,
           // A new deadline restarts the reminder cycle.
           ...(sameDeadline ? {} : { deadlineStage: null }),
-          ...(isMasters ? { amountPaid: newPaid } : {}),
+          ...(tracksPayment ? { amountPaid: newPaid } : {}),
         },
       });
     } else {
@@ -825,7 +826,7 @@ export async function setMentorAllocation(
           mentorId,
           minutes: newMinutes,
           deadline,
-          ...(isMasters ? { amountPaid: newPaid } : {}),
+          ...(tracksPayment ? { amountPaid: newPaid } : {}),
         },
       });
     }
@@ -937,7 +938,7 @@ export async function setMentorAllocation(
 
   revalidatePath("/", "layout");
   const paidNote =
-    isMasters && newPaid !== null ? ` · ${formatMoney(newPaid)} paid` : "";
+    tracksPayment && newPaid !== null ? ` · ${formatMoney(newPaid)} paid` : "";
   const taskSummary = taskOutcome
     ? taskOutcome.created
       ? mentorLabel

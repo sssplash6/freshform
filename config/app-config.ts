@@ -9,8 +9,13 @@
 export const ALLOWED_MENTOR_DOMAIN = "freshman.academy";
 
 /**
- * The Master's Program is billed per student: when an admin allocates hours to
- * a Master's student they also record the amount paid. Matched by program name.
+ * The Master's Program, by name, for the seed and the one-off importer.
+ *
+ * It is NO LONGER how the app decides whether a program bills per student —
+ * that is `Program.tracksPayment`, a column, because this constant was being
+ * compared against a program's name at four call sites and renaming the
+ * program from its own settings page would have switched the money fields off
+ * everywhere without a word.
  */
 export const MASTERS_PROGRAM_NAME = "Master's Program";
 

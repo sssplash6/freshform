@@ -95,6 +95,18 @@ model AvatarImage {
 model Program {
   id      String   @id @default(cuid())
   name    String   @unique
+  // ACTIVE | ARCHIVED. A finished program stops appearing in the pickers
+  // without being deleted — deletion is refused while it holds students, and
+  // a program that ran is part of the record either way.
+  status     String    @default("ACTIVE")
+  archivedAt DateTime?
+  // Does allocating time here also record what the student paid?
+  //
+  // A column rather than a comparison against the program's NAME, which is how
+  // this was decided at four call sites: renaming the Master's Program — which
+  // its own settings page offers — would have switched the money fields off
+  // across the app, silently.
+  tracksPayment Boolean @default(false)
   cohorts Cohort[]
   // Legacy DEPT_LEADER / SALES scope, emptied by the grants migration and
   // dropped with User.programId. Read `staffGrants` instead.

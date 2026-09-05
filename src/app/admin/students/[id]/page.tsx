@@ -25,7 +25,6 @@ import {
 } from "@/lib/constants";
 import { canManageStudent, mentorReaches } from "@/lib/authz";
 import { requireAdminAccess } from "@/lib/dal";
-import { MASTERS_PROGRAM_NAME } from "../../../../../config/app-config";
 import { formatDate, formatDuration, formatMinutes, formatMoney, toDateInputValue } from "@/lib/format";
 import { allocationSummary } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
@@ -83,7 +82,9 @@ export default async function AdminStudentDetailPage({
   // What each logged session could be re-attached to, so a mis-picked task is
   // fixable from the log itself.
   const tasksBySession = await taskOptionsForSessions(ledger.sessions);
-  const isMasters = profile.program.name === MASTERS_PROGRAM_NAME;
+  // Whether this program bills per student — a column now, so renaming it
+  // cannot turn the money fields off behind everyone's back.
+  const tracksPayment = profile.program.tracksPayment;
 
   // One instant for the whole page: the ledger's two columns and every row in
   // them are judged against the same "now".
@@ -195,7 +196,7 @@ Folder
         studentProfileId={profile.id}
         mentors={mentorOptions}
         openTasksByMentor={openTasksByMentor}
-        showAmountPaid={isMasters}
+        showAmountPaid={tracksPayment}
         manage
         manageSessions={{ isAdmin: true, tasksBySession }}
         mentorBase="/admin/mentors"
@@ -207,7 +208,7 @@ Folder
               value={String(hours.perMentor.filter((m) => m.mentor).length)}
               tone="muted"
             />
-            {isMasters && (
+            {tracksPayment && (
               <Figure label="Total paid" value={formatMoney(hours.paid)} />
             )}
           </>
@@ -231,7 +232,7 @@ Folder
             })}
             viewer={viewer}
             framed={false}
-            showAmountPaid={isMasters}
+            showAmountPaid={tracksPayment}
             renderActions={(entry) => (
               <AllocationRowActions
                 studentProfileId={profile.id}
@@ -249,7 +250,7 @@ Folder
                   entry.deadline ? toDateInputValue(entry.deadline) : null
                 }
                 openTasks={openTasksByMentor[entry.mentor?.id ?? ""] ?? []}
-                showAmountPaid={isMasters}
+                showAmountPaid={tracksPayment}
                 currentAmountPaid={entry.amountPaid ?? null}
               />
             )}

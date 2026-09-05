@@ -15,7 +15,6 @@ import { ArrowLink } from "@/components/ui/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/section";
 import { ROLES } from "@/lib/constants";
-import { MASTERS_PROGRAM_NAME } from "../../../../../../config/app-config";
 import { requireProgramScope } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -91,11 +90,7 @@ export default async function AdminProgramSettingsPage({
       <Section
           eyebrow="Identity"
           title="Name"
-          caption={
-            program.name === MASTERS_PROGRAM_NAME
-              ? "Billing rules match on this name — renaming it turns them off"
-              : "Shown everywhere this program appears"
-          }
+          caption="Shown everywhere this program appears"
       >
         <div className="px-4 py-4 sm:px-5">
           <RenameProgramForm programId={program.id} currentName={program.name} />
