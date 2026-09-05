@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/dal";
+import { mentorReaches } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import type { User } from "@/generated/prisma/client";
 import {
   canActAsMentor,
   INTERVIEW_STATUS,
@@ -37,40 +39,21 @@ async function requireActiveMentor() {
 }
 
 /**
- * The student must actually be this mentor's to book: they hold hours with
- * them, have met them before, or the mentor works in their program (and cohort,
- * where the assignment is cohort-scoped). The same reach the mentor's student
- * page grants — without it, any mentor could put a meeting in any student's
- * diary and notify them about it.
+ * The student to book with, when this mentor may book with them at all.
+ *
+ * Reach IS the permission here: without it any mentor could put a meeting in
+ * any student's diary and notify them about it. It is asked with `mentorReaches`
+ * rather than rebuilt, so the students the mentor's own pages offer and the
+ * students the booking form accepts cannot drift apart — a picker that lists
+ * somebody the form then refuses is the same bug in two places.
  */
-async function reachableStudent(mentorId: string, studentProfileId: string) {
+async function reachableStudent(mentor: User, studentProfileId: string) {
   const profile = await prisma.studentProfile.findUnique({
     where: { id: studentProfileId },
     include: { user: true },
   });
   if (!profile) return null;
-
-  const [allocation, met, assignment] = await Promise.all([
-    prisma.hourAllocation.findUnique({
-      where: { studentId_mentorId: { studentId: profile.id, mentorId } },
-    }),
-    prisma.session.findFirst({
-      where: { studentId: profile.id, mentorId },
-      select: { id: true },
-    }),
-    prisma.mentorAssignment.findFirst({
-      where: {
-        mentorId,
-        programId: profile.programId,
-        OR: [
-          { cohortId: null },
-          ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
-        ],
-      },
-    }),
-  ]);
-  if (!allocation && !met && !assignment) return null;
-  return profile;
+  return (await mentorReaches(mentor, profile)) ? profile : null;
 }
 
 /** Date + optional time + optional link/note, as the two forms both send them. */
@@ -128,7 +111,7 @@ export async function scheduleInterview(
   }
 
   const profile = await reachableStudent(
-    mentor.id,
+    mentor,
     String(formData.get("studentProfileId") ?? "")
   );
   if (!profile) {

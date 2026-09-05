@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/dal";
-import type { Prisma } from "@/generated/prisma/client";
+import {
+  adminScope,
+  canManageStudent,
+  mentorReaches,
+  scopeCovers,
+  scopeIsEmpty,
+} from "@/lib/authz";
+import type { Prisma, User } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   ATTENDANCE,
@@ -18,7 +25,6 @@ import {
   timeKindOf,
   INTERVIEW_STATUS,
   NOTIFICATION_TYPES,
-  ROLES,
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
@@ -253,6 +259,20 @@ export async function logSession(
     return bad("That student hasn't been approved by an admin yet.", "studentProfileId");
   }
 
+  // Reach IS authorization here, and `mentorReaches` is the only place it is
+  // written: the log picker offers exactly the students it reaches, so a
+  // student a mentor can see is never one the log then refuses. Every leg of it
+  // takes an admin's act to exist — a grant, a pairing, a task moved onto their
+  // list — so none of it is self-granted, which is what stops any mentor
+  // anywhere logging against any student and carving their unassigned hours to
+  // themselves.
+  if (!(await mentorReaches(mentor, profile))) {
+    return bad(
+      "You aren't assigned to that student's program, so you can't log hours for them.",
+      "studentProfileId"
+    );
+  }
+
   // Sessions draw down hours an admin allocated to THIS mentor — or, when the
   // mentor holds none, the student's unassigned pool: those hours deliberately
   // named no mentor yet, and logging is the act that decides one. The
@@ -269,52 +289,6 @@ export async function logSession(
     : await prisma.hourAllocation.findFirst({
         where: { studentId: profile.id, mentorId: null },
       });
-  // Three things authorize a log, and any one alone is enough:
-  //
-  //  - an allocation of the mentor's own, which IS authorization: an admin
-  //    granted it, and it outlives a program assignment that later moves, so a
-  //    mentor can always correct the hours they already delivered;
-  //  - actually working in the student's program (and cohort, where the
-  //    assignment is cohort-scoped), which is what a mentor has on the day they
-  //    meet a student nobody has granted them hours for yet;
-  //  - a TASK of theirs for this student. An admin putting this student's work
-  //    on this mentor's list is the same statement an allocation makes, and a
-  //    task can be moved to a mentor who holds no hours here and was never in
-  //    the program (lib/actions/assignments.ts) — without this clause the work
-  //    was theirs, the student was on their page, and the log the task exists
-  //    to produce was refused.
-  //
-  // The second is what stops "no hours allocated" from meaning "the meeting
-  // cannot be recorded" — a mentor shouldn't have to wait on an admin to log
-  // work they have already done. Something here is also the whole reason the
-  // check can't be dropped: without it any mentor anywhere could log against
-  // any student, and carve their unassigned hours to themselves. Every one of
-  // the three takes an admin's act to exist, so none can be self-granted.
-  const scope = allocation
-    ? null
-    : await prisma.mentorAssignment.findFirst({
-        where: {
-          mentorId: mentor.id,
-          programId: profile.programId,
-          OR: [
-            { cohortId: null },
-            ...(profile.cohortId ? [{ cohortId: profile.cohortId }] : []),
-          ],
-        },
-      });
-  const ownTask =
-    allocation || scope
-      ? null
-      : await prisma.assignment.findFirst({
-          where: { studentId: profile.id, mentorId: mentor.id },
-          select: { id: true },
-        });
-  if (!allocation && !scope && !ownTask) {
-    return bad(
-      "You aren't assigned to that student's program, so you can't log hours for them.",
-      "studentProfileId"
-    );
-  }
 
   // Whether the hours charge is the mentor's own answer to "Whose hours?", and
   // nothing else: it is NOT inferred from what the student happens to hold.
@@ -343,8 +317,8 @@ export async function logSession(
     );
   }
 
-  // Checked after the allocation, so a mentor with no hours for this student
-  // hears about that first rather than being told about a task they can't use.
+  // Checked after reach, so a mentor who may not log for this student at all
+  // hears that first rather than being told about a task they can't use.
   const resolved = await resolveGoal(
     formData.get("assignmentId"),
     profile.id,
@@ -630,41 +604,65 @@ export async function logSession(
   };
 }
 
+/** A session with everyone the corrections notify: student, user, mentor. */
+type LoggedSession = Prisma.SessionGetPayload<{
+  include: { student: { include: { user: true } }; mentor: true };
+}>;
+
+/** The session to correct, or which refusal the caller should say. */
+type SessionAuthority =
+  | { ok: true; actor: User; session: LoggedSession }
+  /** No session at all is theirs to correct: signed out, or neither of the two. */
+  | { ok: false; refusal: "actor" }
+  /** Not THIS one. `isAdmin` picks which of the two sentences fits. */
+  | { ok: false; refusal: "session"; isAdmin: boolean };
+
 /**
- * Who may change a logged session: the mentor who logged it, and any admin.
+ * Who may change a logged session: the mentor who logged it, and an admin of
+ * the program its student is in.
  *
  * A mentor owns their own log — correcting yesterday's hours shouldn't need
  * anyone's permission. An admin owns the ledger, and rows arrive in it that no
  * mentor will ever fix: a duplicate from the spreadsheet import, a session
  * logged against the wrong student, a test row. Without this, the only way to
  * remove one was the database.
+ *
+ * The admin half used to be the role, and so reached every mentor's hours in
+ * every program — the escalation the grants model exists to end. It is the
+ * student's program now, which is why loading the row and authorizing it are
+ * ONE step: the question cannot be asked until the session says whose student
+ * it is. Anything but a voided session can be corrected — a rescheduled one is
+ * a live record, and correcting it back to attended is exactly how a mis-tick
+ * is fixed.
+ *
+ * A refusal never separates "gone" from "voided" from "another program's":
+ * telling those apart is how somebody maps a ledger they cannot read.
  */
-async function requireSessionAuthority() {
-  const actor = await getCurrentUser();
-  if (!actor) return null;
-  if (actor.role === ROLES.ADMIN) return { actor, isAdmin: true };
-  if (!canActAsMentor(actor) || actor.status !== USER_STATUS.ACTIVE) return null;
-  return { actor, isAdmin: false };
-}
-
-/**
- * Load a session the actor is allowed to change. Anything but a voided session
- * can be corrected: a rescheduled one is a live record, and correcting it back
- * to attended is exactly how a mis-tick is fixed.
- */
-async function findEditableSession(
-  actorId: string,
-  isAdmin: boolean,
+async function requireSessionAuthority(
   sessionId: string
-) {
+): Promise<SessionAuthority> {
+  const actor = await getCurrentUser();
+  if (!actor) return { ok: false, refusal: "actor" };
+  const scope = await adminScope(actor);
+  const administers = !scopeIsEmpty(scope);
+  const isMentor = canActAsMentor(actor) && actor.status === USER_STATUS.ACTIVE;
+  if (!administers && !isMentor) return { ok: false, refusal: "actor" };
+
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: { student: { include: { user: true } }, mentor: true },
   });
-  if (!session) return null;
-  if (!isAdmin && session.mentorId !== actorId) return null;
-  if (session.status === SESSION_STATUS.VOIDED) return null;
-  return session;
+  const mine = isMentor && session?.mentorId === actor.id;
+  const inScope =
+    session !== null && scopeCovers(scope, session.student.programId);
+  if (
+    !session ||
+    session.status === SESSION_STATUS.VOIDED ||
+    (!mine && !inScope)
+  ) {
+    return { ok: false, refusal: "session", isAdmin: administers };
+  }
+  return { ok: true, actor, session };
 }
 
 /**
@@ -676,22 +674,21 @@ export async function editSession(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const auth = await requireSessionAuthority();
-  if (!auth) {
-    return { ok: false, error: "Only the mentor who logged a session, or an admin, can edit it." };
-  }
-  const { actor, isAdmin } = auth;
-
-  const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findEditableSession(actor.id, isAdmin, sessionId);
-  if (!session) {
+  const auth = await requireSessionAuthority(
+    String(formData.get("sessionId") ?? "")
+  );
+  if (!auth.ok) {
     return {
       ok: false,
-      error: isAdmin
-        ? "That session is gone, or already voided."
-        : "You can only edit sessions you logged yourself, and not voided ones.",
+      error:
+        auth.refusal === "actor"
+          ? "Only the mentor who logged a session, or an admin, can edit it."
+          : auth.isAdmin
+            ? "That session is gone, already voided, or isn't in a program you administer."
+            : "You can only edit sessions you logged yourself, and not voided ones.",
     };
   }
+  const { actor, session } = auth;
 
   const minutesParsed = parseMinutesField(formData.get("minutes"), {
     min: 0.01,
@@ -785,22 +782,21 @@ export async function voidSession(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const auth = await requireSessionAuthority();
-  if (!auth) {
-    return { ok: false, error: "Only the mentor who logged a session, or an admin, can void it." };
-  }
-  const { actor, isAdmin } = auth;
-
-  const sessionId = String(formData.get("sessionId") ?? "");
-  const session = await findEditableSession(actor.id, isAdmin, sessionId);
-  if (!session) {
+  const auth = await requireSessionAuthority(
+    String(formData.get("sessionId") ?? "")
+  );
+  if (!auth.ok) {
     return {
       ok: false,
-      error: isAdmin
-        ? "That session is gone, or already voided."
-        : "You can only void sessions you logged yourself, and not twice.",
+      error:
+        auth.refusal === "actor"
+          ? "Only the mentor who logged a session, or an admin, can void it."
+          : auth.isAdmin
+            ? "That session is gone, already voided, or isn't in a program you administer."
+            : "You can only void sessions you logged yourself, and not twice.",
     };
   }
+  const { actor, session } = auth;
 
   const staff = await adminIds();
   const actorLabel = actor.name ?? actor.email;
@@ -851,7 +847,10 @@ export async function deleteSession(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || actor.role !== ROLES.ADMIN) {
+  // Asked before the row is loaded, and deliberately: it is a fact about the
+  // person, not about any session, so a mentor is pointed at the tool they do
+  // have without a probe learning whether the id they guessed exists.
+  if (!actor || scopeIsEmpty(await adminScope(actor))) {
     return {
       ok: false,
       error: "Only admins can delete a session. Mentors can void their own instead, which keeps the record.",
@@ -863,7 +862,17 @@ export async function deleteSession(
     where: { id: sessionId },
     include: { student: { include: { user: true } }, mentor: true },
   });
-  if (!session) return { ok: false, error: "That session is already gone." };
+  // Which programs an admin holds decides which rows they may remove, and the
+  // student is what says which program this row is in — so the fetch comes
+  // first and the gate second. One sentence for both outcomes: an id that finds
+  // nothing and an id in someone else's program must read the same, or deleting
+  // becomes a way to enumerate a ledger you can't see.
+  if (!session || !(await canManageStudent(actor, session.student))) {
+    return {
+      ok: false,
+      error: "That session is gone, or isn't in a program you administer.",
+    };
+  }
 
   const staff = await adminIds();
   const actorLabel = actor.name ?? actor.email;
