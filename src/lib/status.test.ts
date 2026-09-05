@@ -786,12 +786,28 @@ describe("rollUp", () => {
     expect(rolled[0].label).toContain("9");
   });
 
-  it("drops the link as well as the subject", () => {
-    // A row reading "9 students have no time allocated" that navigates to one
-    // of the nine is an arbitrary choice dressed up as an answer.
+  it("drops the subject and links the list instead", () => {
+    // A row reading "9 students have no time allocated" must not navigate to
+    // one of the nine — an arbitrary choice dressed up as an answer — and must
+    // not name one of them either. The filtered list is the destination that
+    // holds exactly the nine.
     const rolled = rollUp(many(9), v);
     expect(rolled[0].subject).toBeUndefined();
-    expect(rolled[0].href).toBeUndefined();
+    expect(rolled[0].href).toBe("/students?time=none");
+  });
+
+  it("has no link for a type whose group is not a filter", () => {
+    // A link that lands on a nearly-right list is worse than none: the reader
+    // cannot tell which rows are the ones they tapped.
+    const meetings = Array.from(
+      { length: 9 },
+      (_, i) =>
+        status("MEETING_AWAITING_ANSWER", v, undefined, {
+          subject: { kind: "student" as const, id: `s${i}`, name: `Student ${i}` },
+          href: `/students/s${i}`,
+        })!
+    );
+    expect(rollUp(meetings, v)[0].href).toBeUndefined();
   });
 
   it("keeps the count honest when the group is exactly at the threshold", () => {

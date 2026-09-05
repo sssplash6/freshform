@@ -1049,6 +1049,24 @@ export function sortStatuses(list: Status[]): Status[] {
  * A group at or under the threshold stays expanded, because three named students
  * are more useful than the sentence "3 students…".
  */
+/**
+ * Where a rolled-up row goes: the filtered list holding exactly its rows.
+ *
+ * Only the types whose whole group IS a filter appear here. A roll-up of
+ * meetings or tasks has no list yet that says the same thing, and a link that
+ * lands on a nearly-right list is worse than a row that does not offer one —
+ * the reader cannot tell which rows are the eight they tapped.
+ */
+const ROLLED_UP_LIST: Partial<Record<StatusType, string>> = {
+  STUDENT_PENDING_APPROVAL: "/students?status=pending",
+  STUDENT_NOT_SIGNED_IN: "/students?status=not-signed-in",
+  BALANCE_NONE: "/students?time=none",
+  ALLOCATION_EXPIRING: "/students?time=expiring",
+  ALLOCATION_EXPIRED: "/students?time=expired",
+  MENTOR_UNASSIGNED: "/mentors?status=unassigned",
+  BOOKING_LINK_MISSING: "/mentors?link=missing",
+};
+
 export function rollUp(
   list: Status[],
   v: ViewerContext,
@@ -1071,17 +1089,22 @@ export function rollUp(
       out.push(...group);
       continue;
     }
-        // Subject AND href are both dropped, for the same reason: the row is about
-    // a count, and sending a reader who tapped "8 students are overdrawn" to
-    // one of the eight is an arbitrary choice dressed up as an answer. The
-    // filtered list this should link to arrives with `/students` in Phase 6.
+        // The subject is dropped because the row is about a count, not a person:
+    // "8 students are overdrawn" names nobody, and captioning the row with one
+    // arbitrary student of the eight was an arbitrary choice dressed up as an
+    // answer. The href is not dropped any more — it is the filtered list, which
+    // is the one destination that holds exactly the eight.
     const { program, at, severity, kind } = group[0];
+    const list = ROLLED_UP_LIST[type];
     out.push({
       type,
       severity,
       kind,
       label: many(group.length),
       count: group.length,
+      ...(list
+        ? { href: program ? `${list}&program=${program.id}` : list }
+        : {}),
       ...(program ? { program } : {}),
             ...(at ? { at } : {}),
     });

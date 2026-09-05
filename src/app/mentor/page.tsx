@@ -127,9 +127,9 @@ export default async function MentorHomePage({
       },
       viewer
     ).map((s) =>
-      // A mentor fixes their own booking link where the form is, not on their
-      // public page. `/settings` in Phase 7.
-      s.type === "BOOKING_LINK_MISSING" ? { ...s, href: `/mentors/${user.id}` } : s
+      // A mentor fixes their own booking link where the form is, which is now
+      // /settings — not on the page other people read about them.
+      s.type === "BOOKING_LINK_MISSING" ? { ...s, href: "/settings" } : s
     ),
     ...inView.flatMap((s) =>
       studentStatuses(

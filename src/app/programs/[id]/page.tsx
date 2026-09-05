@@ -211,12 +211,9 @@ export default async function ProgramOverviewPage({
         )}
       </Section>
 
-      {/* The delivery line. It also carries the two figures the removed stat
-          strip was the only place to read — logged and missed — because
-          `/sessions?program=…`, where §6.15 puts that summary, is commit 42 and
-          does not answer yet. The link to it lands with the page; until then
-          this says the thing an admin opens a program to check rather than
-          pointing at a 404. */}
+      {/* The delivery line, carrying the two figures the removed stat strip
+          was the only place to read — logged and missed — and now linking to
+          the ledger they came from. */}
       <p className="text-sm text-muted-fg">
         {lastSession
           ? `Last session ${formatDate(lastSession.date)} by ${lastSession.mentor.name ?? lastSession.mentor.email}`
