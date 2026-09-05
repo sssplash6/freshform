@@ -184,13 +184,20 @@ export default async function StudentHomePage() {
     include: { program: true, cohort: true },
   });
 
-  // Self-signed-up and not yet registered, or staff-registered and never
-  // through a first sign-in: there is nothing to show until they say who they
-  // are. A student awaiting APPROVAL is a different case and does get this
-  // page — their one blocked row explains what is missing, which is the whole
-  // of what the full-page wall here used to say.
-  if (!profile || !user.name?.trim() || !profile.telegramUsername) {
-    redirect("/student/onboarding");
+  // Everything unfinished about this account is finished at /onboarding, and
+  // that includes waiting to be approved. There is nothing to show a student
+  // who has not said who they are, and nothing to show a PENDING one either:
+  // no time is allocated until an admin approves them, /student/book turns
+  // them away, and this page rendered a single blocked row surrounded by
+  // sections about time they do not have. §6.20 gives that sentence a step of
+  // its own instead.
+  if (
+    !profile ||
+    !user.name?.trim() ||
+    !profile.telegramUsername ||
+    user.status === USER_STATUS.PENDING
+  ) {
+    redirect("/onboarding");
   }
 
   // Before the feed is read rather than after, so a deadline reminder this very
@@ -395,14 +402,11 @@ export default async function StudentHomePage() {
             : profile.program.name
         }
         title={`Hi, ${user.name.split(" ")[0]}`}
-        subtitle={
-          // Not offered to a student awaiting approval: /student/book turns
-          // any non-ACTIVE student straight back to this page, so the link was
-          // a round trip with no message. Their blocked row says why.
-          user.status === USER_STATUS.ACTIVE ? (
-            <ArrowLink href="/student/book">Book a session</ArrowLink>
-          ) : undefined
-        }
+        // Unconditional now: the only student who could not follow this link
+        // was one awaiting approval, and /onboarding holds them before they
+        // reach this page. A guard for a reader who cannot arrive reads like a
+        // second, quieter rule about who may book.
+        subtitle={<ArrowLink href="/student/book">Book a session</ArrowLink>}
         leading={
           // 96px, scaled from the component's own 132: a ring that size beside
           // the h1 on a 390px screen leaves the greeting three words wide, and
@@ -450,6 +454,7 @@ export default async function StudentHomePage() {
         <Section title="Your time">
           <div className="px-4 py-4 sm:px-5">
             <HoursBreakdown
+              audience="student"
               allotted={hours.allotted}
               completed={hours.completed}
               missed={hours.missed}

@@ -3,10 +3,9 @@ import Link from "next/link";
 
 import { AttentionList } from "@/components/attention-list";
 import { Avatar } from "@/components/avatar";
-import { AvatarForm } from "@/components/forms/avatar-form";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
 import { EditMentorForm } from "@/components/forms/mentor-forms";
-import { OwnNameForm } from "@/components/forms/own-name-form";
+import { AvatarForm, OwnNameForm } from "@/components/forms/profile-forms";
 import { PersonCell } from "@/components/person-chip";
 import {
   SessionsLog,

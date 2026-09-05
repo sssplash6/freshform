@@ -1,6 +1,5 @@
-import { AvatarForm } from "@/components/forms/avatar-form";
 import { BookingLinksForm } from "@/components/forms/booking-link-form";
-import { OwnNameForm } from "@/components/forms/own-name-form";
+import { AvatarForm, OwnNameForm } from "@/components/forms/profile-forms";
 import {
   NotificationMatrix,
   OwnTelegramForm,

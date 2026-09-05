@@ -42,6 +42,7 @@ export function HoursBreakdown({
     remaining,
   extra = 0,
   statesRemaining = true,
+  audience = "staff",
   className,
 }: {
   allotted: number;
@@ -50,6 +51,12 @@ export function HoursBreakdown({
   forfeited: number;
   remaining: number;
   extra?: number;
+  /**
+   * Whose word for the last segment. §5.7 allows exactly two spellings of this
+   * quantity — "left" to a student and "remaining" to staff — after ten were
+   * found in use, of which "Still yours" was one.
+   */
+  audience?: "staff" | "mentor" | "student";
   /**
    * Whether the key names what is still left.
    *
@@ -95,7 +102,7 @@ export function HoursBreakdown({
     },
     {
       key: "remaining",
-      label: overdrawn ? "Overdrawn" : "Still yours",
+      label: overdrawn ? "Overdrawn" : audience === "student" ? "Left" : "Remaining",
       minutes: overdrawn ? -remaining : remaining,
       fill: overdrawn ? "bg-danger" : "bg-line",
       ink: overdrawn ? "text-danger-ink" : "text-ink",

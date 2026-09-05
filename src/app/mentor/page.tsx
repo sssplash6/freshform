@@ -209,7 +209,7 @@ export default async function MentorHomePage({
         // A time still to be set is not an all-day event. The student's page
         // says so; the mentor who booked it was told nothing.
         timePending: !m.hasTime,
-        title: "Interview",
+        title: "Meeting",
         status: meetingStatus(
           {
             id: m.id,

@@ -480,7 +480,7 @@ export async function logSession(
       message: rescheduled
         ? `${mentorLabel} recorded that your ${formatMinutes(minutesParsed.value)} meeting on ${formatDate(dateParsed.value)}${forTask} was rescheduled. No time was charged.`
         : !withinPlan
-          ? `${mentorLabel} logged ${formatDuration(minutesParsed.value)} extra hours on ${formatDate(dateParsed.value)}${toward} — work on top of your plan, so none of your time were used.`
+          ? `${mentorLabel} logged ${formatDuration(minutesParsed.value)} extra hours on ${formatDate(dateParsed.value)}${toward} — work on top of your plan, so none of your time was used.`
           : state === ATTENDANCE.ABSENT
             ? `${mentorLabel} recorded a ${formatMinutes(minutesParsed.value)} no-show on ${formatDate(dateParsed.value)}${forTask}. Those hours were still deducted.`
             : `${mentorLabel} logged a ${formatMinutes(minutesParsed.value)} session on ${formatDate(dateParsed.value)}${toward}${state === ATTENDANCE.LATE ? ", which you came late to" : ""}.`,

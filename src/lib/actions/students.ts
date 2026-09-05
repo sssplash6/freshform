@@ -1003,8 +1003,8 @@ export async function removeMentorAllocation(
       actorId: actor.id,
       href: notificationHref.studentHome(),
       message: mentorLabel
-        ? `Your time with ${mentorLabel} were removed. They're no longer one of your mentors.`
-        : `Your unassigned time were removed.`,
+        ? `Your time with ${mentorLabel} was removed. They're no longer one of your mentors.`
+        : `Your unassigned time was removed.`,
     });
   });
 
@@ -1012,7 +1012,7 @@ export async function removeMentorAllocation(
   return {
     ok: true,
     message: mentorLabel
-      ? `${mentorLabel} removed from this student, along with the tasks their time were for.`
-      : `The unassigned time were removed, along with the tasks they were for.`,
+      ? `${mentorLabel} removed from this student, along with the tasks their time was for.`
+      : `The unassigned time was removed, along with the tasks it was for.`,
   };
 }

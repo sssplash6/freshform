@@ -53,7 +53,7 @@ export type TimelineEntry = {
    */
   timePending?: boolean;
     /**
-   * What it is, in two or three words: "Interview", "Time expires".
+   * What it is, in two or three words: "Meeting", "Time expires".
    *
    * Optional, because a row with a person chip on it in a section called "Up
    * next" is already a meeting, and "Meeting" beside the mentor's name is a

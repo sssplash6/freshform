@@ -92,7 +92,7 @@ function MeetingRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span className="text-[15px] font-semibold text-ink">Interview</span>
+          <span className="text-[15px] font-semibold text-ink">Meeting</span>
           {/* Whoever the reader is NOT: a student sees the mentor, a mentor
               sees the student, and staff watching from outside see both. */}
           {view !== "mentor" && <PersonChip person={meeting.mentor} size="sm" />}
