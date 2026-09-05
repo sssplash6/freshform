@@ -438,7 +438,10 @@ export function Select({
         onClick={() => (open ? close(false) : openList("value"))}
         onKeyDown={onKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between gap-2 rounded-lg border bg-surface pl-3.5 pr-2.5 text-[15px] transition-colors focus:outline-none",
+          // 44px, not 40. §9 measured every control on a phone and this was
+          // the one that appears most often — the log form and every filter
+          // row carry one — so four pixels here is four pixels everywhere.
+          "flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border bg-surface pl-3.5 pr-2.5 text-[15px] transition-colors focus:outline-none",
           invalid
             ? "border-danger"
             : open
@@ -499,7 +502,7 @@ export function Select({
                   aria-controls={listId}
                   aria-activedescendant={pickable(active) ? optionId(active) : undefined}
                   placeholder="Type to filter…"
-                  className="h-10 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted-fg focus:outline-none"
+                  className="min-h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted-fg focus:outline-none"
                 />
               </div>
             )}

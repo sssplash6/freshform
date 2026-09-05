@@ -24,7 +24,7 @@ type Person = {
  * `size="sm"` is the in-table size; the default suits a page header. Passing
  * `href` turns the chip into a link (admins click a mentor through to their
  * page); the hover ring picks up the chip's own hue via `ring-current`, so one
- * rule covers all eight tones.
+ * rule covers all three tones.
  */
 export function PersonChip({
   person,

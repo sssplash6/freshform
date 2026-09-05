@@ -56,7 +56,10 @@ function Answer({
       value={going}
       disabled={pending}
       aria-busy={mine}
-      className={buttonClasses(variant, "sm")}
+      // md, not sm. This pair is a student's only reply to an invitation, it is
+      // the primary action of the view on a phone, and it sits beside its own
+      // opposite — so a 32px target meant a mis-tap declined a meeting.
+      className={buttonClasses(variant, "md")}
     >
       {mine && <Spinner />}
       {mine ? pendingLabel : label}
