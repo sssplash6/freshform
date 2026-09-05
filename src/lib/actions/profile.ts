@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
-import { canActAsMentor } from "@/lib/constants";
+import { parseTelegramField } from "@/lib/actions/shared";
 import {
   canSwitchProfile,
   homeFor,
@@ -22,12 +22,17 @@ import {
 import { type ActionState } from "@/lib/actions/shared";
 
 /**
- * A mentor's own profile: their display name and their picture.
+ * Your own profile: your display name and your picture.
  *
- * All three actions are self-service only — the actor is always the subject,
- * never an id from the form — so there is nothing to authorize beyond "are you
- * a mentor". Admins edit mentors through updateMentor in actions/mentors.ts,
+ * All three actions are self-service — the actor is always the subject, never
+ * an id from the form — so there is nothing to authorize beyond being signed
+ * in. Admins edit OTHER people through updateMentor in actions/mentors.ts,
  * which is a different job with a different audit story.
+ *
+ * The gate used to be `canActAsMentor`, which meant a student could not fix
+ * the spelling of their own name and a non-mentoring admin could not have a
+ * picture. Nobody chose that; it followed from these forms first appearing on
+ * a mentor page.
  */
 
 /**
@@ -73,6 +78,40 @@ export async function setProfile(formData: FormData): Promise<void> {
 }
 
 /**
+ * Your Telegram handle, which is how a mentor actually reaches you.
+ *
+ * It was captured once during onboarding and then never editable, so a student
+ * who changed their handle — or typed it wrong on the day they signed up — had
+ * no way to fix it and no idea that was why nobody was messaging them.
+ */
+export async function setOwnTelegram(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+  if (!actor) return { ok: false, error: "Sign in to do that." };
+
+  const profile = await prisma.studentProfile.findUnique({
+    where: { userId: actor.id },
+    select: { id: true },
+  });
+  if (!profile) {
+    return { ok: false, error: "Only students have a Telegram handle here." };
+  }
+
+  const telegram = parseTelegramField(formData.get("telegramUsername"));
+  if ("error" in telegram) return { ok: false, error: telegram.error };
+
+  await prisma.studentProfile.update({
+    where: { id: profile.id },
+    data: { telegramUsername: telegram.value },
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Telegram saved." };
+}
+
+/**
  * Rename yourself. This is the same field mentors first fill in at signup
  * (completeMentorProfile), now editable for the rest of the time — people
  * marry, transliterate their name differently, or just typo it on day one.
@@ -82,8 +121,8 @@ export async function updateOwnName(
   formData: FormData
 ): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || !canActAsMentor(actor)) {
-    return { ok: false, error: "Only mentors can edit their profile." };
+  if (!actor) {
+    return { ok: false, error: "Sign in to do that." };
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -112,8 +151,8 @@ export async function updateOwnName(
  */
 export async function setOwnAvatar(formData: FormData): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || !canActAsMentor(actor)) {
-    return { ok: false, error: "Only mentors can set a profile picture." };
+  if (!actor) {
+    return { ok: false, error: "Sign in to do that." };
   }
 
   const file = formData.get("avatar");
@@ -156,8 +195,8 @@ export async function setOwnAvatar(formData: FormData): Promise<ActionState> {
 /** Drop your picture and go back to the initials badge. */
 export async function removeOwnAvatar(): Promise<ActionState> {
   const actor = await getCurrentUser();
-  if (!actor || !canActAsMentor(actor)) {
-    return { ok: false, error: "Only mentors can change their picture." };
+  if (!actor) {
+    return { ok: false, error: "Sign in to do that." };
   }
   if (!actor.avatarUpdatedAt) {
     return { ok: true, message: "You don't have a picture set." };

@@ -1,0 +1,111 @@
+import { AvatarForm } from "@/components/forms/avatar-form";
+import { BookingLinksForm } from "@/components/forms/booking-link-form";
+import { OwnNameForm } from "@/components/forms/own-name-form";
+import { OwnTelegramForm, WeeklyDigestForm } from "@/components/forms/settings-forms";
+import { PageTitle, Section } from "@/components/ui/section";
+import { SettingsRow } from "@/components/ui/settings-row";
+import { canActAsMentor } from "@/lib/constants";
+import { requireUser } from "@/lib/dal";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * Everything about you, in one place, whoever you are.
+ *
+ * These controls existed — scattered. The name and picture forms were on the
+ * mentor's own profile page and gated on `canActAsMentor`, so a student could
+ * not fix the spelling of their own name and an admin who does not mentor
+ * could not have a picture. Booking links were a fold on the mentor home,
+ * where they competed with the caseload. The weekly-email toggle was at the
+ * bottom of the notification feed, which is a list of things that happened,
+ * not a place anybody looks for a preference. A Telegram handle was captured
+ * once at onboarding and never editable at all.
+ *
+ * Sections appear only when they are yours: a student has no booking links, a
+ * mentor has no Telegram row.
+ */
+export default async function SettingsPage() {
+  const user = await requireUser();
+  const isMentor = canActAsMentor(user);
+
+  const [profile, assignments] = await Promise.all([
+    prisma.studentProfile.findUnique({
+      where: { userId: user.id },
+      select: { telegramUsername: true },
+    }),
+    isMentor
+      ? prisma.mentorAssignment.findMany({
+          where: { mentorId: user.id },
+          include: { program: true, cohort: true },
+          orderBy: { createdAt: "asc" },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageTitle title="Settings" />
+
+      <Section eyebrow="How you appear" title="Profile">
+        <div className="px-4 py-2 sm:px-5">
+          <SettingsRow
+            label="Picture"
+            description="Shown wherever your name appears."
+            control={
+              <AvatarForm
+                person={{
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  avatarUpdatedAt: user.avatarUpdatedAt,
+                }}
+              />
+            }
+          />
+          <OwnNameForm defaultName={user.name ?? ""} />
+          <SettingsRow
+            label="Sign-in email"
+            description="Changed by an admin — it is the address Google signs you in with."
+            control={<span className="text-sm text-ink">{user.email}</span>}
+          />
+        </div>
+      </Section>
+
+      {profile && (
+        <Section eyebrow="How your mentors reach you" title="Contact">
+          <div className="px-4 py-2 sm:px-5">
+            <OwnTelegramForm defaultHandle={profile.telegramUsername ?? ""} />
+          </div>
+        </Section>
+      )}
+
+      {isMentor && assignments.length > 0 && (
+        <Section
+          eyebrow="One per program you work in"
+          title="Booking links"
+          caption="Students book you through these."
+        >
+          <div className="px-4 py-4 sm:px-5">
+            <BookingLinksForm
+              assignments={assignments.map((a) => ({
+                id: a.id,
+                label: a.cohort
+                  ? `${a.program.name} · ${a.cohort.name}`
+                  : a.program.name,
+                calendlyUrl: a.calendlyUrl,
+              }))}
+            />
+          </div>
+        </Section>
+      )}
+
+      <Section eyebrow="What arrives by email" title="Email">
+        <div className="px-4 py-2 sm:px-5">
+          <WeeklyDigestForm
+            defaultOn={user.weeklyDigest}
+            student={Boolean(profile)}
+          />
+        </div>
+      </Section>
+    </div>
+  );
+}

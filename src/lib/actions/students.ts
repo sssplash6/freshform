@@ -24,6 +24,7 @@ import {
   parseMinutesField,
   parseLinkField,
   type ActionState,
+  parseTelegramField,
 } from "@/lib/actions/shared";
 import { emailConfigured } from "@/lib/email/send";
 import { sendWelcomeEmails, welcomeMail } from "@/lib/email/welcome";
@@ -32,27 +33,6 @@ import type { Cohort, Program } from "@/generated/prisma/client";
 /** "Program" or "Program / Cohort" display label. */
 function enrollmentLabel(programName: string, cohortName?: string | null) {
   return cohortName ? `${programName} / ${cohortName}` : programName;
-}
-
-const TELEGRAM_RE = /^[A-Za-z0-9_]{5,32}$/;
-
-/**
- * Normalize a Telegram username field ("@name" or "name"). Returns the bare
- * username or an error message.
- */
-function parseTelegramField(
-  raw: FormDataEntryValue | null
-): { value: string } | { error: string } {
-  const value = String(raw ?? "")
-    .trim()
-    .replace(/^@/, "");
-  if (!TELEGRAM_RE.test(value)) {
-    return {
-      error:
-        "Enter your Telegram username (5–32 letters, digits or underscores).",
-    };
-  }
-  return { value };
 }
 
 /**
@@ -532,7 +512,6 @@ export async function deleteStudent(
     // sessions, checked above), so no delivered hours are at stake.
     await tx.assignment.deleteMany({ where: { studentId: profile.id } });
     await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
-    await tx.websiteFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.notification.deleteMany({ where: { userId: profile.userId } });
     await tx.studentProfile.delete({ where: { id: profile.id } });
     await tx.user.delete({ where: { id: profile.userId } });
@@ -634,7 +613,6 @@ export async function rejectStudent(
     await tx.hourAllocation.deleteMany({ where: { studentId: profile.id } });
     await tx.assignment.deleteMany({ where: { studentId: profile.id } });
     await tx.mentorFeedback.deleteMany({ where: { studentId: profile.id } });
-    await tx.websiteFeedback.deleteMany({ where: { studentId: profile.id } });
     await tx.notification.deleteMany({ where: { userId: profile.userId } });
     await tx.studentProfile.delete({ where: { id: profile.id } });
     await tx.user.delete({ where: { id: profile.userId } });

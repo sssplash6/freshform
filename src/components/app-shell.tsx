@@ -74,9 +74,9 @@ function NotificationBell({ count }: { count: number }) {
  * left focus on an unmounted node — see the note at the top of `ui/popover.tsx`,
  * which was written about these two menus.
  *
- * §4.1 also puts Settings, Platform and Help in here. None of the three is a
- * route yet (Phase 7), and a menu item that 404s is worse than a menu item that
- * is missing, so the menu carries what exists today.
+ * §4.1 also puts Platform and Help in here. Neither is a route yet, and a menu
+ * item that 404s is worse than one that is missing, so the menu carries what
+ * exists today. Settings does exist now and is here.
  */
 function AccountMenu({
   user,
@@ -139,10 +139,17 @@ function AccountMenu({
         </div>
       )}
 
+      <Link
+        href="/settings"
+        className="mt-1 flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+      >
+        Settings
+      </Link>
+
       {mentorProfile && (
         <Link
           href={`/mentors/${user.id}`}
-          className="mt-1 flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+          className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
         >
           My profile
         </Link>
@@ -231,7 +238,10 @@ function StaffShell({
 
       <Sidebar
         items={items}
-        utility={[notificationsItem(unread)]}
+        // The gear carries its word: an icon alone is the thing §4.1 rules out,
+        // and this is the row a reader reaches for least often and needs to
+        // recognise fastest.
+        utility={[notificationsItem(unread), { href: "/settings", label: "Settings" }]}
         switcher={lens ? <ProfileSwitch active={lens} /> : undefined}
         search={search}
         account={account}

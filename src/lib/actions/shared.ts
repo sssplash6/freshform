@@ -125,3 +125,29 @@ export function normalizeEmail(raw: FormDataEntryValue | null): string {
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Telegram usernames: 5-32 of letters, digits and underscores. */
+const TELEGRAM_RE = /^[A-Za-z0-9_]{5,32}$/;
+
+/**
+ * Normalize a Telegram username field ("@name" or "name"). Returns the bare
+ * username or an error message.
+ *
+ * Shared because two places take one: onboarding captures it, and /settings
+ * lets a student correct it afterwards — which they could not do at all while
+ * this lived beside the onboarding action.
+ */
+export function parseTelegramField(
+  raw: FormDataEntryValue | null
+): { value: string } | { error: string } {
+  const value = String(raw ?? "")
+    .trim()
+    .replace(/^@/, "");
+  if (!TELEGRAM_RE.test(value)) {
+    return {
+      error:
+        "Enter your Telegram username (5–32 letters, digits or underscores).",
+    };
+  }
+  return { value };
+}
