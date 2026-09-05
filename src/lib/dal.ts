@@ -1,9 +1,10 @@
 import "server-only";
 
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { adminScope, scopeCovers, scopeIsEmpty } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { canActAsMentor, ROLE_HOME, type Role } from "@/lib/constants";
 import type { User } from "@/generated/prisma/client";
@@ -45,6 +46,37 @@ export async function requireRole(...roles: Role[]): Promise<User> {
   if (!roles.includes(user.role as Role)) {
     redirect(ROLE_HOME[user.role as Role] ?? "/login");
   }
+  return user;
+}
+
+/**
+ * Gate a staff page: signed in, and administering at least one program.
+ *
+ * This replaced `requireRole(ROLES.ADMIN)`, and it is a different question.
+ * The role says what somebody is; the scope says what they may see, and an
+ * ADMIN with no grants may see nothing — which is deliberate, and the reason
+ * there is no "admins fall back to everything" branch here.
+ *
+ * Everything the doc on `requireRole` says about calling this in the PAGE and
+ * not only in the layout applies, for the same reason.
+ */
+export async function requireAdminAccess(): Promise<User> {
+  const user = await requireUser();
+  if (scopeIsEmpty(await adminScope(user))) redirect(homeFor(user));
+  return user;
+}
+
+/**
+ * Gate a page about ONE program.
+ *
+ * `notFound()`, not a redirect: a program outside somebody's grants should read
+ * exactly like a program that does not exist. Bouncing them home instead would
+ * confirm the id was real, and is the wrong answer to a link they were sent in
+ * good faith.
+ */
+export async function requireProgramScope(programId: string): Promise<User> {
+  const user = await requireAdminAccess();
+  if (!scopeCovers(await adminScope(user), programId)) notFound();
   return user;
 }
 

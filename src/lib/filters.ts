@@ -5,6 +5,7 @@ import {
   SESSION_STATUS,
   USER_STATUS,
 } from "@/lib/constants";
+import { mentorReachWhere } from "@/lib/queries";
 import { EXPIRY_WINDOW_DAYS, type Audience } from "@/lib/status";
 import { programWallClock } from "@/lib/when";
 import type { Prisma } from "@/generated/prisma/client";
@@ -700,30 +701,24 @@ function readPerson(params: SearchParams, key: string, scope: FilterScope): stri
 }
 
 /**
- * The four ways a mentor reaches a student, as one `where` — the same rule
- * `mentorCaseload()` (`queries.ts:600-616`) states in prose, minus the fourth
- * (everyone else in their programs), which is reachability for logging and not
- * a caseload.
+ * "Whose students are these?" as a `where`, from the one definition of reach
+ * (`mentorReachWhere`, `queries.ts`) — so a filtered list holds exactly the
+ * people the mentor's own caseload holds. It stops at the caseload: the fifth
+ * leg, everyone else in their programs, is who they may LOG against, which is
+ * not who this list is about.
  *
- * The pool leg needs to know which programs are the mentor's, so it is only
- * added when the scope says. Without that it would read "anyone holding
- * unassigned time anywhere", which is not the same question.
+ * Programs arrive as ids without cohorts, which is what the lens offers, so a
+ * pairing here is program-wide. A cohort-scoped pairing therefore reads one
+ * program wide in this one place — the same answer the page gave before, and
+ * narrower than it looks, since the pool leg is the only one it widens.
  */
-function mentorReach(
+function reachOf(
   mentorId: string,
   programIds?: readonly string[]
 ): Prisma.StudentProfileWhereInput {
-  const reach: Prisma.StudentProfileWhereInput[] = [
-    { hourAllocations: { some: { mentorId } } },
-    { sessions: { some: { mentorId } } },
-  ];
-  if (programIds) {
-    reach.push({
-      programId: { in: [...programIds] },
-      hourAllocations: { some: { mentorId: null } },
-    });
-  }
-  return { OR: reach };
+  return mentorReachWhere(mentorId, {
+    pairings: programIds?.map((programId) => ({ programId, cohortId: null })),
+  });
 }
 
 /**
@@ -750,7 +745,7 @@ export function studentsWhere(
 
   if (scope.programIds) and.push({ programId: { in: [...scope.programIds] } });
   if (scope.studentId) and.push({ id: scope.studentId });
-  if (scope.mentorId) and.push(mentorReach(scope.mentorId, scope.programIds));
+  if (scope.mentorId) and.push(reachOf(scope.mentorId, scope.programIds));
 
   const program = readParam(params, "program");
   // ANDed alongside the scope rather than checked against it: a program id from
@@ -761,7 +756,7 @@ export function studentsWhere(
   if (cohort) and.push({ cohortId: cohort });
 
   const mentor = readPerson(params, "mentor", scope);
-  if (mentor) and.push(mentorReach(mentor, scope.programIds));
+  if (mentor) and.push(reachOf(mentor, scope.programIds));
 
   const status = readParam(params, "status");
   if (status === "pending") {

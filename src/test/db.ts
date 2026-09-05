@@ -19,6 +19,7 @@ export async function resetDb() {
   await prisma.websiteFeedback.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.mentorAssignment.deleteMany();
+  await prisma.programStaff.deleteMany();
   await prisma.studentProfile.deleteMany();
   await prisma.avatarImage.deleteMany();
   await prisma.user.deleteMany();
@@ -51,8 +52,59 @@ export async function admin(name = "Test Admin") {
   });
 }
 
+/** Runs the platform: every program, without a grant. */
+export async function platformAdmin(name = "Test Platform Admin") {
+  return prisma.user.create({
+    data: {
+      email: nextEmail("platform"),
+      name,
+      role: ROLES.ADMIN,
+      platformAdmin: true,
+    },
+  });
+}
+
+/** One person may administer one program. */
+export async function grant(opts: {
+  userId: string;
+  programId: string;
+  role?: string;
+}) {
+  return prisma.programStaff.create({
+    data: {
+      userId: opts.userId,
+      programId: opts.programId,
+      role: opts.role ?? "ADMIN",
+    },
+  });
+}
+
+/** A mentor paired with a program, or with one cohort inside it. */
+export async function pairing(opts: {
+  mentorId: string;
+  programId: string;
+  cohortId?: string | null;
+}) {
+  return prisma.mentorAssignment.create({
+    data: {
+      mentorId: opts.mentorId,
+      programId: opts.programId,
+      cohortId: opts.cohortId ?? null,
+    },
+  });
+}
+
+/** A cohort inside a program, for the pairings that are scoped to one. */
+export async function cohort(opts: { programId: string; name?: string }) {
+  return prisma.cohort.create({
+    data: { programId: opts.programId, name: opts.name ?? `Cohort ${++seq}` },
+  });
+}
+
 /** A student and their profile; the profile id is what the hours engine takes. */
-export async function student(opts: { programId?: string; name?: string } = {}) {
+export async function student(
+  opts: { programId?: string; name?: string; cohortId?: string | null } = {}
+) {
   const programId = opts.programId ?? (await program()).id;
   const [user, createdBy] = await Promise.all([
     prisma.user.create({
@@ -65,7 +117,12 @@ export async function student(opts: { programId?: string; name?: string } = {}) 
     admin("Creator"),
   ]);
   return prisma.studentProfile.create({
-    data: { userId: user.id, programId, createdById: createdBy.id },
+    data: {
+      userId: user.id,
+      programId,
+      cohortId: opts.cohortId ?? null,
+      createdById: createdBy.id,
+    },
   });
 }
 

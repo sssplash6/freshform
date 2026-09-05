@@ -645,6 +645,57 @@ export function toProgramOptions(
  * log picker offers eleven. The first four groups are `students`, the fifth
  * is `loggable`, and both come back so a caller can decide which it needs.
  */
+/** One of a mentor's pairings, as the students it lets them reach. */
+export type MentorPairing = { programId: string; cohortId: string | null };
+
+/**
+ * The five legs above, as one `where` — so "who are my students?" and "is this
+ * one of mine?" cannot drift apart. A list that offers a student and a page
+ * that 404s on them is the same bug twice, and it was live for months.
+ *
+ * Pure and synchronous: the caller supplies the mentor's pairings, because the
+ * two callers already hold them (the caseload has them for its own totals, the
+ * students list has the program lens the reader chose). Pass none and the two
+ * program-shaped legs are simply absent — which is right for "students of
+ * mine", and wrong for "students I may log against", hence `includeProgram`.
+ */
+export function mentorReachWhere(
+  mentorId: string,
+  opts: {
+    pairings?: readonly MentorPairing[];
+    /** Add the fifth leg: everyone in a program this mentor works in. */
+    includeProgram?: boolean;
+  } = {}
+): Prisma.StudentProfileWhereInput {
+  const reach: Prisma.StudentProfileWhereInput[] = [
+    // An admin granted this mentor time with them.
+    { hourAllocations: { some: { mentorId } } },
+    // They have met: a grant can be removed, a session happened.
+    { sessions: { some: { mentorId } } },
+    // An admin put this student's work on this mentor's list.
+    { assignments: { some: { mentorId } } },
+  ];
+
+  const pairings = opts.pairings;
+  if (pairings && pairings.length > 0) {
+    // A pairing is program-wide (cohortId null) or to one cohort inside it,
+    // and a student is reached by whichever of the two the pairing says.
+    const inPairings: Prisma.StudentProfileWhereInput = {
+      OR: pairings.map((p) =>
+        p.cohortId
+          ? { programId: p.programId, cohortId: p.cohortId }
+          : { programId: p.programId }
+      ),
+    };
+    // Unassigned time in one of those programs: logging is the act that
+    // decides whose time it was.
+    reach.push({ AND: [inPairings, { hourAllocations: { some: { mentorId: null } } }] });
+    if (opts.includeProgram) reach.push(inPairings);
+  }
+
+  return { OR: reach };
+}
+
 export type CaseloadStudent = {
   profile: {
     id: string;
