@@ -124,6 +124,116 @@ export async function deleteCohort(
 }
 
 /**
+ * Close a finished program down, or reopen one that was closed too early.
+ *
+ * Archiving is what a program that has RUN does instead of being deleted.
+ * `deleteProgram` below is refused while a single student or a single grant is
+ * left, which is correct and which leaves the common case — a cohort that
+ * finished, with a year of sessions behind it — with nowhere to go: the program
+ * stayed in every picker and every list forever, and the only way to get it out
+ * was to delete the students whose ledger it holds.
+ *
+ * WHO MAY. The program's own admins, the same gate as `renameProgram` and
+ * `deleteProgram`, and NOT platform-only. §8.3 reserves platform for two things
+ * and this is neither: creating a program (which arrives with nobody
+ * administering it, so it cannot be anybody's) and `ProgramStaff` writes (which
+ * hand out access). Archiving creates and destroys nothing — every grant
+ * survives it, every ledger page stays reachable, and the reader who ran the
+ * program is the one who knows it has finished. It is also the only reversible
+ * door on that settings page, which is the argument for putting it beside the
+ * two irreversible ones rather than behind a different person.
+ *
+ * One action, both directions: the pair is one decision, and splitting it in
+ * two would duplicate the gate and the sentence.
+ */
+export async function archiveProgram(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+
+  const programId = String(formData.get("programId") ?? "");
+  // Gated before the row is read, so a program outside the scope answers the
+  // same whether or not the id names a real one.
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
+  const program = await prisma.program.findUnique({ where: { id: programId } });
+  if (!program) return { ok: false, error: "Program not found." };
+
+  const restore = String(formData.get("restore") ?? "") === "true";
+  if (restore === (program.status === "ACTIVE")) {
+    return {
+      ok: true,
+      message: restore
+        ? `${program.name} is already running.`
+        : `${program.name} is already archived.`,
+    };
+  }
+
+  await prisma.program.update({
+    where: { id: programId },
+    data: restore
+      ? { status: "ACTIVE", archivedAt: null }
+      : { status: "ARCHIVED", archivedAt: new Date() },
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: restore
+      ? `${program.name} is running again.`
+      : `${program.name} is archived. Its sessions and allocations stay where they are.`,
+  };
+}
+
+/**
+ * Does allocating time in this program also record what the student paid?
+ *
+ * A column on the program, decided here, replacing a comparison against the
+ * program's NAME at four call sites — where renaming the Master's Program,
+ * which the same settings page offers, silently switched the money fields off
+ * across the whole app.
+ *
+ * Program-scoped for the same reason `renameProgram` is: it changes what that
+ * program's own forms ask for, and the person who administers it is the one who
+ * knows whether they collect money.
+ */
+export async function setProgramTracksPayment(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await getCurrentUser();
+
+  const programId = String(formData.get("programId") ?? "");
+  const denied = await assertProgramScope(actor, programId);
+  if (denied) return denied;
+
+  const program = await prisma.program.findUnique({ where: { id: programId } });
+  if (!program) return { ok: false, error: "Program not found." };
+
+  const tracksPayment = String(formData.get("tracksPayment") ?? "") === "on";
+  if (tracksPayment === program.tracksPayment) {
+    return { ok: true, message: "No change." };
+  }
+
+  await prisma.program.update({
+    where: { id: programId },
+    data: { tracksPayment },
+  });
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    // Amounts already recorded are not touched: the flag decides what the forms
+    // ASK for, and money somebody entered last month is a fact either way.
+    message: tracksPayment
+      ? `Allocating time in ${program.name} now asks what the student paid.`
+      : `Allocating time in ${program.name} no longer asks about payment. Amounts already recorded stay.`,
+  };
+}
+
+/**
  * Delete a whole program, once it is empty. Anything with history in it —
  * students, staff scoped to it — blocks the delete rather than being swept up:
  * a program is closed by emptying it, and only then removed.
