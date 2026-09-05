@@ -125,7 +125,9 @@ export default async function StudentWorkspacePage({
           take: 20,
         })
       : Promise.resolve([]),
-    manages ? programOptions(programIds) : Promise.resolve([]),
+    // Archived included: a student may already be IN one, and the move form
+    // has to be able to show where they are before it offers anywhere else.
+    manages ? programOptions(programIds, true) : Promise.resolve([]),
     manages
       ? prisma.user.findMany({
           where: {

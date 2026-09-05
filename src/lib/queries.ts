@@ -605,9 +605,19 @@ export function assignmentsForStudentWhere(profile: {
  * All programs with their cohorts, for enrollment/assignment selects. Only
  * programs with cohorts (Global Admissions) require picking one.
  */
-export async function programOptions(programIds?: readonly string[]) {
+export async function programOptions(
+  programIds?: readonly string[],
+  /** Archived programs, for a page that is ABOUT them rather than picking one. */
+  includeArchived = false
+) {
   return prisma.program.findMany({
-    where: programIds ? { id: { in: [...programIds] } } : {},
+    where: {
+      ...(programIds ? { id: { in: [...programIds] } } : {}),
+      // An archived program is one nothing new should be enrolled into. It
+      // keeps its students, its ledger and its pages; it just stops being
+      // offered. That is the whole difference between archiving and deleting.
+      ...(includeArchived ? {} : { status: "ACTIVE" }),
+    },
     include: { cohorts: { orderBy: { name: "asc" } } },
     orderBy: { name: "asc" },
   });

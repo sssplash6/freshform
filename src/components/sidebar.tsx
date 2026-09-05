@@ -66,7 +66,7 @@ export function Sidebar({
  */
 function NavSearch({ mentors }: { mentors: boolean }) {
   return (
-    <form method="get" action="/admin/students" role="search">
+    <form method="get" action="/students" role="search">
       <label htmlFor="nav-search" className="sr-only">
         {mentors ? "Find a student or mentor" : "Find a student"}
       </label>

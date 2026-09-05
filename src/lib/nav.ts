@@ -105,27 +105,24 @@ async function staffNav(viewer: User, inbox?: number): Promise<NavItem[]> {
           select: { id: true, name: true },
         })
       : null;
+  // One program is a name, not an index: an index of one is a page whose only
+  // content is a link. More than one, and it is the list.
   const programItem: NavItem[] = onlyProgram
     ? [{ href: `/programs/${onlyProgram.id}`, label: onlyProgram.name }]
-    : [];
+    : [{ href: "/programs", label: "Programs" }];
 
-  const students: NavItem = { href: "/admin/students", label: "Students" };
+  const students: NavItem = { href: "/students", label: "Students" };
   const feedback: NavItem = { href: "/feedback", label: "Feedback" };
 
   if (level === "SALES") return [inboxItem, students, ...programItem];
   if (level === "LEADER") return [inboxItem, students, feedback, ...programItem];
 
-  // Sessions is missing on purpose: `/sessions` is a list that does not exist
-  // yet (only `/sessions/new` does), and pointing an admin at `/mentor/sessions`
-  // would hand them one mentor's own log from an item named for the school's.
-  // Commit 42. Programs, for somebody who holds more than one, is missing for
-  // the same reason — there is no index route until commit 44, and until then
-  // the inbox's program rows are the way in.
   return [
     inboxItem,
     students,
     { href: "/mentors", label: "Mentors" },
     ...programItem,
+    { href: "/sessions", label: "Sessions" },
     feedback,
   ];
 }
