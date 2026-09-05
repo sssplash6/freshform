@@ -4,7 +4,6 @@ import { Timeline, type TimelineEntry } from "@/components/timeline";
 import { Figure } from "@/components/ui/figure";
 import { ArrowLink } from "@/components/ui/link";
 import { PageTitle, Section } from "@/components/ui/section";
-import { StatusChip } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
   ASSIGNMENT_PROGRESS,
@@ -13,9 +12,10 @@ import {
   SESSION_STATUS,
 } from "@/lib/constants";
 import { adminScope, scopeProgramFilter } from "@/lib/authz";
+import { SessionRow, toSessionEntries } from "@/components/session-row";
 import { requireStaff } from "@/lib/dal";
 import { ensureDeadlineReminders } from "@/lib/deadline-reminders";
-import { formatDate, formatMinutes, formatRough } from "@/lib/format";
+import { formatRough } from "@/lib/format";
 import { programTotals } from "@/lib/hours";
 import { prisma } from "@/lib/prisma";
 import { recentMeetings, studentsWithHours } from "@/lib/queries";
@@ -24,7 +24,6 @@ import {
   attentionList,
   meetingStatus,
   mentorStatuses,
-  sessionStatuses,
   status,
   studentStatuses,
   taskStatuses,
@@ -98,8 +97,6 @@ const reroute = (href: string): string =>
 
 /** "1 program", "3 programs" — the one place this page pluralises. */
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-
-type RecentSession = Awaited<ReturnType<typeof recentMeetings>>[number];
 
 /** A status and the program it belongs to, before either is presented. */
 type Flag = { programId: string | null; status: Status };
@@ -516,14 +513,17 @@ export default async function AdminInboxPage() {
       {recent.length > 0 && (
         <Section title="Recent">
           <ul className="divide-y divide-line">
-            {recent.map((session) => (
-              <RecentLine
-                key={session.id}
-                session={session}
-                program={studentById.get(session.studentId)?.program.name}
-                viewer={viewer}
-              />
-            ))}
+            {toSessionEntries(recent, { studentBase: "/admin/students" }).map(
+              (session, i) => (
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  viewer={viewer}
+                  variant="line"
+                  index={i}
+                />
+              )
+            )}
           </ul>
         </Section>
       )}
@@ -531,57 +531,4 @@ export default async function AdminInboxPage() {
   );
 }
 
-/**
- * One logged session as a sentence.
- *
- * `SessionRow variant="line"` is where this belongs and it arrives with the
- * shared renderers (§5.2); until then a read-only line is four spans, and
- * mounting the editable log this section replaces to get them back would undo
- * the point of the section. The exception chips are not decoration: without
- * them a voided session reads as delivered time.
- */
-function RecentLine({
-  session,
-  program,
-  viewer,
-}: {
-  session: RecentSession;
-  program?: string;
-  viewer: ViewerContext;
-}) {
-  const exceptions = sessionStatuses(
-    {
-      attended: session.attended,
-      late: session.late,
-      status: session.status,
-      withinPlan: session.withinPlan,
-    },
-    viewer
-  );
-  const dot = (
-    <span aria-hidden="true" className="text-muted-fg">
-      ·
-    </span>
-  );
 
-  return (
-    <li className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-2.5 text-sm sm:px-5">
-      <span className="text-muted-fg">{formatDate(session.date)}</span>
-      {dot}
-      <span className="min-w-0 text-ink">
-        {session.mentor.name ?? session.mentor.email} logged{" "}
-        {formatMinutes(session.minutes)} with{" "}
-        {session.student.user.name ?? session.student.user.email}
-      </span>
-      {program && (
-        <>
-          {dot}
-          <span className="text-muted-fg">{program}</span>
-        </>
-      )}
-      {exceptions.map((s) => (
-        <StatusChip key={s.type} status={s} />
-      ))}
-    </li>
-  );
-}

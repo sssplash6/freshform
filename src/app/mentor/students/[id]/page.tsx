@@ -6,7 +6,7 @@ import { AssignmentsPanel } from "@/components/assignments-panel";
 import { LogSessionForm } from "@/components/forms/log-session-form";
 import { ScheduleInterviewForm } from "@/components/forms/schedule-interview-form";
 import { HoursBreakdown } from "@/components/hours-breakdown";
-import { MeetingsLog } from "@/components/meetings-log";
+import { SessionsLog, toSessionEntries } from "@/components/session-row";
 import { ScheduledMeetings } from "@/components/scheduled-meetings";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { Callout } from "@/components/ui/callout";
@@ -262,8 +262,9 @@ Folder
         }
       />
 
-      <MeetingsLog
-        sessions={ledger.sessions}
+      <SessionsLog
+        sessions={toSessionEntries(ledger.sessions)}
+        viewer={viewer}
         manage={{ actorId: mentor.id, tasksBySession }}
       />
 

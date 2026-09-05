@@ -1,20 +1,16 @@
 import { SessionRowActions } from "@/components/forms/session-row-actions";
+import { SessionsTable, toSessionEntries } from "@/components/session-row";
 import { Select } from "@/components/select";
 import { Button, LinkButton } from "@/components/ui/button";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
-import { Table, Td, Tr, type Column } from "@/components/ui/table";
 import {
-  ATTENDANCE,
-  ATTENDANCE_META,
   attendanceOf,
   timeKindOf,
   SESSION_STATUS,
 } from "@/lib/constants";
 import { requireMentor } from "@/lib/dal";
-import { formatDate, formatDuration, formatMinutes, toDateInputValue } from "@/lib/format";
+import { formatDuration, toDateInputValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { StatusChip } from "@/components/ui/status-chip";
-import { severityOrNeutral } from "@/lib/status";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -38,6 +34,8 @@ export default async function MentorSessionsPage({
   }>;
 }) {
   const user = await requireMentor();
+  // One instant for the whole page: every chip and window is judged against it.
+  const viewer = { audience: "mentor" as const, userId: user.id, now: new Date() };
   const {
     student = "",
     program = "",
@@ -113,12 +111,18 @@ export default async function MentorSessionsPage({
     orderBy: [{ studentId: "asc" }, { position: "asc" }],
     select: { id: true, studentId: true, purpose: true },
   });
-  const goalsByStudent = new Map<string, { value: string; label: string }[]>();
+  // Keyed by SESSION, not by student: a row's menu offers the tasks that row
+  // could be re-attached to, and `SessionsTable` hands the renderer a row.
+  const goalsByStudentId = new Map<string, { value: string; label: string }[]>();
   for (const g of myGoals) {
-    const list = goalsByStudent.get(g.studentId) ?? [];
+    const list = goalsByStudentId.get(g.studentId) ?? [];
     list.push({ value: g.id, label: g.purpose });
-    goalsByStudent.set(g.studentId, list);
+    goalsByStudentId.set(g.studentId, list);
   }
+  const goalsBySession: Record<string, { value: string; label: string }[]> =
+    Object.fromEntries(
+      sessions.map((s) => [s.id, goalsByStudentId.get(s.studentId) ?? []])
+    );
 
   const studentOptions = loggedStudents
     .map((s) => ({
@@ -148,16 +152,6 @@ export default async function MentorSessionsPage({
     .reduce((sum, row) => sum + (row._sum.minutes ?? 0), 0);
 
   const params = { student, program, from, to };
-
-  const columns: Column[] = [
-    { label: "Date" },
-    { label: "Student" },
-    { label: "Duration", align: "right" },
-    { label: "Task" },
-    { label: "Notes" },
-    { label: "Status" },
-    { label: "" },
-  ];
 
   return (
     <div className="space-y-6">
@@ -241,91 +235,31 @@ export default async function MentorSessionsPage({
             </EmptyState>
           ) : (
             <>
-              <Table columns={columns}>
-                {sessions.map((s) => {
-                  const voided = s.status === SESSION_STATUS.VOIDED;
-                  return (
-                    <Tr
-                      key={s.id}
-                      // The receipt on /sessions/new links here, so a mentor
-                      // who reads "90 min" and meant 60 lands on their own row
-                      // with its Correct menu already in front of them.
-                      id={`session-${s.id}`}
-                      className={voided ? "opacity-50" : ""}
-                    >
-                      <Td label="Date" className="tabular-nums">
-                        {formatDate(s.date)}
-                      </Td>
-                      <Td label="Student">
-                        <span className="font-medium text-ink">
-                          {s.student.user.name ?? s.student.user.email}
-                        </span>
-                        <span className="block text-xs text-muted-fg">
-                          {s.student.program.name}
-                          {s.student.cohort ? ` / ${s.student.cohort.name}` : ""}
-                        </span>
-                      </Td>
-                      <Td label="Duration" align="right" className="tabular-nums">
-                        <span
-                          className={
-                            s.withinPlan ? undefined : "text-muted-fg line-through"
-                          }
-                        >
-                          {formatMinutes(s.minutes)}
-                        </span>
-                      </Td>
-                      <Td
-                        label="Task"
-                        className="text-ink sm:max-w-56 sm:truncate"
-                      >
-                        {s.assignment?.purpose ?? "—"}
-                      </Td>
-                      <Td
-                        label="Notes"
-                        className="text-muted-fg sm:max-w-56 sm:truncate"
-                      >
-                        {s.note ?? "—"}
-                      </Td>
-                      <Td label="Status">
-                        <span className="flex flex-wrap gap-1.5">
-                          {voided ? (
-                            <StatusChip severity="neutral">
-                              Voided, time returned
-                            </StatusChip>
-                          ) : attendanceOf(s) === ATTENDANCE.ATTENDED ? null : (
-                            <StatusChip
-                              severity={severityOrNeutral(
-                                ATTENDANCE_META[attendanceOf(s)].status
-                              )}
-                            >
-                              {ATTENDANCE_META[attendanceOf(s)].chip}
-                            </StatusChip>
-                          )}
-                          {!voided && !s.withinPlan && (
-                            <StatusChip severity="neutral">Extra, no time charged</StatusChip>
-                          )}
-                        </span>
-                      </Td>
-                      <Td>
-                        {!voided && (
-                          <SessionRowActions
-                            session={{
-                              id: s.id,
-                              minutes: s.minutes,
-                              date: toDateInputValue(s.date),
-                              attendance: attendanceOf(s),
-                              timeKind: timeKindOf(s),
-                              note: s.note,
-                              assignmentId: s.assignmentId,
-                            }}
-                            goals={goalsByStudent.get(s.studentId) ?? []}
-                          />
-                        )}
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </Table>
+              <SessionsTable
+                // Every row is this mentor's, so the query never fetched a
+                // mentor to put on it; the table drops the column anyway.
+                sessions={toSessionEntries(
+                  sessions.map((row) => ({ ...row, mentor: user }))
+                )}
+                viewer={viewer}
+                columns={["date", "student", "duration", "task", "notes"]}
+                renderActions={(row) =>
+                  row.status === SESSION_STATUS.VOIDED ? null : (
+                    <SessionRowActions
+                      session={{
+                        id: row.id,
+                        minutes: row.minutes,
+                        date: toDateInputValue(row.date),
+                        attendance: attendanceOf(row),
+                        timeKind: timeKindOf(row),
+                        note: row.note,
+                        assignmentId: row.task?.id ?? null,
+                      }}
+                      goals={goalsBySession[row.id] ?? []}
+                    />
+                  )
+                }
+              />
               <Pagination
                 basePath="/mentor/sessions"
                 params={params}

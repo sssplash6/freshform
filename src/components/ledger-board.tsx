@@ -2,20 +2,16 @@ import { ExpandableText } from "@/components/expandable-text";
 import { HoursBreakdown } from "@/components/hours-breakdown";
 import { CalendarIcon, LinkIcon } from "@/components/icons";
 import { PersonChip } from "@/components/person-chip";
+import { SessionRow, toSessionEntries } from "@/components/session-row";
 import { Section } from "@/components/ui/section";
 import {
   ASSIGNMENT_PROGRESS,
   ASSIGNMENT_PROGRESS_GLYPH,
   ASSIGNMENT_PROGRESS_LABELS,
   ASSIGNMENT_PROGRESS_STATUS,
-  ATTENDANCE,
-  ATTENDANCE_META,
-  attendanceOf,
-  chargesAllocation,
   SESSION_STATUS,
 } from "@/lib/constants";
 import {
-  formatDate,
   formatDuration,
   formatMeetingWhen,
   formatMinutes,
@@ -139,59 +135,6 @@ function UpcomingMeetingRow({
           </ExternalLink>
         )}
       </div>
-    </li>
-  );
-}
-
-function LoggedMeetingRow({ session }: { session: LedgerSession }) {
-  const voided = session.status === SESSION_STATUS.VOIDED;
-  const state = attendanceOf(session);
-  return (
-    <li className={cn("px-4 py-2.5 sm:px-5", voided && "opacity-55")}>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <PersonChip person={session.mentor} size="sm" />
-        <span
-          className={cn(
-            "text-[13px] tabular-nums",
-            voided || !chargesAllocation(session)
-              ? "text-muted-fg line-through"
-              : "font-semibold text-accent-ink",
-          )}
-        >
-          {formatMinutes(session.minutes)}
-        </span>
-        <span className="text-xs tabular-nums text-muted-fg">
-          {formatDate(session.date)}
-        </span>
-        {session.assignment && (
-          <span className="min-w-0 truncate text-xs font-medium text-ink">
-            {session.assignment.purpose}
-          </span>
-        )}
-      </div>
-      {session.note && (
-        <div className="mt-0.5 text-[13px] text-ink">
-          <ExpandableText text={session.note} />
-        </div>
-      )}
-      {(voided || state !== ATTENDANCE.ATTENDED || !session.withinPlan) && (
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {voided ? (
-            <StatusChip severity="neutral">Voided, time returned</StatusChip>
-          ) : (
-            <>
-              {state !== ATTENDANCE.ATTENDED && (
-                <StatusChip severity={severityOrNeutral(ATTENDANCE_META[state].status)}>
-                  {ATTENDANCE_META[state].chip}
-                </StatusChip>
-              )}
-              {!session.withinPlan && (
-                <StatusChip severity="neutral">Extra, no time charged</StatusChip>
-              )}
-            </>
-          )}
-        </div>
-      )}
     </li>
   );
 }
@@ -347,8 +290,14 @@ export function LedgerBoard({
               </ul>
               <GroupRule label="Already held" count={logged.length} />
               <ul className="divide-y divide-line/50">
-                {logged.map((s) => (
-                  <LoggedMeetingRow key={s.id} session={s} />
+                {toSessionEntries(logged, { mentorBase }).map((s, i) => (
+                  <SessionRow
+                    key={s.id}
+                    session={s}
+                    viewer={viewer}
+                    variant="timeline"
+                    index={i}
+                  />
                 ))}
               </ul>
             </>

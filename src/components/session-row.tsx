@@ -5,9 +5,22 @@ import { PersonChip } from "@/components/person-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Table, Td, Tr, type Column } from "@/components/ui/table";
-import { chargesAllocation, SESSION_STATUS } from "@/lib/constants";
+import { SessionRowActions } from "@/components/forms/session-row-actions";
+import { ArrowLink } from "@/components/ui/link";
+import { Section } from "@/components/ui/section";
+import {
+  attendanceOf,
+  chargesAllocation,
+  SESSION_STATUS,
+  timeKindOf,
+} from "@/lib/constants";
 import { cn } from "@/lib/cn";
-import { formatDate, formatMinutes } from "@/lib/format";
+import {
+  formatDate,
+  formatDuration,
+  formatMinutes,
+  toDateInputValue,
+} from "@/lib/format";
 import { personTone } from "@/lib/person-tone";
 import { sessionStatuses, type ViewerContext } from "@/lib/status";
 
@@ -416,6 +429,94 @@ function Separator() {
  * query that can see the whole filtered set. When two renderers disagree about
  * a number, delete the one that recomputes it.
  */
+/**
+ * A session as the database hands it over, at any of the six places one is
+ * read. Structural for the same reason `SessionEntry` is — three queries, three
+ * shapes — and separate from it because this is what callers HAVE and that is
+ * what the row NEEDS.
+ */
+export type LoggedSession = {
+  id: string;
+  minutes: number;
+  date: Date;
+  attended: boolean;
+  late: boolean;
+  note: string | null;
+  status: string;
+  withinPlan: boolean;
+  mentor: { id: string; name: string | null; email: string; avatarUpdatedAt?: Date | null };
+  student?: {
+    id: string;
+    user: { name: string | null; email: string; avatarUpdatedAt?: Date | null };
+    program?: { name: string } | null;
+  } | null;
+  assignment?: { id: string; purpose: string } | null;
+};
+
+/**
+ * Rows, with the links this reader is entitled to.
+ *
+ * Bases rather than functions: a page hands these to a component tree that may
+ * cross into a client component, and a function cannot make that crossing — it
+ * type-checks, it builds, and it throws at render.
+ */
+export function toSessionEntries(
+  sessions: readonly LoggedSession[],
+  links: { mentorBase?: string; studentBase?: string } = {}
+): SessionEntry[] {
+  return sessions.map((s) => ({
+    id: s.id,
+    date: s.date,
+    minutes: s.minutes,
+    attended: s.attended,
+    late: s.late,
+    status: s.status,
+    withinPlan: s.withinPlan,
+    note: s.note,
+    mentor: {
+      id: s.mentor.id,
+      name: s.mentor.name,
+      email: s.mentor.email,
+      avatarUpdatedAt: s.mentor.avatarUpdatedAt,
+      href: links.mentorBase ? `${links.mentorBase}/${s.mentor.id}` : undefined,
+    },
+    student: s.student
+      ? {
+          id: s.student.id,
+          name: s.student.user.name,
+          email: s.student.user.email,
+          avatarUpdatedAt: s.student.user.avatarUpdatedAt,
+          program: s.student.program?.name ?? null,
+          href: links.studentBase
+            ? `${links.studentBase}/${s.student.id}`
+            : undefined,
+        }
+      : null,
+    task: s.assignment ?? null,
+  }));
+}
+
+/**
+ * What a log of these adds up to, for the caption above it.
+ *
+ * Voided and rescheduled rows are history, not hours, and out-of-plan time is
+ * named beside the total rather than folded into it — a caption that added
+ * them together would disagree with the balance on the same page.
+ */
+export function sessionsCaption(sessions: readonly SessionEntry[]): string {
+  const active = sessions.filter((s) => s.status === SESSION_STATUS.ACTIVE);
+  if (active.length === 0) return "Nothing logged yet";
+  const logged = active
+    .filter(chargesAllocation)
+    .reduce((sum, s) => sum + s.minutes, 0);
+  const extra = active
+    .filter((s) => !s.withinPlan)
+    .reduce((sum, s) => sum + s.minutes, 0);
+  return `${active.length} meeting${active.length === 1 ? "" : "s"} · ${formatDuration(logged)}${
+    extra > 0 ? ` · ${formatDuration(extra)} extra` : ""
+  }`;
+}
+
 export function SessionsTable({
   sessions,
   viewer,
@@ -481,5 +582,114 @@ export function SessionsTable({
         />
       ))}
     </Table>
+  );
+}
+
+/**
+ * Who is reading, and therefore which rows they may change. A mentor may
+ * correct and void their own; an admin may do both to anyone's in a program
+ * they administer, and is the only one who can delete a row outright.
+ */
+export type ManageSessions = {
+  actorId?: string;
+  isAdmin?: boolean;
+  /**
+   * sessionId → the tasks THAT row could be attached to (its own mentor's, for
+   * its own student). Keyed per session because a log can span both — see
+   * queries.ts#taskOptionsForSessions.
+   */
+  tasksBySession?: Record<string, { value: string; label: string }[]>;
+};
+
+/**
+ * A log of sessions under a heading: what `MeetingsLog` was, in a fifth of the
+ * lines, because the row and its words are no longer this component's problem.
+ *
+ * It exists rather than four call sites composing a Section and a table
+ * themselves, for the same reason the row does: the caption is a figure, and a
+ * figure written four times is four chances to say something different from
+ * the balance on the same page.
+ */
+export function SessionsLog({
+  sessions,
+  viewer,
+  title = "Meetings log",
+  eyebrow = "Logged by mentors",
+  caption,
+  empty,
+  manage,
+  moreHref,
+  moreLabel = "All sessions",
+}: {
+  sessions: SessionEntry[];
+  viewer: ViewerContext;
+  title?: string;
+  eyebrow?: React.ReactNode;
+  /** Overrides the tally, for rows that are a slice of a wider set. */
+  caption?: React.ReactNode;
+  empty?: React.ReactNode;
+  manage?: ManageSessions;
+  moreHref?: string;
+  moreLabel?: string;
+}) {
+  const tally = caption ?? sessionsCaption(sessions);
+
+  // Correcting is for rows that still count and belong to the reader (any row,
+  // if they administer the program). Deleting is theirs alone, and applies to a
+  // voided row too: those hours are already back, but the line is still in the
+  // log, and a line that should never have been there should be removable.
+  const canEdit = (s: SessionEntry) =>
+    Boolean(manage) &&
+    s.status !== SESSION_STATUS.VOIDED &&
+    (manage?.isAdmin === true || s.mentor.id === manage?.actorId);
+  const canDelete = manage?.isAdmin === true;
+
+  return (
+    <Section
+      eyebrow={eyebrow}
+      title={title}
+      action={
+        moreHref ? (
+          <span className="flex items-center gap-3 text-xs text-muted-fg">
+            {tally}
+            <ArrowLink href={moreHref} className="text-xs">
+              {moreLabel}
+            </ArrowLink>
+          </span>
+        ) : undefined
+      }
+      caption={tally}
+    >
+      <SessionsTable
+        sessions={sessions}
+        viewer={viewer}
+        framed={false}
+        empty={
+          empty ?? (
+            <EmptyState framed={false} title="No meetings logged yet">
+              A mentor logs each meeting once it has happened.
+            </EmptyState>
+          )
+        }
+        renderActions={(s) =>
+          canEdit(s) || canDelete ? (
+            <SessionRowActions
+              session={{
+                id: s.id,
+                minutes: s.minutes,
+                date: toDateInputValue(s.date),
+                attendance: attendanceOf(s),
+                timeKind: timeKindOf(s),
+                note: s.note,
+                assignmentId: s.task?.id ?? null,
+              }}
+              goals={manage?.tasksBySession?.[s.id] ?? []}
+              canEdit={canEdit(s)}
+              canDelete={canDelete}
+            />
+          ) : null
+        }
+      />
+    </Section>
   );
 }

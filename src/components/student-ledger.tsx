@@ -1,7 +1,11 @@
 import { AssignmentsPanel } from "@/components/assignments-panel";
 import { LedgerBoard } from "@/components/ledger-board";
 import type { ViewerContext } from "@/lib/status";
-import { MeetingsLog, type ManageMeetings } from "@/components/meetings-log";
+import {
+  SessionsLog,
+  toSessionEntries,
+  type ManageSessions,
+} from "@/components/session-row";
 import type { OpenTask } from "@/components/forms/task-picker";
 import type { SelectOption } from "@/components/select";
 import { Figure, FigureRow } from "@/components/ui/figure";
@@ -55,7 +59,7 @@ export function StudentLedger({
   showAmountPaid?: boolean;
   manage?: boolean;
   /** Who may correct rows in the meetings log, if anyone. */
-  manageSessions?: ManageMeetings;
+  manageSessions?: ManageSessions;
   /** Role-specific numbers appended to the strip (mentor count, total paid). */
   extraStats?: React.ReactNode;
   /** The rows behind that panel, so the board can show them beside the log. */
@@ -110,9 +114,9 @@ export function StudentLedger({
         mentorBase={mentorBase}
       />
 
-      <MeetingsLog
-        sessions={sessions}
-        mentorBase={mentorBase}
+      <SessionsLog
+        sessions={toSessionEntries(sessions, { mentorBase })}
+        viewer={viewer}
         manage={manageSessions}
       />
 

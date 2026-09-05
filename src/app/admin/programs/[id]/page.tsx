@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MeetingsLog } from "@/components/meetings-log";
+import { SessionsLog, toSessionEntries } from "@/components/session-row";
 import { PersonChip } from "@/components/person-chip";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -95,7 +95,9 @@ export default async function AdminProgramOverviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireProgramScope(id);
+  const me = await requireProgramScope(id);
+  // One instant for the whole page, so no two sections disagree about today.
+  const viewer = { audience: "staff" as const, userId: me.id, now: new Date() };
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) notFound();
 
@@ -213,12 +215,18 @@ export default async function AdminProgramOverviewPage({
         </Section>
       )}
 
-      <MeetingsLog
-        sessions={recentSessions}
+      <SessionsLog
+        sessions={toSessionEntries(recentSessions, {
+          mentorBase: "/admin/mentors",
+        })}
+        viewer={viewer}
         title="Latest meetings"
         eyebrow={`Logged by mentors · ${program.name}`}
-        emptyBody={`No sessions logged in ${program.name} yet.`}
-        mentorBase="/admin/mentors"
+        empty={
+          <EmptyState framed={false} title="No meetings logged yet">
+            {`No sessions logged in ${program.name} yet.`}
+          </EmptyState>
+        }
         manage={{ isAdmin: true, tasksBySession: meetingTasks }}
       />
 

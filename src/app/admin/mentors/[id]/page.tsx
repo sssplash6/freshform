@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MeetingsLog } from "@/components/meetings-log";
+import { SessionsLog, toSessionEntries } from "@/components/session-row";
 import { Figure, FigureRow } from "@/components/ui/figure";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -49,6 +49,7 @@ export default async function AdminMentorDetailPage({
   const me = await requireAdminAccess();
   // One instant for every use-by date and every window bound on the page.
   const now = new Date();
+  const viewer = { audience: "staff" as const, userId: me.id, now };
   const { id } = await params;
   const query = await searchParams;
 
@@ -366,15 +367,20 @@ export default async function AdminMentorDetailPage({
         )}
       </Section>
 
-      <MeetingsLog
-        sessions={shownMeetings}
+      <SessionsLog
+        sessions={toSessionEntries(shownMeetings, {
+          studentBase: "/admin/students",
+        })}
+        viewer={viewer}
         title="Recent meetings"
         eyebrow={`Logged by ${mentor.name?.split(" ")[0] ?? name}`}
         caption={logCaption}
-        emptyBody={
-          !win.from && !win.to
-            ? "This mentor has logged no sessions."
-            : "No sessions logged inside this window — widen the period above."
+        empty={
+          <EmptyState framed={false} title="No meetings logged yet">
+            {!win.from && !win.to
+              ? "This mentor has logged no sessions."
+              : "No sessions logged inside this window — widen the period above."}
+          </EmptyState>
         }
       />
 
