@@ -1,5 +1,4 @@
 import { AppShell } from "@/components/app-shell";
-import { ROLES } from "@/lib/constants";
 import { requireStaff } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
@@ -15,9 +14,5 @@ export default async function AdminLayout({
   // The inbox under this shell is where an admin with no grants lands and is
   // told so, which a gate demanding a grant would make unreachable.
   const user = await requireStaff();
-  return (
-    <AppShell user={user} mode={ROLES.ADMIN}>
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

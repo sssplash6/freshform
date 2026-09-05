@@ -1,5 +1,4 @@
 import { AppShell } from "@/components/app-shell";
-import { ROLES } from "@/lib/constants";
 import { requireMentorAccess } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
@@ -13,9 +12,5 @@ export default async function MentorLayout({
   children: React.ReactNode;
 }) {
   const user = await requireMentorAccess();
-  return (
-    <AppShell user={user} mode={ROLES.MENTOR}>
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

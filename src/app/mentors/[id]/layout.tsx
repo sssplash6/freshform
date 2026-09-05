@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Mentor profiles are one page read by every role, so the shell takes the
- * VIEWER's own nav (like /notifications) rather than a role-specific one: a
- * student reading a mentor's profile keeps their student navigation.
+ * VIEWER's own nav — a student reading a mentor's profile keeps their student
+ * navigation, and a dual-role admin keeps whichever lens they are in rather
+ * than the one their `role` column names.
  */
 export default async function MentorProfileLayout({
   children,

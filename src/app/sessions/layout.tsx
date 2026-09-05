@@ -1,5 +1,4 @@
 import { AppShell } from "@/components/app-shell";
-import { ROLES } from "@/lib/constants";
 import { requireMentorAccess } from "@/lib/dal";
 
 // Authenticated, per-user pages that read the database on every request.
@@ -10,11 +9,13 @@ export const dynamic = "force-dynamic";
 /**
  * The first route outside `/admin`, `/mentor` and `/student`.
  *
- * Logging a session is a mentor's act whoever performs it, so the shell shows
- * the mentor nav — an admin who also mentors gets here from their mentor
- * lens. Phase 6 makes this route properly role-neutral and gives it the tabbed
- * `/sessions` list beside it; until then `requireMentorAccess` is the honest
- * gate, since it is exactly who `logSession` will accept.
+ * Logging a session is a mentor's act whoever performs it, so
+ * `requireMentorAccess` is the honest gate — it is exactly who `logSession`
+ * will accept. What the shell shows is not this route's business: the nav
+ * follows the reader's lens, so an admin who came here from their admin lens
+ * keeps the admin rail and does not have their chrome swapped out under them
+ * for the length of one form. Phase 6 gives this route the `/sessions` list
+ * beside it.
  */
 export default async function SessionsLayout({
   children,
@@ -22,9 +23,5 @@ export default async function SessionsLayout({
   children: React.ReactNode;
 }) {
   const user = await requireMentorAccess();
-  return (
-    <AppShell user={user} mode={ROLES.MENTOR}>
-      {children}
-    </AppShell>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

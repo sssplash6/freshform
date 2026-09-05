@@ -1,18 +1,24 @@
 import Link from "next/link";
 
 import { Avatar } from "@/components/avatar";
-import { NavLinks } from "@/components/nav-links";
 import { ChevronDownIcon, LogOutIcon } from "@/components/icons";
+import { NavLinks } from "@/components/nav-links";
 import {
   ProfileShortcut,
   ProfileSwitch,
   ProfileSwitchMenu,
 } from "@/components/profile-switch";
+import { PublicShell } from "@/components/public-shell";
+import { Sidebar } from "@/components/sidebar";
+import { TabBar } from "@/components/tab-bar";
+import { Popover } from "@/components/ui/popover";
 import { signOut } from "@/lib/auth";
+import { cn } from "@/lib/cn";
+import { adminScope, scopeIsEmpty } from "@/lib/authz";
+import { canActAsMentor, ROLES, USER_STATUS } from "@/lib/constants";
+import { navFor, notificationsItem, type NavItem } from "@/lib/nav";
 import { prisma } from "@/lib/prisma";
-import { NAV_BY_ROLE, ROLE_LABELS } from "@/lib/nav";
-import { ROLES, type Role } from "@/lib/constants";
-import { canSwitchProfile, profileOf } from "@/lib/profile";
+import { canSwitchProfile, profileOf, type Profile } from "@/lib/profile";
 import type { User } from "@/generated/prisma/client";
 
 async function signOutAction() {
@@ -20,20 +26,22 @@ async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
-function RoleBadge({ role }: { role: Role }) {
-  return (
-    <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-      {ROLE_LABELS[role]}
-    </span>
-  );
-}
-
+/**
+ * 44px, up from 40. The smallest reliable touch target, and this is the only
+ * control in the phone chrome that was under it.
+ *
+ * The count is brand blue: unread notifications are not a problem, and red is
+ * spent here on hours that are gone and balances that are negative. It appears
+ * only below `lg` — at desktop widths the sidebar's Notifications row carries
+ * the same number, and stating it twice on one screen is the "remaining is
+ * never said twice" rule applied to the chrome.
+ */
 function NotificationBell({ count }: { count: number }) {
   return (
     <Link
       href="/notifications"
       aria-label={`Notifications (${count} unread)`}
-      className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+      className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
     >
       <svg
         aria-hidden="true"
@@ -50,7 +58,7 @@ function NotificationBell({ count }: { count: number }) {
         />
       </svg>
       {count > 0 && (
-        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+        <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -59,177 +67,320 @@ function NotificationBell({ count }: { count: number }) {
 }
 
 /**
- * Signed-in user cluster: an avatar-initial button that opens a small menu
- * with the account's name/email and a sign-out. Groups identity + sign-out
- * into one control instead of a loose label plus a bare button.
+ * Identity and the things that are about you rather than about the school.
+ *
+ * A real `Popover`, not the hand-styled `<details>` this replaces: that one
+ * never closed on Escape, never closed when you clicked the page behind it, and
+ * left focus on an unmounted node — see the note at the top of `ui/popover.tsx`,
+ * which was written about these two menus.
+ *
+ * §4.1 also puts Settings, Platform and Help in here. None of the three is a
+ * route yet (Phase 7), and a menu item that 404s is worse than a menu item that
+ * is missing, so the menu carries what exists today.
  */
-function UserMenu({ user }: { user: User }) {
+function AccountMenu({
+  user,
+  lens,
+  mentorProfile,
+}: {
+  user: User;
+  /** The lens to show as active, or null for somebody who has only one. */
+  lens: Profile | null;
+  /** Where a mentor edits their own name, picture and booking link, until /settings. */
+  mentorProfile: boolean;
+}) {
   const label = user.name ?? user.email;
   const initial = (user.name?.trim() || user.email).charAt(0).toUpperCase();
+
   return (
-    <details className="group relative">
-      <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-full pl-1 pr-2.5 transition-colors hover:bg-canvas [&::-webkit-details-marker]:hidden">
-        {user.avatarUpdatedAt ? (
-          <Avatar person={user} className="h-8 w-8" />
-        ) : (
-          // Kept as the brand-soft single initial rather than the identity-tone
-          // badge used elsewhere: this is your OWN chrome, not a person in a list.
-          <span
-            aria-hidden="true"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand"
-          >
-            {initial}
-          </span>
-        )}
-        <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:inline">
-          {label}
-        </span>
-        <ChevronDownIcon className="h-4 w-4 text-muted-fg transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
-        <div className="border-b border-line px-3 py-2.5">
-          <p className="min-w-0 truncate text-sm font-medium text-ink">
-            {user.name ?? user.email}
-          </p>
-          {user.name && (
-            <p className="min-w-0 truncate text-xs text-muted-fg">{user.email}</p>
+    <Popover
+      label="Account"
+      origin="end"
+      width="sm"
+      triggerClassName="group flex h-11 w-full cursor-pointer items-center gap-2 rounded-lg pl-1 pr-2 transition-colors hover:bg-canvas"
+      trigger={
+        <>
+          {user.avatarUpdatedAt ? (
+            <Avatar person={user} className="h-8 w-8 shrink-0" />
+          ) : (
+            // The brand-soft initial rather than the identity tone used for a
+            // person in a list: this is your OWN chrome, not somebody you are
+            // being asked to tell apart from somebody else.
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand"
+            >
+              {initial}
+            </span>
           )}
-        </div>
-        <form action={signOutAction} className="pt-1">
-          <button
-            type="submit"
-            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-danger-soft hover:text-danger-ink"
-          >
-            <LogOutIcon className="h-4 w-4" />
-            Sign out
-          </button>
-        </form>
+          <span className="hidden min-w-0 flex-1 truncate text-left text-sm font-medium text-ink lg:inline">
+            {label}
+          </span>
+          <ChevronDownIcon className="hidden h-4 w-4 shrink-0 text-muted-fg transition-transform group-data-[open]:rotate-180 lg:block" />
+        </>
+      }
+    >
+      <div className="border-b border-line px-3 py-2.5">
+        <p className="min-w-0 truncate text-sm font-medium text-ink">
+          {user.name ?? user.email}
+        </p>
+        {user.name && (
+          <p className="min-w-0 truncate text-xs text-muted-fg">{user.email}</p>
+        )}
       </div>
-    </details>
+
+      {/* The switch lives here and not in the tab bar's More sheet, though §4.2
+          lists it there too: the mentor lens has no More sheet, so a dual-role
+          admin who switched to it on a phone would have no way back. ⌥M is not
+          the answer on a device with no ⌥. */}
+      {lens && (
+        <div className="mt-1">
+          <ProfileSwitchMenu active={lens} />
+        </div>
+      )}
+
+      {mentorProfile && (
+        <Link
+          href={`/mentors/${user.id}`}
+          className="mt-1 flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink"
+        >
+          My profile
+        </Link>
+      )}
+
+      <form action={signOutAction} className="mt-1 border-t border-line pt-1">
+        <button
+          type="submit"
+          className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-danger-soft hover:text-danger-ink"
+        >
+          <LogOutIcon className="h-4 w-4" />
+          Sign out
+        </button>
+      </form>
+    </Popover>
+  );
+}
+
+/** Wordmark · bell · account. The whole of the chrome that is not navigation. */
+function TopBar({
+  account,
+  unread,
+  links,
+  width,
+}: {
+  account: React.ReactNode;
+  unread: number;
+  links?: React.ReactNode;
+  width: string;
+}) {
+  return (
+    <header className="border-b border-line bg-surface">
+      <div className={cn("mx-auto flex min-h-16 items-center gap-4 px-4", width)}>
+        <Link
+          href="/"
+          className="shrink-0 text-base font-bold tracking-tight text-brand"
+        >
+          freshlog
+        </Link>
+        {links}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <NotificationBell count={unread} />
+          {account}
+        </div>
+      </div>
+    </header>
   );
 }
 
 /**
- * Shared chrome for every signed-in role: a light nav bar in three groups —
- * brand + profile on the left, nav in the middle, notifications + account on
- * the right. `mode` overrides which role's nav shows (dual-role admins pass
- * it); it defaults to the user's own role. Pages render inside.
+ * Staff: a labelled rail at ≥ lg, a bottom bar below it.
+ *
+ * The rail is `fixed`, so the page is padded past it rather than laid out
+ * beside it — which is what keeps a long table scrolling under its own rules
+ * instead of inside a flex child.
  */
-export async function AppShell({
+function StaffShell({
   user,
-  mode,
+  unread,
+  items,
+  lens,
+  search,
   children,
 }: {
   user: User;
-  mode?: Role;
+  unread: number;
+  items: NavItem[];
+  /** The lens, for the two people in one — null for everybody with one lens. */
+  lens: Profile | null;
+  search?: { mentors: boolean };
   children: React.ReactNode;
 }) {
-  const activeRole = (mode ?? (user.role as Role)) as Role;
-  const isDual = canSwitchProfile(user);
-  // The lens is the cookie's answer, not this tree's. They agree in practice —
-  // switching out of one home moves you to the other — and where they don't,
-  // the switch should say which lens you are in rather than which URL you are
-  // at. What the lens DECIDES (the nav below, and the default filters) comes
-  // with the sidebar in the next commit.
-  const profile = isDual ? await profileOf(user) : null;
-  const unreadCount = await prisma.notification.count({
-    where: { userId: user.id, read: false },
-  });
-
-  // A mentor's profile lives at their own id, so this one item can't be a
-  // constant in NAV_BY_ROLE the way the rest are — it's built per viewer here.
-  const navItems =
-    activeRole === ROLES.MENTOR
-      ? [
-          ...NAV_BY_ROLE[activeRole],
-          { href: `/mentors/${user.id}`, label: "My profile" },
-        ]
-      : NAV_BY_ROLE[activeRole];
-
-  const brand = (
-    <Link href="/" className="shrink-0 text-base font-bold tracking-tight text-brand">
-      freshlog
-    </Link>
+  const account = (
+    <AccountMenu
+      user={user}
+      lens={lens}
+      mentorProfile={canActAsMentor(user)}
+    />
   );
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      {/* Once, for the whole shell: both switches below are in the DOM at the
-          same time, so the key would otherwise be handled twice. */}
-      {isDual && <ProfileShortcut />}
-      <header className="border-b border-line bg-surface">
-        {/* Desktop */}
-        <div className="mx-auto hidden min-h-16 max-w-5xl items-center gap-6 px-4 md:flex">
-          <div className="flex items-center gap-2.5">
-            {brand}
-            {profile ? (
-              <ProfileSwitch active={profile} />
-            ) : (
-              <RoleBadge role={activeRole} />
-            )}
-          </div>
+    <div className="flex min-h-full flex-1 flex-col lg:pl-[220px]">
+      {/* Once for the whole shell: the switch is in the DOM twice (one of them
+          hidden by a breakpoint), so a listener on either would fire twice. */}
+      {lens && <ProfileShortcut />}
 
-          <nav className="flex flex-1 items-center gap-7">
-            <NavLinks items={navItems} />
-          </nav>
+      <Sidebar
+        items={items}
+        utility={[notificationsItem(unread)]}
+        switcher={lens ? <ProfileSwitch active={lens} /> : undefined}
+        search={search}
+        account={account}
+      />
 
-          <div className="flex items-center gap-1 border-l border-line pl-3">
-            <NotificationBell count={unreadCount} />
-            <UserMenu user={user} />
-          </div>
-        </div>
+      <div className="lg:hidden">
+        {/* The same measure as the page below it, so the wordmark lines up
+            with the h1 rather than floating in from a narrower centre. */}
+        <TopBar account={account} unread={unread} width="max-w-6xl" />
+      </div>
 
-        {/* Mobile. Four things do not fit a 320px row, so the profile switch
-            moves into the menu and the role rides next to the brand as a badge
-            (a badge fits; a two-segment switch does not). */}
-        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-2 px-4 md:hidden">
-          <div className="flex min-w-0 items-center gap-2">
-            {brand}
-            {!isDual && <RoleBadge role={activeRole} />}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1">
-            <NotificationBell count={unreadCount} />
-            <details className="group relative">
-              <summary className="flex h-10 cursor-pointer list-none items-center gap-1 rounded-lg px-2.5 text-sm font-medium text-muted-fg transition-colors hover:bg-canvas hover:text-ink [&::-webkit-details-marker]:hidden">
-                Menu
-                <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="pop-in absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-1 shadow-soft [--pop-origin:top_right]">
-                {profile && <ProfileSwitchMenu active={profile} />}
-                <nav aria-label="Primary navigation" className="mt-1 grid gap-1">
-                  <NavLinks items={navItems} variant="menu" />
-                </nav>
-                <div className="mt-1 border-t border-line pt-1">
-                  <div className="px-3 py-2">
-                    <p className="min-w-0 truncate text-sm font-medium text-ink">
-                      {user.name ?? user.email}
-                    </p>
-                    {user.name && (
-                      <p className="min-w-0 truncate text-xs text-muted-fg">
-                        {user.email}
-                      </p>
-                    )}
-                  </div>
-                  <form action={signOutAction}>
-                    <button
-                      type="submit"
-                      className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-muted-fg transition-colors hover:bg-danger-soft hover:text-danger-ink"
-                    >
-                      <LogOutIcon className="h-4 w-4" />
-                      Sign out
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </details>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      {/* pb-24 clears the bottom bar; nothing sits under it at lg, where the
+          bar is gone. */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 lg:pb-10 lg:pt-8">
         {children}
       </main>
+
+      <TabBar items={items} className="lg:hidden" />
     </div>
+  );
+}
+
+/**
+ * Students: no sidebar at any width.
+ *
+ * A student must never feel "accidentally let into an internal admin tool"
+ * (PRODUCT.md), and a 220px rail of school-wide lists is exactly what that
+ * feels like. Four items fit a top bar on a laptop and a bottom bar on a phone,
+ * and the page is `max-w-2xl` because a student's pages are one column of their
+ * own things — a 6xl measure would set a paragraph 1100px wide.
+ */
+function StudentShell({
+  user,
+  unread,
+  items,
+  children,
+}: {
+  user: User;
+  unread: number;
+  items: NavItem[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-full flex-1 flex-col">
+      <TopBar
+        width="max-w-2xl"
+        unread={unread}
+        links={
+          <nav
+            aria-label="Primary"
+            className="hidden flex-1 items-center gap-6 md:flex"
+          >
+            <NavLinks items={items} />
+          </nav>
+        }
+        account={
+          <AccountMenu user={user} lens={null} mentorProfile={false} />
+        }
+      />
+
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 md:pb-10">
+        {children}
+      </main>
+
+      <TabBar items={items} className="md:hidden" />
+    </div>
+  );
+}
+
+/**
+ * Is this person still being let in?
+ *
+ * PENDING and UNASSIGNED say so outright. The two onboarding routes do not have
+ * a flag of their own, so the test is the same predicate the gates that send
+ * people there already use — `requireMentor` (a mentor with no name) and
+ * `student/page.tsx` (no profile, no name, or no Telegram username). Those two
+ * and this one have to agree: a reader the gate redirects to onboarding and the
+ * shell dresses in a full nav is the exact case §4.2 is about.
+ */
+async function settlingIn(user: User): Promise<boolean> {
+  if (
+    user.status === USER_STATUS.PENDING ||
+    user.status === USER_STATUS.UNASSIGNED
+  ) {
+    return true;
+  }
+  if (user.role === ROLES.STUDENT) {
+    if (!user.name?.trim()) return true;
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: user.id },
+      select: { telegramUsername: true },
+    });
+    return !profile?.telegramUsername;
+  }
+  return canActAsMentor(user) && !user.name?.trim();
+}
+
+/**
+ * The chrome every signed-in page renders inside.
+ *
+ * It takes no `mode`. The lens is the cookie's answer and nothing else's: three
+ * layouts used to pass the role of the route TREE they sat in, and two more
+ * fell back to `user.role`, so a dual-role admin reading their notifications
+ * was shown the admin nav whichever lens they were actually working in. Where
+ * the URL and the lens disagree, the chrome should say which lens you are in —
+ * that is the only thing it knows that the URL does not.
+ */
+export async function AppShell({
+  user,
+  children,
+}: {
+  user: User;
+  children: React.ReactNode;
+}) {
+  if (await settlingIn(user)) {
+    return <PublicShell user={user}>{children}</PublicShell>;
+  }
+
+  const [profile, unread] = await Promise.all([
+    profileOf(user),
+    prisma.notification.count({ where: { userId: user.id, read: false } }),
+  ]);
+  const items = await navFor(user, profile);
+
+  if (user.role === ROLES.STUDENT) {
+    return (
+      <StudentShell user={user} unread={unread} items={items}>
+        {children}
+      </StudentShell>
+    );
+  }
+
+  // The search goes where the lists are. A person with no grants has no list to
+  // search, and only a full admin has a Mentors list to send the second submit
+  // to — both read off the items `navFor` just derived rather than off a role.
+  const scope = await adminScope(user);
+  const search = scopeIsEmpty(scope)
+    ? undefined
+    : { mentors: items.some((i) => i.href === "/admin/mentors") };
+
+  return (
+    <StaffShell
+      user={user}
+      unread={unread}
+      items={items}
+      lens={canSwitchProfile(user) ? profile : null}
+      search={search}
+    >
+      {children}
+    </StaffShell>
   );
 }
