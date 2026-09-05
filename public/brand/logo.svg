@@ -1,0 +1,28 @@
+<!--
+  The wordmark: "freshlog", lowercase, brand blue, bold, tracking tight.
+
+  Not a drawing of the logo — a portable copy of it. The app never loads this
+  file: `app-shell.tsx` and `public-shell.tsx` render the word as HTML text
+  (`text-base font-bold tracking-tight text-brand`), which stays selectable and
+  scales with the reader's own type size. This exists for the surfaces that
+  have no stylesheet — an email header, a PDF guide, a README — and it is set
+  in the same weight, colour and tracking so those never drift into a second
+  identity.
+
+  Live <text> rather than outlined paths, deliberately: the point of this file
+  is that someone can read it and change the word, and letterform paths from an
+  editor are neither. The stack falls back the way `globals.css` does, so a
+  renderer without Geist draws the wordmark in Arial rather than dropping it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 44" width="156" height="44" role="img" aria-label="freshlog">
+  <text
+    x="78"
+    y="32"
+    text-anchor="middle"
+    font-family="Geist, Arial, Helvetica, sans-serif"
+    font-size="40"
+    font-weight="700"
+    letter-spacing="-1"
+    fill="#124b84"
+  >freshlog</text>
+</svg>

@@ -1,0 +1,23 @@
+<!--
+  The mark: a lowercase f, drawn as one stroke, on brand blue.
+
+  The app's whole logo is the word "freshlog" set in brand blue (app-shell.tsx,
+  public-shell.tsx). A tab is too small for eight letters, so the mark is the
+  first of them and nothing else — same colour, same lowercase, same weight.
+  There is no second identity to keep in step.
+
+  No orange. Orange means hours (globals.css, REDESIGN.md §5.6 rule 2); an
+  identity badge is exactly the kind of chrome it is not allowed on, and the
+  earlier icon spent it on a capital F for decoration.
+
+  The f is a path rather than <text> so it rasterises the same everywhere —
+  favicon.ico and apple-touch-icon.png are both rendered from this file, and a
+  font stack would have made them depend on whatever the renderer had.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="freshlog">
+  <rect width="64" height="64" rx="14" fill="#124b84"/>
+  <g fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round">
+    <path d="M42 17h-5a9 9 0 0 0-9 9v21"/>
+    <path d="M21 29h14"/>
+  </g>
+</svg>
