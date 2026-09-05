@@ -1,38 +1,67 @@
 # Pick up here
 
-State of the UX reorganisation as of the last commit on `main`. The plan is
-`REDESIGN.md` — it is the contract and it is still accurate. This file is only
+`REDESIGN.md` is the contract and it is still accurate. This file is only
 "where the work stopped and what to do next".
 
 ---
 
 ## Where it stopped
 
-**39 commits.** `git log --oneline addf3b1~1..HEAD` is the whole series.
+**All 59 numbered commits have landed.** The series is 94 commits:
+`git log --oneline addf3b1~1..HEAD`.
 
 | Phase | REDESIGN.md commits | State |
 |---|---|---|
-| 0 — audit, spec, safety | — | **done.** `REDESIGN.md` written; a data leak fixed (`8cd59a9`); the hours engine got tests before anything moved (`6bac963`); deploys made manual (`d9ebd85`) |
-| 1 — shared foundation | 1–16 | **done.** Every commit landed |
-| 2 — the three homes | 17–21 | **done.** `/sessions/new`, `AttentionList` + `Timeline`, `/mentor`, `/admin`, `/student` |
-| 3 — permissions, program scope | 22–28 | **not started.** This is the owner's per-program-admin ask |
-| 4 — shell and lens | 29–32 | commit 30's `ui/segmented.tsx` **done** early (it replaced both pickers and the program tabs). 29, 31, 32 not started |
-| 5 — shared renderers | 33–38 | **components built, call sites not rewritten.** See "Built but unmounted" |
-| 6 — role-neutral routes | 39–47 | **not started**, except the two redirect seeds (`/students/[id]`, `/programs/[id]`) added in `eb566d6` so `lib/status.ts` links resolve |
-| 7 — settings, platform, student app | 48–53 | commit 52's `/student/meetings` **done** early, because removing `StudentJourney` from the home had left a student with no history at all |
-| 8 — copy, docs, cleanup | 54–59 | **not started** |
+| 0 — audit, spec, safety | 1–3 | **done** |
+| 1 — shared foundation | 4–16 | **done** |
+| 2 — the three homes | 17–21 | **done** |
+| 3 — permissions, program scope | 22–28 | **done.** Access is a `ProgramStaff` row plus `User.platformAdmin`; `/leader` and `/sales` are gone |
+| 4 — shell and lens | 29–32 | **done.** 220px sidebar from `navFor`, tab bars below lg, the lens as a cookie, one error boundary |
+| 5 — shared renderers | 33–38 | **done.** Every session, task and allocation renders through one component |
+| 6 — role-neutral routes | 39–47 | **done.** `/students`, `/students/[id]`, `/sessions`, `/mentors`, `/programs`, `/feedback`, `/notifications` |
+| 7 — settings, platform, student app | 48–53 | **done.** `/settings`, `/settings/platform`, per-category notification preferences, `/onboarding` |
+| 8 — copy, docs, cleanup | 54–59 | **done except one deferred half** — see below |
 
-Roughly 23 of 59 numbered commits, and the foundation everything else stands on
-is finished.
+### Deliberately not done
 
-### Verified green at the stopping point
+- **The redirect map is still in `next.config.ts`.** Commit 57 deletes it "one
+  released version after Phase 6", and Phase 6 landed on 5 September 2026. That
+  is a date somebody chooses, not a state the code can detect. Sixteen rows;
+  delete them together, and delete `MOVED_SUBJECTS` in `notify.ts` at the same
+  time.
+- **`User.weeklyDigest` survives.** Superseded by `NotificationPreference`, kept
+  because the HMAC unsubscribe links already in people's inboxes write it.
+
+### Verified at the stopping point
 
 ```
 npx tsc --noEmit     clean
-npm run lint         clean  (eslint + check-colors + check-copy, both custom checks are ERRORS)
-npm test             161 passed
-npm run build        compiles
+npm run lint         clean  (eslint + check-colors + check-copy, both ERRORS)
+npm test             196 passed
+npm run build        compiles, 31 routes
 ```
+
+Driven against the built server on :3001 — all 25 current routes resolve or
+bounce to `/login`; all 18 retired addresses 308 to a live page **in one hop**
+(two chained through another redirect and were fixed); all four `/brand/*`
+assets serve.
+
+### What was NOT verified, and why
+
+**Nobody has looked at these pages signed in.** Commit 59 asks for screenshots
+at 390px and 1280px as five different readers, plus keyboard-only passes
+through *Log a session* and *Approve a student*. Minting an Auth.js session
+cookie needs `NEXTAUTH_SECRET` out of `.env`, and the permission classifier
+blocks reading it — the recipe in `.claude/skills/verify/SKILL.md` is correct,
+it just cannot be run from an agent session here. **Run it by hand before
+deploying.** Specifically unproven:
+
+- the four `/onboarding` branches, each of which only one kind of account sees
+- a **scoped** admin: every admin in `prisma/dev.db` holds all three programs,
+  so nothing has exercised a one-program grant end to end
+- the ⌥M repaint (fixed after a browser measured it failing, not re-measured)
+- `reduced-motion` zeroing the staggered row delays
+- that no table scrolls sideways at 390px on the pages built this week
 
 ### What the numbers moved
 
@@ -42,296 +71,80 @@ npm run build        compiles
 | colour tokens | 47 | 28 |
 | identity hues | 8 | 3, muted |
 | `StatCard` implementations | 57 | 1 `Figure` |
-| banned copy habits | 51 | **0** (the build fails on one) |
-| unanchored `truncate` | 13 | **0** |
-| tests | 0 | 161 |
-| admin inbox rows on the real data | 36 statuses | 6 rows |
-| student's first actionable row at 390×664 | — | 284px (required: above 420) |
-| a mentor's caseload | 0 students / picker offered 11 | 9, from one definition |
+| renderers for one logged session | 4 | 1 |
+| renderers for one task | 4 | 1 |
+| hand-rolled row menus | 4 | 1 `RowActionMenu` |
+| two-step confirms written by hand | 8 | 1 `ConfirmInline` |
+| tests | 0 | 196 |
+| migrations | 23 | 30 |
+| routes under `/admin`, `/leader`, `/sales` | 20 | 2 |
+
+---
+
+## Bugs this work found, all fixed
+
+Worth reading: each was live, and none was what the commit set out to do.
+
+1. **A mentor could read who rated them 2 out of 5.** The rating form promises
+   the student "your name isn't shown to the mentor", and nine of the ten
+   admins also mentor — so nine of ten could open the staff feedback page and
+   read exactly who had scored them.
+2. **Clear unassigned mentors from programs you cannot see.** The mentor edit
+   form resubmits existing pairings as hidden inputs, so "Clear" dropped
+   pairings in programs the editor was never shown.
+3. **An admin with no grants looped forever.** `requireAdminAccess` sent them
+   to their home, and an admin's home gated on the same rule and sent them
+   back. The inbox had been written to explain that exact state and could never
+   be reached to say it.
+4. **Both copies of the mentor-reach rule were narrower than the caseload.**
+   Scheduling did not accept a task; logging did not accept having-met. A
+   mentor could log a session with somebody they could not put a meeting in the
+   diary with.
+5. **`setMentorAllocation` wrote `formatDate()` text into a date column**, so
+   every task the app created for itself was unreadable by a clock and could
+   never be overdue.
+6. **A 404 after a real write.** Removing a student redirected to a program
+   page that no longer existed.
+7. **The nameless dual-role admin loop.** `/mentor/onboarding` gated on
+   `role === MENTOR`, so a dual-role admin with no name bounced between it and
+   `/mentor` forever.
+8. **The notification bell shrank to 27px** at 390 — the one target the
+   sidebar commit set out to widen — and **⌥M flipped the lens without
+   repainting**, because a synthetic click does not drive React's action
+   re-render. Both found by measuring in a browser, not by review.
 
 ---
 
 ## Next, in order
 
-1. **Phase 3, commit 22.** `ProgramStaff` + `User.platformAdmin` + the seed + `config/app-config.ts`
-   + the `deleteProgram` guard, **in one commit** — §8.5 explains why it cannot be split (`render.yaml`
-   runs `db:seed` on every boot, so a config-shaped grant list would re-grant an admin the owner had
-   just demoted). Then commit 23, `src/lib/authz.ts` + tests. This is the change the owner actually
-   asked for: per-program admin grants and a platform page to make them.
-2. **Phase 5 call sites.** The five components below are written, tested and unmounted. Wiring them
-   is mostly deletion.
-3. **Phase 6.** The route moves. Commit 39 must land first and alone — the redirect map, the
-   role-neutral hrefs from `notify.ts`, and `/n/[id]` together, so no link ever points at a route
-   that does not exist.
+1. **Run `.claude/skills/verify/SKILL.md` by hand.** See "What was NOT
+   verified" above. This is the only thing standing between here and a deploy.
+2. **The owner's four asks from 4 September** — `TODO.md` Batch 1. The
+   hours-dynamics view is a genuinely new feature and needs its own spec
+   section; the other three are small.
+3. **`TODO.md` Batch 2** — the overdraw warning, mentor removal, CSV export,
+   and the sidebar Inbox count.
+4. **After a release**: delete the redirect map, drop `User.weeklyDigest`.
 
-## Built but unmounted
+## Deploying
 
-All five compile, lint and were rendered once in a throwaway preview route (since deleted). None
-has a call site yet. They are Phase 5's commits 33–37.
+`render.yaml` no longer seeds on every boot — that was a second writer to the
+permission model, and a grant removed on `/settings/platform` would come back
+on the next deploy. A fresh database needs `npm run db:seed` once, by hand.
 
-| File | Replaces | Call sites to rewrite |
-|---|---|---|
-| `src/components/session-row.tsx` | `meetings-log.tsx` (6 routes), `LedgerBoard.LoggedMeetingRow`, `student-journey.tsx`, the `/mentor/sessions` table | one done: `/student/meetings` uses `variant="timeline"` |
-| `src/components/task-row.tsx` | `assignments-panel.tsx`, `LedgerBoard.TaskRow`, `student-goals.tsx`, the program page table | none |
-| `src/components/ui/filter-bar.tsx` + `src/lib/filters.ts` | `ui/search-form.tsx`, `mentor-hours-filter.tsx` (322 lines), 3 filter cards | none. 53 tests already pass |
-| `src/components/ui/row-action-menu.tsx` + `ui/popover.tsx` | the four `*-row-actions.tsx` popovers | none |
-| `src/components/ui/confirm-inline.tsx` | 8 two-step confirms | none |
+Auto-deploy is off. The owner deploys deliberately.
 
-**Orphaned and safe to delete once their replacements are mounted:**
-`mentor-hours-list.tsx` (superseded by `/student/book`'s own cards),
-`program-island-card.tsx`, `student-goals.tsx`, `student-journey.tsx`.
-
----
-
-## Known gaps, deliberate
-
-Each of these is a thing the plan puts in a later phase. None is a mistake; they
-are listed so nobody rediscovers them as bugs.
-
-- **`TASK_OVERDUE` is dormant.** `Assignment.deadline` is free text holding both "Aug 7" and
-  "March–May". It needs **M6** (commit 53) to split into `dueNote` + `dueOn`. Until then no task is
-  flagged overdue and no task due dates appear in "Up next". Guessing at the free text is how a task
-  gets flagged overdue for a range it is still inside.
-- **No `/sessions` list.** Only `/sessions/new` exists. So "Up next" on `/mentor` has no "see all"
-  link, and `/admin`'s Recent has none either — pointing them at `/mentor/sessions` would send the
-  reader to a log of what was delivered from a heading about what is scheduled. Commit 42.
-- **`CreateProgramForm` is unmounted.** It was on the old `/admin`; its new home is
-  `/settings/platform` (commit 49). **A program cannot currently be created through the UI.** If
-  that is needed before Phase 7, mount the existing form somewhere temporarily.
-- **`STAFF_UNSCOPED` renders as "no program exists at all"**, because grants do not exist until
-  Phase 3.
-- **Roll-up rows have no destination.** "8 students are overdrawn" deliberately drops its `href`
-  (linking to one of eight is an arbitrary choice); it wants the filtered `/students` list from
-  commit 40.
-- **Money is still gated on `MASTERS_PROGRAM_NAME`**, a string match at four sites. Commit 45
-  replaces it with a per-program `tracksPayment` toggle.
-- **Touch targets still under 44px**, all listed against Phase 4 in `REDESIGN.md` §9: the
-  notification bell (40), `<Select>` (40), `PersonChip` as a link (40), and — the one that matters —
-  the RSVP pair at 32px on `/student`, which sits next to its opposite, so a mis-tap declines a
-  meeting.
-
-## Regression hunt, in flight
-
-Three audits were running when work stopped, one per surface (student, mentor, admin + shared
-primitives). Their method is worth repeating for any future rewrite, because it caught things
-review did not: **the spec says what a section should SHOW; it does not say what the old component
-let a user DO.** Anything that was an affordance rather than a feature can vanish silently.
-
-Four found and fixed already:
-
-1. `InterviewResponse` lets a student **change** an answer — both buttons stay live. Moving the
-   control to only the "awaiting your answer" row took that away. Fixed in `fd6ca57`.
-2. A meeting with no time set rendered **"All day"** instead of "time to be confirmed".
-3. `student-journey.tsx` was **orphaned** — a student could not see a single past session anywhere.
-   `/student/meetings` built.
-4. A **passed meeting vanished** from a student's week, because `MEETING_UNLOGGED` had no student
-   voice. It now reads "Waiting on your mentor".
-
-The student and mentor audits finished, and a primitives audit (chips, `StatCard`, the link
-components) finished. **The `/admin` page audit died on a rate limit before reporting — re-run
-it.** Scope: the old `/admin` surfaces plus `EmptyState` losing its `action` slot, `Callout` going
-4 tones → 3, `CreateProgramForm` having no mount, and the admin sub-pages
-(`admin/students`, `admin/mentors`, `admin/programs/**`, `admin/feedback`, `/leader`, `/sales`)
-against the helpers that changed under them: `studentsWithHours` gained a parameter and a returned
-field, `attentionList` stopped injecting `ALL_CLEAR`, `rollUp` drops `href`, `programTotals`
-replaced five reduces. The prompt shape is: enumerate everything the old component let a user do,
-trace each to where it is reachable today, report only what is not, graded
-BROKEN / DEGRADED / MOVED / DELIBERATE. Read-only; no edits.
-
-### Primitives audit — the one real bug it found
-
-**Two "Time remaining" figures lost their red.** `admin/mentors/[id]` (old `:194` → now `:189-192`)
-and `admin/programs/[id]` (old `:184` → now `:176-179`) both passed
-`tone={remaining < 0 ? "danger" : "default"}` and now pass no tone at all, so **a negative balance
-renders in plain ink on both pages.** This is fallout from the tone-stripping regex in `73aca3d`,
-which was known to have caught two `StatCard`s and was re-decided for those two — these two were
-not noticed. One prop each.
-
-Everything else it found is wording or reach, not correctness:
-
-- **`Figure` is a strict superset of `StatCard`** — every prop has an equivalent, plus one guard
-  `StatCard` lacked. No capability lost in the primitive itself. (`figure.tsx:6` says 57 instances;
-  the real count at the baseline was 48.)
-- `DeadlineText` reproduces `deadline.tsx` exactly, and all six call sites survive.
-- **"Sessions logged" exists nowhere in the app** (0 grep hits). "Time allotted", "Time completed",
-  "Time missed" are gone from `/admin`; "Time delivered", "Time missed", "Time beyond plan" from
-  `/mentor`. Deliberate per the plan, but worth confirming the owner agrees a mentor never needs
-  their own lifetime delivery figure.
-- **Telegram and Folder left `/mentor` entirely** with the 9→5 column cut — a mentor can no longer
-  message a student or open their folder from the caseload, only from the student page.
-- **The Folder tooltip lost the URL.** It was `"Open the student's folder (https://…)"`; it is now
-  `"Open the student's folder"`, so staff cannot see where a link points without clicking.
-- **`{X} extra` per student is gone from the mentor caseload** and `s.extra` is now unused there —
-  out-of-plan time delivered is only visible per session on the student page.
-- Lateness lost its amber: `SESSION_LATE` is `neutral`, where the old chip was amber. And the
-  student-voiced "Extra — none of your used" reassurance became the staff-neutral
-  "Extra, no time charged".
-- `INTERVIEW_STATUS_META` (`constants.ts:218-227`) is now **dead code** — only a comment and a test
-  reference it.
-- **`StatusChip`'s free-text form is still used at 26 call sites**, so `lib/status.ts` is not yet
-  the only source of chip wording. Those 26 are the pages Phase 6 has not reached.
-
----
-
-## Owner feedback, 4 September — not yet acted on
-
-Voice notes, transcribed automatically from a phone, so the wording below is my
-reading of them. **Check each against what he meant before building it.**
-
-**The frame: he is going to use this on a phone, and he means the ADMIN side
-too.** That is a change to a settled decision — the plan has students and
-mentors phone-first and admin desktop-first (`REDESIGN.md` §10). Every admin
-surface still to be built should now assume a phone.
-
-1. **Round the figures. There are too many digits and he is lost in them.**
-   "130h 07m" should read "130+ hours"; "1,240+ hours". Today `formatDuration`
-   is exact everywhere.
-   **This needs a rule, not a global change**, because exactness is the
-   product's promise elsewhere (`PRODUCT.md`: "the numbers are trusted by
-   everyone"). The line to draw: a figure a reader *orients* by — a program
-   total, a caseload total, a dashboard headline — rounds and takes a "+"; a
-   figure that is *the record* — one allocation, one logged session, a balance
-   a mentor is about to spend against, anything beside money — stays exact.
-   Ask him to confirm that split.
-2. **A "+" to add hours, and to log, in one tap.** He wants adding time and
-   logging a session to be immediate, not a page away. `/sessions/new` exists
-   and the mentor inbox has a "Log a session" button in its title row; he is
-   asking for something lighter and always to hand — a persistent "+", probably
-   in the shell.
-3. **Stop repeating the same thing.** He named it as something that keeps
-   happening. This is already the rule in §5.3 and §6.3 ("remaining is never
-   stated twice"), so it is not new — it means the rule is not being applied
-   widely enough. Sweep for it.
-4. **Cut the scrolling. Everywhere.** The strongest of the six. He wants a
-   compact summary that opens on demand: *"show them, and if it's interesting
-   I'll open it further"*. `ui/disclosure.tsx` exists for exactly this (§5.4)
-   and is barely used. Every list should default to a short, dense form.
-5. **One page, everything visible, no confusion — and simple.** His two sides:
-   no confusion on one hand, maximally simple and efficient on the other.
-6. **NEW, and not in `REDESIGN.md` at all: an hours-DYNAMICS dashboard.**
-   *"who is missing hours, who is performing how."* Everything in the plan is a
-   snapshot — balances, totals, what needs attention today. This is asking for
-   change over time: who is falling behind, who is delivering, and the trend.
-   It needs its own spec section before anything is built. It also has a
-   dependency: no table currently records a *rate*, so decide the window (per
-   week? per month?) and whether it is derived from `Session.date` alone.
-
-7. **Text that fills its space must go DOWN, not slide left. All of it visible.**
-   Two readings, and both are real — do both:
-   - **Wrap, do not truncate.** `truncate` is `white-space: nowrap` plus an
-     ellipsis, so a long name slides out of view instead of taking a second
-     line. `scripts/check-copy.mjs` currently enforces that every `truncate`
-     has `min-w-0` beside it — that makes truncation *work*, which is the
-     opposite of what he is asking for. **The guard needs rewriting to push
-     toward wrapping**, and the ~13 anchored truncates need revisiting one by
-     one: keep it only where a single line is structurally required, and let
-     everything else wrap. `StatusChip` was already made wrappable in Phase 1
-     for exactly this reason (`ui/status-chip.tsx:58-60`) — extend it.
-   - **A one-line `<input>` cannot wrap.** The session note on `/sessions/new`
-     is `<input type="text">` (`forms/log-session-form.tsx`), so a long note
-     scrolls sideways inside the box as it is typed and the writer cannot see
-     what they wrote. It wants a `<textarea>` that grows with its content. Same
-     for every other free-text field — audit them.
-
-   This is the closest thing yet to the original complaint that started the
-   whole reorganisation: *"long text not rendering right."*
-
-Items 1, 4, 5 and 7 point the same way — **the phone screen is the constraint,
-and density, disclosure and wrapping are the answer.** Item 6 is a genuinely
-new feature and should be scoped separately rather than folded into the
-reorganisation.
-
----
-
-## ⚠ START HERE: one bug is actively rotting
-
-**`/mentor`'s "Up next" never filters `interviewIsOpen`.** `src/app/mentor/page.tsx:181-183`
-filters only on `bucketOf(...) !== "later"`, and `mentorMeetings` returns *every interview ever*
-(`src/lib/queries.ts:220-226`). Logging a session sets `HELD`; cancelling sets `CANCELLED`. Neither
-is excluded.
-
-So every meeting a mentor has ever logged or cancelled sits under **Overdue** forever, with an
-amber edge and a live Move/Cancel menu on an action that should not exist for it. Overdue is the
-first bucket rendered and rows sort ascending inside it, which means **"Up next" opens with the
-mentor's oldest meeting ever.** By month two the section cannot answer the question it is named
-for.
-
-It does not show in dev because the seed data has almost no closed history. Every other reader of
-`mentorMeetings`/`studentMeetings` applies this filter — `splitMeetings` (`src/lib/interviews.ts:56`),
-`src/app/student/page.tsx:257` — so `/mentor` is the one page that forgot it.
-
-**The fix is one predicate.** Do it before anything else.
-
----
-
-### Student audit — open findings, NOT fixed
-
-Three of its findings landed in `c26904a`; these did not, and are ordered by what it would fix
-first.
-
-1. **BROKEN — a per-mentor time ledger has no home.** The old `mentor-hours-list.tsx` read
-   `hours.perMentor`, i.e. `HourAllocation`. `/student/book` keys off `MentorAssignment`
-   (`src/app/student/book/page.tsx:39-49`), and so do the home's booking rows. So **hours a student
-   still holds with a mentor whose pairing was removed are inside the ring total and named
-   nowhere** — they cannot tell whose time it is or who to chase. `mentor-hours-list.tsx` was
-   already migrated to `Section`/`DeadlineText` during the rewrite and then left with no importer;
-   it needs a mount, not a rewrite. It also still carries the per-mentor "· 30m missed" and
-   "· 2h expired unused" figures, which exist only as aggregates now.
-2. **DEGRADED — `remaining === 0` says nothing.** `BALANCE_NONE` fires only at
-   `allottedMinutes === 0` and `BALANCE_OVERDRAWN` only below zero (`src/lib/status.ts:766-771`), so
-   a student who has used exactly all of their time sees a ring reading "0m / time left", an empty
-   "Needs you", and no guidance. The old page said "Your mentoring time are all used up. Talk to
-   your program contact about topping up." Wants its own status type.
-3. **DEGRADED — meetings more than 7 days out are not on the home.** `bucketOf` sends day 8+ to
-   `later` and the home renders `["overdue","today","week"]`. Now reachable via the "All meetings"
-   link and the nav, so it is no longer BROKEN, but an interview three weeks out is still invisible
-   on the page a student opens.
-4. **DEGRADED — the mentor count is gone.** "N meetings logged · N mentors on your team" was in the
-   old footer. The meeting count is back as the `Past sessions` count; "how many people am I working
-   with" now means counting cards on `/student/book`.
-5. **DEGRADED — two explanatory empty states got shorter.** The home Timeline passes no `empty`, so
-   it falls back to "Nothing scheduled." where the old text named who makes meetings appear. The new
-   `/student/meetings` page does pass the fuller wording.
-6. **DEGRADED — no diary tally.** "2 coming up · 1 confirmed · 1 awaiting an answer" has no
-   equivalent on either Timeline.
-
-Its DELIBERATE list agreed with every removal the plan made: the orange hero, the 120px watermark,
-the balance sentence, the PENDING wall, `DateLeaf`, the four rival session renderers, the
-self-computed section totals, and dropping "Still yours" from the breakdown key. `student-journey.tsx`
-and `student-goals.tsx` it confirmed as genuinely superseded dead code. `mentor-hours-list.tsx` it
-confirmed as an accidental orphan — see finding 1.
-
----
-
-## How to run it
-
-`.claude/skills/verify/SKILL.md` has the full recipe. The short version:
-
-```bash
-npm run dev                      # or: npm run build && PORT=3001 npm run start
-npx prisma migrate deploy        # against prisma/dev.db
-npm run db:seed
-```
-
-- **Node 22.** `npm rebuild better-sqlite3` if you see an ABI mismatch (127 vs 141).
-- The demo data lives in `prisma/dev.db`: 3 programs, 11 students (all in Master's), 8 mentor
-  pairings, 74 sessions. Ten of the eleven students are overdrawn, which is what makes the admin
-  inbox's roll-up worth looking at.
-- **Deploys are manual.** `render.yaml` has `autoDeploy: false`. The owner still needs to switch
-  Auto-Deploy off in the Render dashboard itself — the yaml only governs blueprint syncs.
-
-### Verifying a UI change
-
-Screenshots at **390px and 1280px**, signed in as each role. Tokens are minted from `.env`'s
-`NEXTAUTH_SECRET`; the recipe is in the verify skill. Measure rather than eyeball: every mistake
-this series caught in its own work was caught by reading a rendered number — element heights,
-`document.documentElement.scrollWidth`, computed colours, `aria-expanded` — not by looking.
+Seven migrations land with this work: `ProgramStaff` + `platformAdmin`,
+`dueNote`/`dueOn`, `Program.status`/`tracksPayment`, `Notification.category`/
+`readAt`, dropping `WebsiteFeedback`, `NotificationPreference`, and the `User`
+rebuild that drops `programId`. The last is the only table rebuild; it is last
+on purpose, and it verified 26 users in and 26 out with foreign keys clean.
 
 ## Two habits worth keeping
 
-- **`git checkout <file>` threw away uncommitted work twice.** For mutation-testing a guard, copy
-  the file, mutate, run, `mv` it back. `scripts/lib/swap.py` exists because the naive
-  whitespace-flexible matcher aborts a migration half-applied.
-- **A function cannot cross the server→client boundary.** It type-checks, it builds, and it throws
-  at render. Passing `correctHref={(id) => ...}` from a page to a client component cost a debug
-  cycle; it is a string base now.
+- **`git add -u <dir>` swept another agent's half-written work into three
+  commits.** Stage explicit paths, and read `git status --porcelain` before
+  every commit. `git rm` stages immediately, so a deletion rides into whatever
+  you commit next.
+- **A function cannot cross the server→client boundary.** It type-checks, it
+  builds, and it throws at render. Pass a string base, not a callback.
